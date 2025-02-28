@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Fresh Share</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #2E7D32;
+            --primary-light: #4CAF50;
+            --primary-dark: #1B5E20;
+            --secondary: #F5F5F5;
+            --text-dark: #333;
+            --text-light: #666;
+            --border: #E0E0E0;
+            --success: #4CAF50;
+            --warning: #FFC107;
+            --danger: #F44336;
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            --sidebar-width: 250px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: white;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 1.5rem;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 0 0.5rem;
+        }
+
+        .logo img {
+            height: 34px;
+            margin-right: 10px;
+        }
+
+        .logo-text {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--primary-light);
+            color: white;
+        }
+
+        .nav-item i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-section {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            padding-left: 1rem;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: 70px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 99;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: var(--secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            width: 300px;
+        }
+
+        .search-bar input {
+            border: none;
+            background: transparent;
+            margin-left: 0.5rem;
+            flex-grow: 1;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-menu .notification {
+            position: relative;
+            margin-right: 1.5rem;
+            cursor: pointer;
+        }
+
+        .user-menu .notification .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 50%;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 0.75rem;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: 70px;
+            padding: 2rem;
+            width: calc(100% - var(--sidebar-width));
+            min-height: calc(100vh - 70px);
+            background-color: #f5f7fa;
+        }
+
+        .page-title {
+            margin-bottom: 2rem;
+            color: var(--text-dark);
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-card .stat-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-card .stat-footer {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .trend-up {
+            color: var(--success);
+        }
+
+        .trend-down {
+            color: var(--danger);
+        }
+
+        .trend-icon {
+            margin-right: 4px;
+        }
+
+        /* Dashboard Rows */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+        }
+
+        .dashboard-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .dashboard-card h3 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin: 0;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .card-action-btn {
+            background: var(--secondary);
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card-action-btn:hover {
+            background: var(--border);
+            color: var(--text-dark);
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .dashboard-table th, .dashboard-table td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dashboard-table th {
+            font-weight: 500;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .dashboard-table tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.01);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-available {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: var(--warning);
+        }
+
+        .status-expired {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--danger);
+        }
+
+        /* Activity feed */
+        .activity-feed {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .icon-share {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--success);
+        }
+
+        .icon-group {
+            background-color: rgba(33, 150, 243, 0.1);
+            color: #2196F3;
+        }
+
+        .icon-comment {
+            background-color: rgba(156, 39, 176, 0.1);
+            color: #9C27B0;
+        }
+
+        .activity-content {
+            flex-grow: 1;
+        }
+
+        .activity-content p {
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .activity-time {
+            color: var(--text-light);
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Calendar */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .calendar-month {
+            font-weight: 600;
+        }
+
+        .calendar-day {
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .weekday {
+            color: var(--text-light);
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+
+        .calendar-date {
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .calendar-date:hover {
+            background-color: var(--secondary);
+        }
+
+        .calendar-date.today {
+            background-color: var(--primary-light);
+            color: white;
+        }
+
+        .calendar-date.has-event {
+            position: relative;
+        }
+
+        .calendar-date.has-event::after {
+            content: "";
+            position: absolute;
+            bottom: 2px;
+            width: 4px;
+            height: 4px;
+            background-color: var(--primary-light);
+            border-radius: 50%;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .dashboard-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                display: block;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-seedling" style="color: var(--primary); font-size: 1.6rem;"></i>
+            <div class="logo-text">Fresh Share</div>
+        </div>
+        
+        <a href="/dashboard" class="nav-item active">
+            <i class="fas fa-chart-line"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="/listings" class="nav-item">
+            <i class="fas fa-apple-alt"></i>
+            <span>My Listings</span>
+        </a>
+        <a href="/marketplace" class="nav-item">
+            <i class="fas fa-search"></i>
+            <span>Browse Food</span>
+        </a>
+        <a href="/community" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Community</span>
+        </a>
+        
+        <div class="nav-section">MANAGEMENT</div>
+        
+        <a href="/schedule" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Schedule</span>
+        </a>
+        <a href="/locations" class="nav-item">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Locations</span>
+        </a>
+        <a href="/impact" class="nav-item">
+            <i class="fas fa-leaf"></i>
+            <span>Impact</span>
+        </a>
+        
+        <div class="nav-section">ACCOUNT</div>
+        
+        <a href="/settings" class="nav-item">
+            <i class="fas fa-user-cog"></i>
+            <span>Settings</span>
+        </a>
+        <a href="/help" class="nav-item">
+            <i class="fas fa-question-circle"></i>
+            <span>Help Center</span>
+        </a>
+    </aside>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="search-bar">
+            <i class="fas fa-search" style="color: var(--text-light);"></i>
+            <input type="text" placeholder="Search...">
+        </div>
+        
+        <div class="user-menu">
+            <div class="notification">
+                <i class="fas fa-bell"></i>
+                <span class="badge">3</span>
+            </div>
+            
+            <div class="user-profile">
+                <div class="user-avatar">JS</div>
+                <div class="user-name">John Smith</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <h1 class="page-title">Dashboard</h1>
+        
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Items Shared</div>
+                <div class="stat-value">42</div>
+                <div class="stat-footer">
+                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>12%</span>
+                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">People Helped</div>
+                <div class="stat-value">68</div>
+                <div class="stat-footer">
+                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>8%</span>
+                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Food Waste Reduced (kg)</div>
+                <div class="stat-value">156</div>
+                <div class="stat-footer">
+                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>15%</span>
+                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">CO₂ Emissions Saved (kg)</div>
+                <div class="stat-value">234</div>
+                <div class="stat-footer">
+                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>9%</span>
+                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- First Row -->
+        <div class="dashboard-row">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>Impact Over Time</h3>
+                    <div class="card-actions">
+                        <button class="card-action-btn" id="weeklyBtn">Weekly</button>
+                        <button class="card-action-btn" id="monthlyBtn">Monthly</button>
+                        <button class="card-action-btn" id="yearlyBtn">Yearly</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="impactChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>Food Category Breakdown</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Second Row -->
+        <div class="dashboard-row">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>Available Food Listings</h3>
+                </div>
+                <div class="table-container">
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Quantity</th>
+                                <th>Location</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Fresh Tomatoes</td>
+                                <td>Vegetables</td>
+                                <td>2 kg</td>
+                                <td>Downtown</td>
+                                <td>Feb 28, 2025</td>
+                                <td><span class="status-indicator status-available">Available</span></td>
+                            </tr>
+                            <tr>
+                                <td>Whole Wheat Bread</td>
+                                <td>Bakery</td>
+                                <td>1 loaf</td>
+                                <td>Westside</td>
+                                <td>Feb 27, 2025</td>
+                                <td><span class="status-indicator status-pending">Reserved</span></td>
+                            </tr>
+                            <tr>
+                                <td>Organic Apples</td>
+                                <td>Fruits</td>
+                                <td>1.5 kg</td>
+                                <td>North End</td>
+                                <td>Mar 1, 2025</td>
+                                <td><span class="status-indicator status-available">Available</span></td>
+                            </tr>
+                            <tr>
+                                <td>Milk (2%)</td>
+                                <td>Dairy</td>
+                                <td>1 gallon</td>
+                                <td>Downtown</td>
+                                <td>Feb 26, 2025</td>
+                                <td><span class="status-indicator status-expired">Expired</span></td>
+                            </tr>
+                            <tr>
+                                <td>Rice</td>
+                                <td>Grains</td>
+                                <td>3 kg</td>
+                                <td>Eastside</td>
+                                <td>Dec 2025</td>
+                                <td><span class="status-indicator status-available">Available</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>Calendar</h3>
+                    <div class="card-actions">
+                        <button class="card-action-btn"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="calendar-header">
+                    <div class="calendar-month">February 2025</div>
+                    <div class="calendar-nav">
+                        <button class="card-action-btn"><i class="fas fa-chevron-left"></i></button>
+                        <button class="card-action-btn"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <!-- Week days -->
+                    <div class="calendar-day weekday">Sun</div>
+                    <div class="calendar-day weekday">Mon</div>
+                    <div class="calendar-day weekday">Tue</div>
+                    <div class="calendar-day weekday">Wed</div>
+                    <div class="calendar-day weekday">Thu</div>
+                    <div class="calendar-day weekday">Fri</div>
+                    <div class="calendar-day weekday">Sat</div>
+                    
+                    <!-- Days of the month - just a partial view -->
+                    <div class="calendar-date">26</div>
+                    <div class="calendar-date">27</div>
+                    <div class="calendar-date">28</div>
+                    <div class="calendar-date">29</div>
+                    <div class="calendar-date">30</div>
+                    <div class="calendar-date">31</div>
+                    <div class="calendar-date">1</div>
+                    <div class="calendar-date">2</div>
+                    <div class="calendar-date has-event">3</div>
+                    <div class="calendar-date">4</div>
+                    <div class="calendar-date">5</div>
+                    <div class="calendar-date has-event">6</div>
+                    <div class="calendar-date">7</div>
+                    <div class="calendar-date">8</div>
+                    <div class="calendar-date">9</div>
+                    <div class="calendar-date">10</div>
+                    <div class="calendar-date has-event">11</div>
+                    <div class="calendar-date">12</div>
+                    <div class="calendar-date">13</div>
+                    <div class="calendar-date">14</div>
+                    <div class="calendar-date">15</div>
+                    <div class="calendar-date">16</div>
+                    <div class="calendar-date">17</div>
+                    <div class="calendar-date">18</div>
+                    <div class="calendar-date">19</div>
+                    <div class="calendar-date has-event">20</div>
+                    <div class="calendar-date">21</div>
+                    <div class="calendar-date has-event">22</div>
+                    <div class="calendar-date">23</div>
+                    <div class="calendar-date">24</div>
+                    <div class="calendar-date">25</div>
+                    <div class="calendar-date today">26</div>
+                    <div class="calendar-date">27</div>
+                    <div class="calendar-date">28</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Third Row -->
+        <div class="dashboard-row">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>Community Activity</h3>
+                </div>
+                <div class="activity-feed">
+                    <div class="activity-item">
+                        <div class="activity-icon icon-share">
+                            <i class="fas fa-share-alt"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p><strong>You</strong> shared 2kg of fresh vegetables</p>
+                            <div class="activity-time">Today at 10:34 AM</div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-icon icon-group">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p><strong>Maria Lopez</strong> joined your "Local Food Heroes" group</p>
+                            <div class="activity-time">Yesterday at 2:15 PM</div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-icon icon-comment">
+                            <i class="fas fa-comment"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p><strong>James Wilson</strong> commented on your tomato listing</p>
+                            <div class="activity-time">Yesterday at 9:45 AM</div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-icon icon-share">
+                            <i class="fas fa-share-alt"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p><strong>Alex Chen</strong> shared 1.5kg of organic apples</p>
+                            <div class="activity-time">Feb 24, 2025</div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="activity-icon icon-group">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p><strong>You</strong> joined "Zero Waste Kitchen" group</p>
+                            <div class="activity-time">Feb 23, 2025</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>Quick Actions</h3>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <a href="#" style="text-decoration: none;">
+                        <div style="background-color: var(--primary); color: white; padding: 1.25rem; border-radius: 6px; text-align: center;">
+                            <i class="fas fa-plus-circle" style="font-size: 2rem; margin-bottom: 0.75rem;"></i>
+                            <div style="font-weight: 600;">Add New Listing</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" style="text-decoration: none;">
+                        <div style="background-color: #2196F3; color: white; padding: 1.25rem; border-radius: 6px; text-align: center;">
+                            <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 0.75rem;"></i>
+                            <div style="font-weight: 600;">Find Food</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" style="text-decoration: none;">
+                        <div style="background-color: #FF9800; color: white; padding: 1.25rem; border-radius: 6px; text-align: center;">
+                            <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 0.75rem;"></i>
+                            <div style="font-weight: 600;">Join Group</div>
+                        </div>
+                    </a>
+                    
+                    <a href="#" style="text-decoration: none;">
+                        <div style="background-color: #9C27B0; color: white; padding: 1.25rem; border-radius: 6px; text-align: center;">
+                            <i class="fas fa-leaf" style="font-size: 2rem; margin-bottom: 0.75rem;"></i>
+                            <div style="font-weight: 600;">View Impact</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Check if the user is authenticated (placeholder)
+        function isAuthenticated() {
+            return true; // In a real app, this would check

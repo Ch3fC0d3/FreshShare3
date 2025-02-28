@@ -1,0 +1,14 @@
+.contact-info {
+    margin-bottom: 30px;
+}
+
+.contact-info i {
+    margin-right: 10px;
+    color: #4CAF50;
+}
+
+.contact-form {
+    background-color: #f9f9f9;
+    padding: 30px;
+    border-radius: 10px;
+}

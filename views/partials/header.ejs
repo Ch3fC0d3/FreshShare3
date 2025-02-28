@@ -1,0 +1,438 @@
+<header class="header">
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <i class="fas fa-seedling"></i>
+            <span>FreshShare</span>
+        </a>
+        
+        <!-- Mobile menu toggle button -->
+        <button class="mobile-menu-toggle" aria-label="Toggle menu" id="menuToggle">
+            <span class="hamburger-icon">
+                <span class="line"></span>
+                <span class="line"></span>
+                <span class="line"></span>
+            </span>
+        </button>
+        
+        <!-- Navigation links - will collapse on mobile -->
+        <div class="nav-container" id="navContainer">
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/marketplace" class="nav-link">Marketplace</a>
+                <a href="/forum" class="nav-link">Forum</a>
+                <a href="/groups" class="nav-link">Groups</a>
+                <a href="/profile" class="nav-link">Profile</a>
+            </div>
+            
+            <div class="auth-buttons">
+                <% if (!locals.user) { %>
+                    <div id="loggedOutButtons" class="cta-buttons">
+                        <a href="/login" class="btn btn-secondary">Login</a>
+                        <a href="/signup" class="btn btn-primary">Sign Up</a>
+                    </div>
+                <% } else { %>
+                    <div id="loggedInButtons" class="user-menu">
+                        <a href="/profile" class="btn btn-secondary">
+                            <i class="fas fa-user"></i> <span class="btn-text">Profile</span>
+                        </a>
+                        <button onclick="logout()" class="btn btn-primary">
+                            <i class="fas fa-sign-out-alt"></i> <span class="btn-text">Logout</span>
+                        </button>
+                        
+                        <!-- User dropdown for mobile -->
+                        <div class="user-dropdown-mobile">
+                            <a href="/profile" class="dropdown-item">
+                                <i class="fas fa-user"></i> My Profile
+                            </a>
+                            <a href="/settings" class="dropdown-item">
+                                <i class="fas fa-cog"></i> Settings
+                            </a>
+                            <a href="#" onclick="logout(); return false;" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<style>
+/* Base styles for the header */
+.header {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary, #3d85c6);
+    text-decoration: none;
+}
+
+.logo i {
+    margin-right: 0.5rem;
+    font-size: 1.8rem;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    flex-grow: 1;
+    align-items: center;
+    margin-left: 2rem;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.nav-link {
+    color: #555;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+    position: relative;
+}
+
+.nav-link:hover {
+    color: var(--primary, #3d85c6);
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary, #3d85c6);
+    transition: width 0.2s;
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+.nav-link.active {
+    color: var(--primary, #3d85c6);
+}
+
+.nav-link.active::after {
+    width: 100%;
+}
+
+.auth-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.cta-buttons, .user-menu {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn i {
+    margin-right: 0.5rem;
+}
+
+.btn-primary {
+    background-color: var(--primary, #3d85c6);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark, #2a75b5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary {
+    background-color: #f0f0f0;
+    color: #555;
+}
+
+.btn-secondary:hover {
+    background-color: #e0e0e0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile menu toggle button - hidden on desktop */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 1001;
+}
+
+.hamburger-icon {
+    display: block;
+    width: 24px;
+    height: 18px;
+    position: relative;
+}
+
+.line {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background-color: #555;
+    position: absolute;
+    left: 0;
+    transition: all 0.3s;
+}
+
+.line:nth-child(1) {
+    top: 0;
+}
+
+.line:nth-child(2) {
+    top: 8px;
+}
+
+.line:nth-child(3) {
+    top: 16px;
+}
+
+/* Hamburger animation when active */
+.mobile-menu-toggle.active .line:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.mobile-menu-toggle.active .line:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-toggle.active .line:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* User dropdown on mobile - hidden by default */
+.user-dropdown-mobile {
+    display: none;
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+    .nav-container {
+        position: fixed;
+        top: 0;
+        right: -300px;
+        width: 280px;
+        height: 100vh;
+        background-color: white;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        padding: 5rem 1.5rem 1.5rem;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s ease;
+        margin-left: 0;
+        z-index: 1000;
+        overflow-y: auto;
+    }
+    
+    .nav-container.active {
+        right: 0;
+    }
+    
+    .nav-links {
+        flex-direction: column;
+        width: 100%;
+        gap: 1rem;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+    
+    .nav-link {
+        font-size: 1.1rem;
+        padding: 0.5rem 0;
+        width: 100%;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .nav-link::after {
+        display: none;
+    }
+    
+    .auth-buttons {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .cta-buttons, .user-menu {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        justify-content: flex-start;
+    }
+    
+    /* Show mobile menu toggle */
+    .mobile-menu-toggle {
+        display: block;
+    }
+    
+    /* For very small screens, hide text in buttons */
+    @media (max-width: 350px) {
+        .btn-text {
+            display: none;
+        }
+        
+        .btn i {
+            margin-right: 0;
+        }
+    }
+    
+    /* Show mobile dropdown */
+    .user-dropdown-mobile {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .dropdown-item {
+        padding: 0.75rem 0;
+        color: #555;
+        text-decoration: none;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+    }
+    
+    .dropdown-item i {
+        margin-right: 0.75rem;
+        width: 20px;
+        text-align: center;
+    }
+    
+    .dropdown-item:hover {
+        color: var(--primary, #3d85c6);
+    }
+    
+    /* Hide desktop buttons on mobile */
+    .user-menu .btn {
+        display: none;
+    }
+}
+
+/* Add overlay when mobile menu is open */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+}
+
+.menu-overlay.active {
+    display: block;
+}
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const navContainer = document.getElementById('navContainer');
+        
+        // Create overlay element
+        const overlay = document.createElement('div');
+        overlay.className = 'menu-overlay';
+        document.body.appendChild(overlay);
+        
+        // Toggle menu
+        menuToggle.addEventListener('click', function() {
+            menuToggle.classList.toggle('active');
+            navContainer.classList.toggle('active');
+            overlay.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            document.body.style.overflow = navContainer.classList.contains('active') ? 'hidden' : '';
+        });
+        
+        // Close menu when clicking overlay
+        overlay.addEventListener('click', function() {
+            menuToggle.classList.remove('active');
+            navContainer.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+        
+        // Close menu when clicking a nav link
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                menuToggle.classList.remove('active');
+                navContainer.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+        
+        // Set active nav link based on current page
+        const currentPath = window.location.pathname;
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+                link.classList.add('active');
+            }
+        });
+    });
+    
+    function logout() {
+        // Remove tokens
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Clear cookie with proper attributes
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict";
+        
+        // Redirect to home page
+        window.location.href = '/';
+    }
+</script>

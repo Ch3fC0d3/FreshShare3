@@ -1,0 +1,567 @@
+<%- contentFor('style') %>
+<style>
+    :root {
+        --primary: #4CAF50;
+        --primary-dark: #2E7D32;
+        --primary-darker: #1B5E20;
+        --primary-light: #81C784;
+        --primary-lighter: #C8E6C9;
+        --accent: #FFC107;
+        --text-dark: #263238;
+        --text-medium: #546E7A;
+        --text-light: #B0BEC5;
+        --white: #FFFFFF;
+        --off-white: #f8f9fa;
+        --light-green-bg: #f5f9f5;
+        --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+        --border-radius-sm: 8px;
+        --border-radius-md: 12px;
+        --border-radius-lg: 20px;
+        --transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    
+    body {
+        font-family: 'Poppins', 'Inter', sans-serif;
+        background-color: var(--off-white);
+        min-height: 100vh;
+        color: var(--text-medium);
+        line-height: 1.6;
+    }
+    
+    .contact-section {
+        padding: 100px 0 80px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .contact-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 50%;
+        height: 100%;
+        background-color: var(--light-green-bg);
+        clip-path: polygon(20% 0, 100% 0, 100% 100%, 0% 100%);
+        z-index: -1;
+    }
+    
+    .contact-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    
+    .contact-header {
+        text-align: center;
+        margin-bottom: 60px;
+        position: relative;
+    }
+    
+    .contact-header::after {
+        content: '';
+        position: absolute;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        border-radius: 2px;
+    }
+    
+    .contact-header h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        margin-bottom: 15px;
+    }
+    
+    .contact-header p {
+        font-size: 1.3rem;
+        color: var(--text-medium);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    /* Form Card */
+    .form-card {
+        background-color: var(--white);
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 40px;
+        transition: var(--transition);
+        margin-bottom: 40px;
+    }
+    
+    .form-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-5px);
+    }
+    
+    .form-section-header {
+        margin-bottom: 30px;
+        position: relative;
+        padding-bottom: 15px;
+    }
+    
+    .form-section-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        border-radius: 2px;
+    }
+    
+    .form-section-header h2 {
+        font-size: 1.8rem;
+        color: var(--text-dark);
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .form-section-header p {
+        color: var(--text-medium);
+        font-size: 1.1rem;
+    }
+    
+    /* Form Controls */
+    .form-floating > .form-control {
+        border: 2px solid #a0c5e9;
+        border-radius: var(--border-radius-sm);
+        padding: 1.2rem 1rem;
+        height: calc(3.5rem + 2px);
+        font-size: 1rem;
+        font-weight: 400;
+        color: var(--text-dark);
+        transition: var(--transition);
+    }
+    
+    .form-floating > textarea.form-control {
+        height: 150px;
+        padding-top: 1.625rem;
+    }
+    
+    .form-floating > .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25);
+    }
+    
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: var(--primary-dark);
+        font-weight: 500;
+        transform: scale(0.85) translateY(-1rem) translateX(0.15rem);
+    }
+    
+    .form-floating > label {
+        padding: 1.2rem 1rem;
+        color: var(--text-medium);
+        font-weight: 400;
+    }
+    
+    .contact-button {
+        display: inline-block;
+        padding: 15px 35px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: var(--white);
+        border: none;
+        border-radius: var(--border-radius-lg);
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+    }
+    
+    .contact-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.1);
+        transition: var(--transition);
+        z-index: -1;
+    }
+    
+    .contact-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(76, 175, 80, 0.4);
+    }
+    
+    .contact-button:hover::before {
+        width: 100%;
+    }
+    
+    /* Info Cards */
+    .info-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-top: 50px;
+    }
+    
+    .info-card {
+        background-color: var(--white);
+        border-radius: var(--border-radius-md);
+        padding: 30px;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+        border-top: 4px solid var(--primary);
+    }
+    
+    .info-card:hover {
+        transform: translateY(-10px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .info-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        color: var(--white);
+        font-size: 1.8rem;
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    }
+    
+    .info-title {
+        font-size: 1.3rem;
+        color: var(--text-dark);
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .info-text {
+        color: var(--text-medium);
+        line-height: 1.7;
+        margin-bottom: 5px;
+    }
+    
+    /* Social Links */
+    .social-section {
+        margin-top: 60px;
+        text-align: center;
+    }
+    
+    .social-title {
+        font-size: 1.5rem;
+        color: var(--text-dark);
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .social-links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .social-links a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        background-color: var(--white);
+        color: var(--primary-dark);
+        border-radius: 50%;
+        font-size: 1.3rem;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+        border: 2px solid transparent;
+    }
+    
+    .social-links a:hover {
+        transform: translateY(-5px) rotate(10deg);
+        color: var(--white);
+        background-color: var(--primary);
+        box-shadow: 0 10px 15px rgba(76, 175, 80, 0.2);
+    }
+    
+    /* Confirmation Message */
+    .confirmation-message {
+        display: none;
+        background: linear-gradient(135deg, var(--primary-lighter) 0%, var(--light-green-bg) 100%);
+        padding: 40px;
+        border-radius: var(--border-radius-lg);
+        text-align: center;
+        box-shadow: var(--shadow-md);
+        margin-top: 30px;
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .confirmation-icon {
+        width: 80px;
+        height: 80px;
+        background-color: var(--primary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        color: var(--white);
+        font-size: 2.5rem;
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    }
+    
+    .confirmation-title {
+        font-size: 1.8rem;
+        color: var(--primary-dark);
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .confirmation-text {
+        font-size: 1.1rem;
+        color: var(--text-medium);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    
+    /* Responsive */
+    @media (max-width: 992px) {
+        .contact-section {
+            padding: 80px 0 60px;
+        }
+        
+        .contact-header h1 {
+            font-size: 2.5rem;
+        }
+        
+        .form-card {
+            padding: 30px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .contact-section::before {
+            width: 100%;
+            clip-path: polygon(0 0, 100% 0, 100% 50%, 0 70%);
+            height: 300px;
+        }
+        
+        .contact-header h1 {
+            font-size: 2.2rem;
+        }
+        
+        .contact-header p {
+            font-size: 1.1rem;
+        }
+        
+        .info-cards {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .form-card {
+            padding: 25px 20px;
+        }
+        
+        .contact-button {
+            width: 100%;
+            padding: 12px 20px;
+        }
+    }
+</style>
+
+<%- contentFor('body') %>
+<section class="contact-section">
+    <div class="contact-container">
+        <div class="contact-header">
+            <h1>Get In Touch</h1>
+            <p>Have questions about FreshShare? We're here to help and would love to hear from you!</p>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Contact Form -->
+                <div class="form-card">
+                    <div class="form-section-header">
+                        <h2>Send Us a Message</h2>
+                        <p>Fill out the form below and we'll get back to you as soon as possible.</p>
+                    </div>
+                    
+                    <form id="contactForm">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3">
+                                    <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required>
+                                    <label for="name">Your Name</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3">
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required>
+                                    <label for="email">Your Email</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating mb-4">
+                            <input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required>
+                            <label for="subject">Subject</label>
+                        </div>
+                        
+                        <div class="form-floating mb-4">
+                            <textarea class="form-control" id="message" name="message" placeholder="Your Message" style="height: 180px" required></textarea>
+                            <label for="message">Your Message</label>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="contact-button">
+                                <i class="fas fa-paper-plane me-2"></i> Send Message
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Confirmation Message -->
+                <div id="confirmationMessage" class="confirmation-message">
+                    <div class="confirmation-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 class="confirmation-title">Thank You!</h3>
+                    <p class="confirmation-text">Your message has been sent successfully. We appreciate you reaching out and will get back to you as soon as possible.</p>
+                </div>
+                
+                <!-- Contact Information Cards -->
+                <div class="info-cards">
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <h3 class="info-title">Our Location</h3>
+                        <p class="info-text">123 Fresh Lane</p>
+                        <p class="info-text">Austin, TX 78701</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <h3 class="info-title">Email Us</h3>
+                        <p class="info-text">info@freshshare.com</p>
+                        <p class="info-text">support@freshshare.com</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-phone-alt"></i>
+                        </div>
+                        <h3 class="info-title">Call Us</h3>
+                        <p class="info-text">(512) 555-1234</p>
+                        <p class="info-text">Mon-Fri, 9am-5pm CST</p>
+                    </div>
+                </div>
+                
+                <!-- Social Media Section -->
+                <div class="social-section">
+                    <h3 class="social-title">Connect With Us</h3>
+                    <p>Follow us on social media to stay updated with the latest news and events.</p>
+                    
+                    <div class="social-links">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<%- contentFor('script') %>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form submission handling
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Add loading state to button
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
+            submitButton.disabled = true;
+            
+            // Simulate form submission delay
+            setTimeout(function() {
+                // Hide form and show confirmation
+                document.querySelector('.form-card').style.display = 'none';
+                document.getElementById('confirmationMessage').style.display = 'block';
+                
+                // Scroll to confirmation message
+                document.getElementById('confirmationMessage').scrollIntoView({
+                    behavior: 'smooth'
+                });
+                
+                // In a real application, you would submit the form data to a server here
+                // const formData = new FormData(document.getElementById('contactForm'));
+                // fetch('/api/contact', {
+                //     method: 'POST',
+                //     body: formData
+                // })
+                // .then(response => response.json())
+                // .then(data => {
+                //     console.log('Success:', data);
+                // })
+                // .catch(error => {
+                //     console.error('Error:', error);
+                // });
+            }, 1500);
+        });
+        
+        // Animate elements when they come into view
+        const animateOnScroll = () => {
+            const elements = document.querySelectorAll('.info-card, .form-card, .social-section');
+            
+            elements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const isVisible = rect.top <= window.innerHeight * 0.8;
+                
+                if (isVisible) {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }
+            });
+        };
+        
+        // Set initial opacity for animation
+        const elementsToAnimate = document.querySelectorAll('.info-card, .form-card, .social-section');
+        elementsToAnimate.forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        });
+        
+        // Initial check
+        setTimeout(animateOnScroll, 300);
+        
+        // Check on scroll
+        window.addEventListener('scroll', animateOnScroll);
+    });
+</script>

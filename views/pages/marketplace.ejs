@@ -1,0 +1,1859 @@
+<!-- Complete HTML for FreshShare Marketplace -->
+
+<div class="main-content">
+  <!-- Mobile bottom navigation -->
+  <div class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/home" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </a>
+      <a href="/marketplace" class="nav-item active">
+        <i class="fas fa-store"></i>
+        <span>Market</span>
+      </a>
+      <a href="/forum" class="nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Forum</span>
+      </a>
+      <a href="/profile" class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Floating action button for mobile -->
+  <a href="/create-listing" class="fab-button">
+    <i class="fas fa-plus"></i>
+  </a>
+
+  <!-- Pull to refresh indicator (for mobile) -->
+  <div class="pull-to-refresh" id="pullToRefresh">
+    <div class="spinner" id="refreshSpinner">
+      <i class="fas fa-sync pull-icon"></i>
+    </div>
+    <span id="refreshText">Pull to refresh</span>
+  </div>
+
+  <!-- Main container using Bootstrap grid system -->
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar filters (desktop) -->
+      <div class="col-lg-2 filters-sidebar">
+        <div class="filters-container">
+          <h4>Filters</h4>
+          
+          <!-- Applied filters -->
+          <div class="applied-filters">
+            <div class="filter-tag">
+              Organic <button>&times;</button>
+            </div>
+            <div class="filter-tag">
+              < 5 miles <button>&times;</button>
+            </div>
+          </div>
+          
+          <!-- Categories -->
+          <div class="filter-group">
+            <h5 class="filter-title">Categories</h5>
+            <ul class="category-list">
+              <li><label><input type="checkbox"> Vegetables</label></li>
+              <li><label><input type="checkbox"> Fruits</label></li>
+              <li><label><input type="checkbox"> Herbs</label></li>
+              <li><label><input type="checkbox"> Seeds</label></li>
+              <li><label><input type="checkbox"> Tools</label></li>
+            </ul>
+          </div>
+          
+          <!-- Price Range -->
+          <div class="filter-group">
+            <h5 class="filter-title">Price Range</h5>
+            <div class="price-inputs">
+              <input type="number" class="form-control" placeholder="Min">
+              <input type="number" class="form-control" placeholder="Max">
+            </div>
+          </div>
+          
+          <!-- Distance -->
+          <div class="filter-group">
+            <h5 class="filter-title">Distance</h5>
+            <select class="form-control">
+              <option>Any distance</option>
+              <option>Within 5 miles</option>
+              <option>Within 10 miles</option>
+              <option>Within 25 miles</option>
+              <option>Within 50 miles</option>
+            </select>
+          </div>
+          
+          <!-- Growing Method -->
+          <div class="filter-group">
+            <h5 class="filter-title">Growing Method</h5>
+            <div>
+              <label><input type="checkbox"> Organic</label>
+            </div>
+            <div>
+              <label><input type="checkbox"> Pesticide-free</label>
+            </div>
+          </div>
+          
+          <button class="btn btn-primary w-100">Apply Filters</button>
+        </div>
+      </div>
+      
+      <!-- Marketplace listings - in the same row as the sidebar -->
+      <div class="col-lg-7 products-column">
+        <div class="marketplace-container">
+          <h2>Marketplace</h2>
+          
+          <!-- Sort and view options -->
+          <div class="marketplace-options">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <label for="sortSelect" class="me-2">Sort by:</label>
+                <select class="form-select d-inline-block w-auto" id="sortSelect">
+                  <option>Latest listings</option>
+                  <option>Price: Low to High</option>
+                  <option>Price: High to Low</option>
+                  <option>Distance: Nearest</option>
+                </select>
+                <button class="btn btn-outline-secondary ms-2" id="savedItemsBtn">
+                  <i class="far fa-heart"></i> Saved Items <span class="badge bg-primary" id="savedCount">0</span>
+                </button>
+              </div>
+              <div>
+                <a href="/create-listing" class="btn btn-success me-2 d-none d-md-inline-block">
+                  <i class="fas fa-plus"></i> Create Listing
+                </a>
+                <div class="view-options">
+                  <button class="view-option active"><i class="fas fa-th"></i></button>
+                  <button class="view-option"><i class="fas fa-list"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search box -->
+          <div class="search-container mb-4">
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-search"></i></span>
+              <input type="text" class="form-control" id="searchInput" placeholder="Search for produce, tools, or sellers...">
+              <button class="btn btn-primary" type="button">Search</button>
+            </div>
+            <div class="search-suggestions" id="searchSuggestions">
+              <!-- Suggestions will appear here -->
+            </div>
+          </div>
+
+          <!-- Mobile filters toggle - only visible on mobile -->
+          <div class="mobile-filters-toggle d-lg-none mb-3">
+            <span>Filters</span>
+            <button class="btn btn-outline-primary btn-sm" id="showFiltersBtn">
+              <i class="fas fa-filter"></i> Show Filters
+            </button>
+          </div>
+
+          <!-- Product grid -->
+          <div class="marketplace-grid">
+            <!-- Product Card 1 - Garden Spade -->
+            <div class="product-card">
+              <div class="product-image-container">
+                <img src="/assets/images/garden-spade.jpg" alt="Garden Spade" class="product-image">
+              </div>
+              <div class="product-info">
+                <h3 class="product-title">Garden Spade</h3>
+                <div class="product-meta">
+                  <span class="product-price">$12.50/each</span>
+                  <span class="product-location"><i class="fas fa-map-marker-alt"></i> 2.2 mi</span>
+                </div>
+                <p class="product-description">Lightly used garden spade, perfect for small garden projects. Comfortable grip and durable construct...</p>
+              </div>
+              <div class="product-footer">
+                <div class="product-seller">
+                  <img src="/assets/images/avatar-urban-farmer.jpg" alt="Urban Farmer" class="seller-avatar">
+                  <span>Urban Farmer</span>
+                </div>
+                <div class="product-actions">
+                  <a href="#"><i class="far fa-heart"></i></a>
+                  <a href="#"><i class="far fa-comment"></i></a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Card 2 - Fresh Strawberries -->
+            <div class="product-card">
+              <div class="product-image-container">
+                <img src="/assets/images/strawberries.jpg" alt="Fresh Strawberries" class="product-image">
+              </div>
+              <div class="product-info">
+                <h3 class="product-title">Fresh Strawberries</h3>
+                <div class="product-meta">
+                  <span class="product-price">$6.99/lb</span>
+                  <span class="product-location"><i class="fas fa-map-marker-alt"></i> 4.0 mi</span>
+                </div>
+                <p class="product-description">Sweet, juicy strawberries grown in my home garden. Perfect for desserts, smoothies, or eating fresh!</p>
+              </div>
+              <div class="product-footer">
+                <div class="product-seller">
+                  <img src="/assets/images/avatar-green-thumb.jpg" alt="Green Thumb" class="seller-avatar">
+                  <span>Green Thumb</span>
+                </div>
+                <div class="product-actions">
+                  <a href="#"><i class="far fa-heart"></i></a>
+                  <a href="#"><i class="far fa-comment"></i></a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Card 3 - Organic Tomatoes -->
+            <div class="product-card">
+              <div class="product-image-container">
+                <img src="/assets/images/tomatoes.jpg" alt="Organic Tomatoes" class="product-image">
+              </div>
+              <div class="product-info">
+                <h3 class="product-title">Organic Tomatoes</h3>
+                <div class="product-meta">
+                  <span class="product-price">$4.99/lb</span>
+                  <span class="product-location"><i class="fas fa-map-marker-alt"></i> 1.7 mi</span>
+                </div>
+                <p class="product-description">Fresh, homegrown organic tomatoes from my backyard garden. These are pesticide-free and picked at peak...</p>
+              </div>
+              <div class="product-footer">
+                <div class="product-seller">
+                  <img src="/assets/images/avatar-jane.jpg" alt="Jane Gardener" class="seller-avatar">
+                  <span>Jane Gardener</span>
+                </div>
+                <div class="product-actions">
+                  <a href="#"><i class="far fa-heart"></i></a>
+                  <a href="#"><i class="far fa-comment"></i></a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional product cards would go here -->
+
+          </div>
+        </div>
+      </div>
+      
+      <!-- Cart sidebar column -->
+      <div class="col-lg-3 cart-sidebar">
+        <div class="cart-container">
+          <h4>Shopping Cart <span class="badge bg-primary cart-count">0</span></h4>
+          
+          <div class="cart-empty text-center py-4">
+            <i class="fas fa-shopping-cart fa-3x mb-3 text-muted"></i>
+            <p>Your cart is empty</p>
+            <p class="text-muted">Items you add to your cart will appear here</p>
+          </div>
+          
+          <div class="cart-items">
+            <!-- Cart items will be dynamically added here -->
+          </div>
+          
+          <div class="cart-summary">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal:</span>
+              <span class="cart-subtotal">$0.00</span>
+            </div>
+            <div class="d-flex justify-content-between mb-3">
+              <span>Estimated Tax:</span>
+              <span class="cart-tax">$0.00</span>
+            </div>
+            <div class="d-flex justify-content-between mb-3 fw-bold">
+              <span>Total:</span>
+              <span class="cart-total">$0.00</span>
+            </div>
+            
+            <button class="btn btn-primary w-100 mb-2" id="checkoutBtn" disabled>Checkout</button>
+            <button class="btn btn-outline-secondary w-100" id="clearCartBtn" disabled>Clear Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile filters drawer - slides up from bottom on mobile -->
+  <div class="mobile-filters-drawer" id="mobileFiltersDrawer">
+    <div class="drawer-handle"></div>
+    <h4>Filters</h4>
+    
+    <!-- Applied filters -->
+    <div class="applied-filters">
+      <div class="filter-tag">
+        Organic <button>&times;</button>
+      </div>
+      <div class="filter-tag">
+        < 5 miles <button>&times;</button>
+      </div>
+    </div>
+    
+    <!-- Categories -->
+    <div class="filter-group">
+      <h5 class="filter-title">Categories</h5>
+      <ul class="category-list">
+        <li><label><input type="checkbox"> Vegetables</label></li>
+        <li><label><input type="checkbox"> Fruits</label></li>
+        <li><label><input type="checkbox"> Herbs</label></li>
+        <li><label><input type="checkbox"> Seeds</label></li>
+        <li><label><input type="checkbox"> Tools</label></li>
+      </ul>
+    </div>
+    
+    <!-- Price Range -->
+    <div class="filter-group">
+      <h5 class="filter-title">Price Range</h5>
+      <div class="price-inputs">
+        <input type="number" class="form-control" placeholder="Min">
+        <input type="number" class="form-control" placeholder="Max">
+      </div>
+    </div>
+    
+    <!-- Distance -->
+    <div class="filter-group">
+      <h5 class="filter-title">Distance</h5>
+      <select class="form-control">
+        <option>Any distance</option>
+        <option>Within 5 miles</option>
+        <option>Within 10 miles</option>
+        <option>Within 25 miles</option>
+        <option>Within 50 miles</option>
+      </select>
+    </div>
+    
+    <!-- Growing Method -->
+    <div class="filter-group">
+      <h5 class="filter-title">Growing Method</h5>
+      <div>
+        <label><input type="checkbox"> Organic</label>
+      </div>
+      <div>
+        <label><input type="checkbox"> Pesticide-free</label>
+      </div>
+    </div>
+    
+    <div class="d-flex justify-content-between mt-4">
+      <button class="btn btn-outline-secondary" id="clearFiltersBtn">Clear All</button>
+      <button class="btn btn-primary" id="applyFiltersBtn">Apply Filters</button>
+    </div>
+  </div>
+  
+  <!-- Overlay for mobile drawers -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  
+  <!-- Cart toggle button for mobile -->
+  <button class="cart-toggle" id="cartToggleBtn">
+    <i class="fas fa-shopping-cart"></i>
+    <span class="badge bg-danger cart-mobile-count">0</span>
+  </button>
+</div>
+
+<style>
+/* ===== Base Styles ===== */
+:root {
+  --primary: #3d85c6;
+  --primary-dark: #2a75b5;
+  --secondary: #4caf50;
+  --secondary-dark: #388e3c;
+  --text-color: #333;
+  --light-text: #666;
+  --border-color: #e0e0e0;
+  --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --container-max-width: 1200px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-color);
+  line-height: 1.5;
+  background-color: #f5f7f9;
+}
+
+/* ===== Layout ===== */
+.container-fluid {
+  padding-left: 0;
+  padding-right: 0;
+  max-width: 100%;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.col-lg-2, .col-lg-7, .col-lg-3 {
+  position: relative;
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+/* Desktop grid */
+@media (min-width: 992px) {
+  .col-lg-2 {
+    flex: 0 0 16.66667%;
+    max-width: 16.66667%;
+  }
+  
+  .col-lg-7 {
+    flex: 0 0 58.33333%;
+    max-width: 58.33333%;
+  }
+  
+  .col-lg-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+}
+
+/* Adjust the main content column to use full width */
+.col-lg-7 {
+  padding-left: 5px;
+  padding-right: 0;
+}
+
+/* Adjust the sidebar to have less right margin */
+.col-lg-2 {
+  padding-right: 5px;
+}
+
+/* ===== Mobile Navigation ===== */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.mobile-nav-inner {
+  display: flex;
+  justify-content: space-around;
+  padding: 0.5rem 0;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--light-text);
+  text-decoration: none;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.nav-item i {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.nav-item.active {
+  color: var(--primary);
+}
+
+/* Floating action button for mobile */
+.fab-button {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  transition: all 0.3s;
+}
+
+.fab-button:hover {
+  transform: scale(1.05);
+  background: var(--secondary-dark);
+}
+
+.fab-button i {
+  font-size: 1.5rem;
+}
+
+/* ===== Filter Sidebar ===== */
+.filters-container {
+  position: sticky;
+  top: 80px;
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.filter-group {
+  margin-bottom: 1.5rem;
+}
+
+.filter-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-color);
+}
+
+.price-inputs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.price-inputs input {
+  width: 100%;
+}
+
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-list li {
+  margin-bottom: 0.5rem;
+}
+
+.applied-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-tag {
+  background: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.filter-tag button {
+  background: none;
+  border: none;
+  color: var(--light-text);
+  margin-left: 0.25rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+/* ===== Marketplace Container ===== */
+.marketplace-container {
+  padding: 0.5rem 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Sort and view options */
+.marketplace-options {
+  margin-bottom: 1.5rem;
+}
+
+.form-select {
+  padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+}
+
+.view-options {
+  display: flex;
+}
+
+.view-option {
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.view-option:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.view-option:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.view-option.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Search box */
+.search-container {
+  position: relative;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.input-group {
+  display: flex;
+}
+
+.input-group-text {
+  display: flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  background-color: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem 0 0 0.25rem;
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0;
+}
+
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  border-radius: 0.25rem;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.btn-outline-secondary {
+  color: var(--light-text);
+  border-color: var(--border-color);
+}
+
+.btn-outline-secondary:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-success {
+  color: #fff;
+  background-color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+.btn-success:hover {
+  background-color: var(--secondary-dark);
+  border-color: var(--secondary-dark);
+}
+
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 0 0 8px 8px;
+  box-shadow: var(--card-shadow);
+  z-index: 50;
+  max-height: 300px;
+  overflow-y: auto;
+  display: none;
+}
+
+.search-suggestions.active {
+  display: block;
+}
+
+/* Product Grid */
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0;
+}
+
+/* Product Card */
+.product-card {
+  margin-bottom: 0;
+  border-radius: 6px;
+  background: white;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+}
+
+.product-image-container {
+  height: 160px;
+  overflow: hidden;
+  position: relative;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05);
+}
+
+.product-info {
+  padding: 1rem;
+  flex-grow: 1;
+}
+
+.product-title {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--light-text);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.product-price {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.product-location {
+  display: flex;
+  align-items: center;
+}
+
+.product-location i {
+  margin-right: 0.25rem;
+}
+
+.product-description {
+  font-size: 0.85rem;
+  color: var(--light-text);
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.product-footer {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product-seller {
+  display: flex;
+  align-items: center;
+}
+
+.seller-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  object-fit: cover;
+}
+
+.product-actions a {
+  color: var(--light-text);
+  margin-left: 0.75rem;
+  transition: color 0.2s;
+}
+
+.product-actions a:hover {
+  color: var(--primary);
+}
+
+/* List view styles */
+.marketplace-grid.list-view {
+  display: block;
+}
+
+.marketplace-grid.list-view .product-card {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 1rem;
+  height: auto;
+}
+
+.marketplace-grid.list-view .product-image-container {
+  width: 200px;
+  height: 150px;
+  flex-shrink: 0;
+}
+
+.marketplace-grid.list-view .product-info {
+  flex-grow: 1;
+  padding: 1rem;
+}
+
+.marketplace-grid.list-view .product-footer {
+  border-top: none;
+  border-left: 1px solid var(--border-color);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Mobile filter elements */
+.mobile-filters-toggle {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 1rem;
+}
+
+.mobile-filters-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 200;
+  padding: 1rem;
+  transform: translateY(100%);
+  transition: transform 0.3s;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: none;
+}
+
+.mobile-filters-drawer.active {
+  transform: translateY(0);
+}
+
+.drawer-handle {
+  width: 40px;
+  height: 5px;
+  background: #ddd;
+  border-radius: 3px;
+  margin: 0 auto 1rem;
+}
+
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  display: none;
+}
+
+.drawer-overlay.active {
+  display: block;
+}
+
+/* Pull to refresh (mobile) */
+.pull-to-refresh {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 70px;
+  color: var(--light-text);
+}
+
+.pull-to-refresh .spinner {
+  margin-right: 10px;
+}
+
+.pull-icon {
+  transition: transform 0.2s;
+}
+
+/* Utility classes */
+.d-flex {
+  display: flex;
+}
+
+.justify-content-between {
+  justify-content: space-between;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.w-auto {
+  width: auto;
+}
+
+.mb-3 {
+  margin-bottom: 1rem;
+}
+
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+
+.me-2 {
+  margin-right: 0.5rem;
+}
+
+.ms-2 {
+  margin-left: 0.5rem;
+}
+
+.mt-4 {
+  margin-top: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.4em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+}
+
+.bg-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* Cart sidebar styles */
+.cart-sidebar {
+  position: relative;
+}
+
+.cart-container {
+  position: sticky;
+  top: 80px;
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.cart-empty {
+  color: var(--light-text);
+}
+
+.cart-items {
+  margin-bottom: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cart-summary {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.cart-count {
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
+/* Hide cart on mobile, show on larger screens */
+@media (max-width: 991px) {
+  .cart-sidebar {
+    display: none;
+  }
+  
+  .products-column {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  
+  .mobile-filters-toggle {
+    display: flex;
+  }
+  
+  .mobile-filters-drawer {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 70px;
+  }
+  
+  .mobile-nav {
+    display: block;
+  }
+  
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  
+  .product-image-container {
+    height: 150px;
+  }
+  
+  .marketplace-grid.list-view .product-card {
+    flex-direction: column;
+  }
+  
+  .marketplace-grid.list-view .product-image-container {
+    width: 100%;
+    height: 180px;
+  }
+  
+  .marketplace-grid.list-view .product-footer {
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .d-none {
+    display: none !important;
+  }
+  
+  .d-md-inline-block {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .d-md-inline-block {
+    display: inline-block !important;
+  }
+}
+
+@media (min-width: 992px) {
+  .d-lg-none {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1400px) {
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  }
+}
+
+/* Ensure the container takes full width */
+.col-lg-7 {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Remove extra padding from row */
+.row {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+/* Make search bar take full width */
+.search-container {
+  width: 100%;
+}
+
+/* CSS to make filter and cart cards equal width */
+
+/* Set a fixed width for both sidebars */
+.filters-container,
+.cart-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Make the sidebar cards have the same styling */
+.filters-container,
+.cart-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* Make headings consistent */
+.filters-container h4,
+.cart-container h4 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+/* Make the apply filters button match checkout button style */
+.filters-container .btn-primary,
+.cart-container .btn-primary {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+/* Standardize inputs */
+.filters-container input,
+.filters-container select,
+.cart-container input {
+  font-size: 0.9rem;
+}
+
+/* For mobile screens */
+@media (max-width: 991px) {
+  /* Use a drawer approach for both filters and cart on mobile */
+  .mobile-filters-drawer,
+  .cart-drawer {
+    width: 100%;
+    max-width: 350px;
+  }
+}
+
+/* Equal width columns on wider screens */
+@media (min-width: 992px) {
+  .col-lg-2,
+  .col-lg-3 {
+    flex: 0 0 250px;
+    max-width: 250px;
+  }
+  
+  .col-lg-7 {
+    flex: 0 0 calc(100% - 500px);
+    max-width: calc(100% - 500px);
+  }
+}
+
+/* Adjust the marketplace grid to fit properly */
+.marketplace-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+@media (min-width: 1200px) {
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+@media (min-width: 1400px) {
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+/* Mobile cart drawer */
+.cart-drawer {
+  position: fixed;
+  bottom: 0;
+  right: -100%;
+  height: 80vh;
+  background: white;
+  z-index: 1001;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.cart-drawer.open {
+  right: 0;
+}
+
+/* Cart toggle button for mobile */
+.cart-toggle {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+@media (max-width: 991px) {
+  .cart-toggle {
+    display: flex;
+  }
+}
+</style>
+
+<script>
+// Global variables
+let currentPage = 1;
+let isLoading = false;
+let hasMoreItems = true;
+let currentFilters = {};
+let savedItems = JSON.parse(localStorage.getItem('savedItems') || '[]');
+let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+
+// Combine existing products with new ones
+const allProducts = [
+  {
+    _id: "1",
+    title: "Garden Spade",
+    price: 12.50,
+    priceUnit: "each",
+    description: "Lightly used garden spade, perfect for small garden projects. Comfortable grip and durable construct...",
+    seller: { username: "Urban Farmer", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 0.5
+  },
+  {
+    _id: "2",
+    title: "Fresh Strawberries",
+    price: 6.99,
+    priceUnit: "lb",
+    description: "Sweet, juicy strawberries grown in my home garden. Perfect for desserts, smoothies, or eating fresh!",
+    seller: { username: "Green Thumb", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 3.8
+  },
+  {
+    _id: "3",
+    title: "Organic Tomatoes",
+    price: 4.99,
+    priceUnit: "lb",
+    description: "Fresh, homegrown organic tomatoes from my backyard garden. These are pesticide-free and picked at peak ripeness.",
+    seller: { username: "Jane Gardener", profileImage: null },
+    location: { coordinates: [0, 0] },
+    isOrganic: true,
+    distance: 3.1
+  },
+  {
+    _id: "4",
+    title: "Herb Garden Kit",
+    price: 24.99,
+    priceUnit: "each",
+    description: "Complete herb garden starter kit with basil, mint, parsley, and cilantro seeds. Includes biodegradable pots and organic soil.",
+    seller: { username: "Plant Enthusiast", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 0.3
+  },
+  {
+    _id: "5",
+    title: "Heirloom Seeds Collection",
+    price: 15.99,
+    priceUnit: "pack",
+    description: "Collection of 12 different heirloom vegetable seeds. Non-GMO and organically grown. Perfect for starting your own garden.",
+    seller: { username: "Seed Saver", profileImage: null },
+    location: { coordinates: [0, 0] },
+    isOrganic: true,
+    distance: 2.7
+  },
+  {
+    _id: "6",
+    title: "Gardening Gloves",
+    price: 8.99,
+    priceUnit: "pair",
+    description: "Durable gardening gloves with reinforced fingertips. Waterproof and puncture-resistant for all your gardening needs.",
+    seller: { username: "Garden Supply", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 1.4
+  },
+  {
+    _id: "7",
+    title: "Organic Honey",
+    price: 12.75,
+    priceUnit: "jar",
+    description: "Local wildflower honey from pesticide-free hives. Raw, unfiltered and straight from our family farm.",
+    seller: { username: "Bee Haven", profileImage: null },
+    location: { coordinates: [0, 0] },
+    isOrganic: true,
+    distance: 3.5
+  },
+  {
+    _id: "8",
+    title: "Fresh Zucchini",
+    price: 2.49,
+    priceUnit: "lb",
+    description: "Freshly harvested organic zucchini. Great for grilling, sautéing, or baking into zucchini bread.",
+    seller: { username: "Veggie Tales", profileImage: null },
+    location: { coordinates: [0, 0] },
+    isOrganic: true,
+    distance: 0.8
+  },
+  {
+    _id: "9",
+    title: "Compost Bin",
+    price: 34.95,
+    priceUnit: "each",
+    description: "Compact 5-gallon compost bin for kitchen scraps. Odor-free design with carbon filter lid.",
+    seller: { username: "Eco Solutions", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 5.2
+  },
+  {
+    _id: "10",
+    title: "Hanging Planter",
+    price: 18.75,
+    priceUnit: "each",
+    description: "Handmade ceramic hanging planter with macrame hanger. Perfect for indoor herbs or succulents.",
+    seller: { username: "Pottery Studio", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 4.1
+  },
+  {
+    _id: "11",
+    title: "Homemade Jam",
+    price: 8.50,
+    priceUnit: "jar",
+    description: "Homemade strawberry jam made with organic berries and pure cane sugar. No preservatives or additives.",
+    seller: { username: "Homestead Goods", profileImage: null },
+    location: { coordinates: [0, 0] },
+    isOrganic: true,
+    distance: 1.0
+  },
+  {
+    _id: "12",
+    title: "Fresh Eggs",
+    price: 5.50,
+    priceUnit: "dozen",
+    description: "Farm fresh eggs from free-range chickens. Mixed sizes and colors, all from happy hens!",
+    seller: { username: "Happy Hens Farm", profileImage: null },
+    location: { coordinates: [0, 0] },
+    distance: 3.9
+  }
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+  // DOM elements
+  const marketplaceGrid = document.querySelector('.marketplace-grid');
+  const searchInput = document.getElementById('searchInput');
+  const searchButton = document.querySelector('.search-container .btn-primary');
+  const sortSelect = document.getElementById('sortSelect');
+  const savedItemsBtn = document.getElementById('savedItemsBtn');
+  const savedCountBadge = document.getElementById('savedCount');
+  const viewOptions = document.querySelectorAll('.view-option');
+  const mobileFiltersDrawer = document.getElementById('mobileFiltersDrawer');
+  const drawerOverlay = document.getElementById('drawerOverlay');
+  const showFiltersBtn = document.getElementById('showFiltersBtn');
+  const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+  const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+  const cartToggleBtn = document.getElementById('cartToggleBtn');
+  const cartDrawer = document.getElementById('cartDrawer');
+
+  // Update saved items count
+  function updateSavedCount() {
+    if (savedCountBadge) {
+      savedCountBadge.textContent = savedItems.length;
+    }
+  }
+
+  // Helper function to create a product card
+  function createProductCard(product) {
+    // Use placeholder images with product name
+    const imageName = product.title.toLowerCase().replace(/\s+/g, '-');
+    const imageUrl = `https://placehold.co/400x300?text=${encodeURIComponent(product.title)}`;
+    const avatarUrl = `https://placehold.co/100x100?text=${encodeURIComponent(product.seller.username.charAt(0))}`;
+    
+    // Create the organic badge if applicable
+    const organicBadge = product.isOrganic ? '<span class="organic-badge">Organic</span>' : '';
+    
+    return `
+      <div class="product-card" data-id="${product._id}">
+        <div class="product-image-container">
+          <img src="${imageUrl}" alt="${product.title}" class="product-image">
+          ${organicBadge}
+        </div>
+        <div class="product-info">
+          <h3 class="product-title">${product.title}</h3>
+          <div class="product-meta">
+            <span class="product-price">$${product.price.toFixed(2)}/${product.priceUnit}</span>
+            <span class="product-location"><i class="fas fa-map-marker-alt"></i> ${product.distance ? product.distance.toFixed(1) : '0.0'} mi</span>
+          </div>
+          <p class="product-description">${product.description.substring(0, 80)}${product.description.length > 80 ? '...' : ''}</p>
+        </div>
+        <div class="product-footer">
+          <div class="product-seller">
+            <img src="${avatarUrl}" alt="${product.seller.username}" class="seller-avatar">
+            <span>${product.seller.username}</span>
+          </div>
+          <div class="product-actions">
+            <a href="#" class="save-item" data-id="${product._id}">
+              <i class="far fa-heart"></i>
+            </a>
+            <a href="#" class="contact-seller" data-id="${product._id}">
+              <i class="far fa-comment"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Function to handle product-related events
+  function initProductEvents() {
+    const saveButtons = document.querySelectorAll('.save-item');
+    const contactButtons = document.querySelectorAll('.contact-seller');
+    
+    // Add event listeners for save buttons
+    saveButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const icon = this.querySelector('i');
+        icon.classList.toggle('far');
+        icon.classList.toggle('fas');
+      });
+    });
+    
+    // Add event listeners for contact buttons
+    contactButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const productId = this.getAttribute('data-id');
+        const product = allProducts.find(p => p._id === productId);
+        
+        if (product) {
+          alert(`Contact ${product.seller.username} about "${product.title}"`);
+        }
+      });
+    });
+    
+    // Add event listener for adding to cart
+    const productCards = document.querySelectorAll('.product-card');
+    productCards.forEach(card => {
+      card.addEventListener('dblclick', function(e) {
+        const productId = this.getAttribute('data-id');
+        addToCart(productId);
+      });
+    });
+  }
+
+  // Function to add a product to the cart
+  function addToCart(productId) {
+    const product = allProducts.find(p => p._id === productId);
+    if (!product) return;
+    
+    // Check if product is already in cart
+    const existingItem = cartItems.find(item => item.id === productId);
+    
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      cartItems.push({
+        id: productId,
+        title: product.title,
+        price: product.price,
+        priceUnit: product.priceUnit,
+        quantity: 1,
+        seller: product.seller.username
+      });
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    
+    // Update cart UI
+    updateAllCartUI();
+  }
+
+  // Function to remove an item from the cart
+  function removeFromCart(productId) {
+    cartItems = cartItems.filter(item => item.id !== productId);
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    updateAllCartUI();
+  }
+
+  // Function to update the cart UI
+  function updateCartUI() {
+    const cartCount = document.querySelector('.cart-count');
+    const cartEmpty = document.querySelector('.cart-empty');
+    const cartItemsContainer = document.querySelector('.cart-items');
+    const cartSubtotal = document.querySelector('.cart-subtotal');
+    const cartTax = document.querySelector('.cart-tax');
+    const cartTotal = document.querySelector('.cart-total');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const clearCartBtn = document.getElementById('clearCartBtn');
+    
+    // Update count
+    const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+    cartCount.textContent = totalItems;
+    
+    // Show/hide empty cart message
+    if (totalItems === 0) {
+      cartEmpty.style.display = 'block';
+      cartItemsContainer.style.display = 'none';
+      checkoutBtn.disabled = true;
+      clearCartBtn.disabled = true;
+    } else {
+      cartEmpty.style.display = 'none';
+      cartItemsContainer.style.display = 'block';
+      checkoutBtn.disabled = false;
+      clearCartBtn.disabled = false;
+      
+      // Render cart items
+      cartItemsContainer.innerHTML = '';
+      cartItems.forEach(item => {
+        const itemTotal = (item.price * item.quantity).toFixed(2);
+        cartItemsContainer.innerHTML += `
+          <div class="cart-item mb-2 pb-2 border-bottom">
+            <div class="d-flex justify-content-between">
+              <div>
+                <div class="fw-bold">${item.title}</div>
+                <div class="text-muted small">$${item.price.toFixed(2)}/${item.priceUnit} × ${item.quantity}</div>
+                <div class="text-muted small">Seller: ${item.seller}</div>
+              </div>
+              <div class="text-end">
+                <div>$${itemTotal}</div>
+                <button class="btn btn-sm text-danger remove-item" data-id="${item.id}">Remove</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      // Add event listeners to remove buttons
+      document.querySelectorAll('.remove-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const id = this.getAttribute('data-id');
+          removeFromCart(id);
+        });
+      });
+      
+      // Calculate totals
+      const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+      const tax = subtotal * 0.07; // Assuming 7% tax
+      const total = subtotal + tax;
+      
+      cartSubtotal.textContent = `$${subtotal.toFixed(2)}`;
+      cartTax.textContent = `$${tax.toFixed(2)}`;
+      cartTotal.textContent = `$${total.toFixed(2)}`;
+    }
+  }
+
+  // Function to update all cart UI elements
+  function updateAllCartUI() {
+    updateCartUI();
+    updateMobileCartCount();
+  }
+
+  // Update mobile cart count
+  function updateMobileCartCount() {
+    const mobileCounts = document.querySelectorAll('.cart-mobile-count');
+    const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+    
+    mobileCounts.forEach(badge => {
+      badge.textContent = totalItems;
+    });
+  }
+
+  // Setup mobile filters
+  function setupMobileFilters() {
+    if (!showFiltersBtn || !mobileFiltersDrawer) return;
+    
+    showFiltersBtn.addEventListener('click', function() {
+      mobileFiltersDrawer.classList.add('active');
+      drawerOverlay.classList.add('active');
+    });
+    
+    function closeFiltersDrawer() {
+      mobileFiltersDrawer.classList.remove('active');
+      drawerOverlay.classList.remove('active');
+    }
+    
+    if (applyFiltersBtn) {
+      applyFiltersBtn.addEventListener('click', function() {
+        // Apply filters logic would go here
+        closeFiltersDrawer();
+      });
+    }
+    
+    if (drawerOverlay) {
+      drawerOverlay.addEventListener('click', closeFiltersDrawer);
+    }
+    
+    // Clear filters
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener('click', function() {
+        // Reset all checkboxes
+        mobileFiltersDrawer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        
+        // Reset all select elements
+        mobileFiltersDrawer.querySelectorAll('select').forEach(select => {
+          select.selectedIndex = 0;
+        });
+        
+        // Reset number inputs
+        mobileFiltersDrawer.querySelectorAll('input[type="number"]').forEach(input => {
+          input.value = '';
+        });
+      });
+    }
+  }
+
+  // Setup view toggle (grid/list)
+  function setupViewToggle() {
+    if (!viewOptions.length) return;
+    
+    viewOptions.forEach(option => {
+      option.addEventListener('click', function() {
+        // Remove active class from all options
+        viewOptions.forEach(opt => opt.classList.remove('active'));
+        
+        // Add active class to clicked option
+        this.classList.add('active');
+        
+        // Toggle grid/list view
+        if (this.dataset.view === 'grid') {
+          marketplaceGrid.classList.remove('list-view');
+        } else {
+          marketplaceGrid.classList.add('list-view');
+        }
+      });
+    });
+  }
+
+  // Setup pull to refresh
+  function setupPullToRefresh() {
+    if (window.innerWidth > 768) return;
+    
+    const pullToRefresh = document.getElementById('pullToRefresh');
+    if (!pullToRefresh) return;
+    
+    // Set initial position
+    pullToRefresh.style.transform = 'translateY(0)';
+    
+    let startY = 0;
+    let currentY = 0;
+    let pullDistance = 0;
+    let isPulling = false;
+    let isRefreshing = false;
+    
+    const container = document.querySelector('.marketplace-container');
+    const refreshText = document.getElementById('refreshText');
+    const pullIcon = document.querySelector('.pull-icon');
+    
+    if (!container) return;
+    
+    container.addEventListener('touchstart', function(e) {
+      if (container.scrollTop === 0) {
+        startY = e.touches[0].clientY;
+        isPulling = true;
+      }
+    }, { passive: true });
+    
+    container.addEventListener('touchmove', function(e) {
+      if (!isPulling) return;
+      
+      currentY = e.touches[0].clientY;
+      pullDistance = Math.min(Math.max(0, currentY - startY), 100);
+      
+      if (pullDistance > 0) {
+        pullToRefresh.style.transform = `translateY(${pullDistance}px)`;
+        
+        if (pullIcon) {
+          pullIcon.style.transform = `rotate(${pullDistance * 3.6}deg)`;
+        }
+        
+        if (refreshText) {
+          if (pullDistance > 60) {
+            refreshText.textContent = 'Release to refresh';
+          } else {
+            refreshText.textContent = 'Pull to refresh';
+          }
+        }
+      }
+    }, { passive: true });
+    
+    container.addEventListener('touchend', function() {
+      if (!isPulling) return;
+      
+      if (pullDistance > 60 && !isRefreshing) {
+        // Trigger refresh
+        isRefreshing = true;
+        if (refreshText) refreshText.textContent = 'Refreshing...';
+        if (pullIcon) pullIcon.classList.add('fa-spin');
+        
+        // Render sample listings instead of fetching
+        setTimeout(function() {
+          if (marketplaceGrid) {
+            marketplaceGrid.innerHTML = '';
+            allProducts.forEach(listing => {
+              marketplaceGrid.innerHTML += createProductCard(listing);
+            });
+          }
+          
+          pullToRefresh.style.transform = 'translateY(0)';
+          if (pullIcon) pullIcon.classList.remove('fa-spin');
+          isRefreshing = false;
+          isPulling = false;
+        }, 2000);
+      } else {
+        // Reset without refreshing
+        pullToRefresh.style.transform = 'translateY(0)';
+        isPulling = false;
+      }
+    }, { passive: true });
+  }
+
+  // Setup mobile cart drawer
+  if (cartToggleBtn) {
+    cartToggleBtn.addEventListener('click', function() {
+      if (cartDrawer) {
+        cartDrawer.classList.toggle('open');
+        drawerOverlay.classList.toggle('active');
+      }
+    });
+  }
+  
+  // Initialize the page
+  function init() {
+    // Render sample listings
+    if (marketplaceGrid) {
+      marketplaceGrid.innerHTML = '';
+      allProducts.forEach(listing => {
+        marketplaceGrid.innerHTML += createProductCard(listing);
+      });
+    }
+    
+    // Setup event listeners
+    setupMobileFilters();
+    setupViewToggle();
+    setupPullToRefresh();
+    updateSavedCount();
+    initProductEvents();
+    updateAllCartUI();
+    
+    // Setup clear cart button
+    const clearCartBtn = document.getElementById('clearCartBtn');
+    if (clearCartBtn) {
+      clearCartBtn.addEventListener('click', function() {
+        cartItems = [];
+        localStorage.setItem('cartItems', JSON.stringify(cartItems));
+        updateAllCartUI();
+      });
+    }
+    
+    // Setup checkout button
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+      checkoutBtn.addEventListener('click', function() {
+        alert('Proceeding to checkout with ' + cartItems.length + ' items');
+        // Here you would redirect to a checkout page
+        // window.location.href = '/checkout';
+      });
+    }
+    
+    // Add event listeners for save/unsave items
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.save-item')) {
+        e.preventDefault();
+        const saveBtn = e.target.closest('.save-item');
+        const itemId = saveBtn.dataset.id;
+        
+        // Toggle saved state
+        const index = savedItems.indexOf(itemId);
+        if (index === -1) {
+          savedItems.push(itemId);
+        } else {
+          savedItems.splice(index, 1);
+        }
+        
+        // Update localStorage
+        localStorage.setItem('savedItems', JSON.stringify(savedItems));
+        
+        // Update UI
+        updateSavedCount();
+        
+        // Update heart icon
+        const heartIcon = saveBtn.querySelector('i');
+        heartIcon.classList.toggle('far');
+        heartIcon.classList.toggle('fas');
+      }
+    });
+    
+    // Search functionality
+    if (searchButton && searchInput) {
+      searchButton.addEventListener('click', function() {
+        const query = searchInput.value.trim();
+        if (query) {
+          // Filter sample listings based on search query
+          const filteredListings = allProducts.filter(listing => 
+            listing.title.toLowerCase().includes(query.toLowerCase()) ||
+            listing.description.toLowerCase().includes(query.toLowerCase())
+          );
+          
+          if (marketplaceGrid) {
+            marketplaceGrid.innerHTML = '';
+            if (filteredListings.length === 0) {
+              marketplaceGrid.innerHTML = '<div class="no-results">No results found. Try a different search term.</div>';
+            } else {
+              filteredListings.forEach(listing => {
+                marketplaceGrid.innerHTML += createProductCard(listing);
+              });
+            }
+          }
+        }
+      });
+      
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          searchButton.click();
+        }
+      });
+    }
+  }
+
+  // Initialize everything
+  init();
+});
+</script>

@@ -1,0 +1,273 @@
+<%- contentFor('style') %>
+<style>
+    :root {
+        --primary-color: #2ecc71;
+        --primary-dark: #27ae60;
+        --secondary-color: #3498db;
+        --secondary-dark: #2980b9;
+        --white: #ffffff;
+        --light-gray: #f5f5f5;
+        --gray: #888;
+        --dark-gray: #333;
+    }
+
+    .main-content {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 80px 0;
+        background: linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(52, 152, 219, 0.1) 100%);
+    }
+
+    .signup-container {
+        background: var(--white);
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        width: 100%;
+        max-width: 800px;
+    }
+
+    .brand-name {
+        color: var(--primary-color);
+        text-align: center;
+        font-weight: 700;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+
+    .form-section {
+        margin-bottom: 30px;
+    }
+
+    .section-title {
+        font-weight: 600;
+        font-size: 1.2rem;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        color: var(--dark-gray);
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--dark-gray);
+    }
+
+    .form-control {
+        border: 1px solid #ddd;
+        padding: 10px 15px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(46, 204, 113, 0.25);
+    }
+
+    .btn-signup {
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 5px;
+        color: var(--white);
+        padding: 12px 30px;
+        font-weight: 600;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .btn-signup:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(46, 204, 113, 0.2);
+    }
+
+    .form-text {
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        color: var(--gray);
+    }
+
+    .login-link a {
+        color: var(--primary-color);
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+
+    .signup-success {
+        text-align: center;
+        padding: 30px;
+        background-color: #f1f9f4;
+        border-radius: 10px;
+        display: none;
+    }
+
+    .success-icon {
+        font-size: 4rem;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+    }
+
+    .success-message {
+        font-size: 1.5rem;
+        color: var(--dark-gray);
+        margin-bottom: 15px;
+    }
+
+    .success-description {
+        color: var(--gray);
+        margin-bottom: 20px;
+    }
+
+    .btn-login {
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 5px;
+        color: var(--white);
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-block;
+        text-decoration: none;
+    }
+
+    .btn-login:hover {
+        background-color: var(--primary-dark);
+    }
+</style>
+
+<%- contentFor('body') %>
+<div class="main-content">
+    <div class="container">
+        <div class="signup-container">
+            <h1 class="brand-name">FreshShare</h1>
+            <p class="text-center text-muted mb-4">Join our community of food enthusiasts!</p>
+
+            <form id="signupForm">
+                <!-- Personal Information -->
+                <div class="form-section">
+                    <div class="section-title">Personal Information</div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="form-section">
+                    <div class="section-title">Location</div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <input type="text" class="form-control" id="address">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="zipCode" class="form-label">Zip Code</label>
+                            <input type="text" class="form-control" id="zipCode">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-signup">Create Account</button>
+                </div>
+
+                <div class="login-link">
+                    Already have an account? <a href="/login">Login here</a>
+                </div>
+            </form>
+
+            <!-- Success Message (Hidden by default) -->
+            <div id="signupSuccess" class="signup-success">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="success-message">Registration Successful!</div>
+                <p class="success-description">Thank you for joining FreshShare. You can now login to your account.</p>
+                <a href="/login" class="btn btn-login">Login Now</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- contentFor('script') %>
+<script>
+    document.getElementById("signupForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        // Get form values
+        const username = document.getElementById("username").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const address = document.getElementById("address").value;
+        const city = document.getElementById("city").value;
+        const zipCode = document.getElementById("zipCode").value;
+        
+        // Validate password match
+        if (password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/auth/signup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    address,
+                    city,
+                    zipCode,
+                }),
+            });
+            
+            if (response.ok) {
+                document.getElementById("signupForm").style.display = "none";
+                document.getElementById("signupSuccess").style.display = "block";
+            } else {
+                const data = await response.json();
+                alert(data.message || "Registration failed. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("An error occurred. Please try again later.");
+        }
+    });
+</script>
