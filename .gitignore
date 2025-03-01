@@ -1,0 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Log files
+*.log
+
+# Large media files
+public/images/video.mp4
+
+# OS generated files
+.DS_Store
+Thumbs.db
