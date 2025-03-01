@@ -1,0 +1,63 @@
+/* Custom CSS for Groups Page */
+.groups-container {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+}
+
+.groups-container .row {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+}
+
+.groups-container .col-md-3 {
+    order: -1 !important;
+    flex: 0 0 250px !important;
+    max-width: 250px !important;
+    margin-right: 30px !important;
+    background-color: #f8f9fa !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.groups-container .col-md-9 {
+    flex: 1 !important;
+}
+
+.groups-list {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 20px !important;
+}
+
+@media (max-width: 1200px) {
+    .groups-list {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .groups-list {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .groups-container .row {
+        flex-direction: column !important;
+    }
+    
+    .groups-container .col-md-3 {
+        order: 0 !important;
+        flex: 1 !important;
+        max-width: 100% !important;
+        margin-right: 0 !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .groups-list {
+        grid-template-columns: 1fr !important;
+    }
+}

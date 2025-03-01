@@ -6,670 +6,8 @@
     <title>FreshShare - Share Fresh Food with Your Community</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #4CAF50;
-            --primary-dark: #388E3C;
-            --primary-light: #81C784;
-            --primary-gradient: linear-gradient(135deg, #4CAF50, #2E7D32);
-            --secondary: #FFC107;
-            --text-dark: #263238;
-            --text-medium: #546E7A;
-            --text-light: #B0BEC5;
-            --white: #FFFFFF;
-            --bg-light: #F5F7FA;
-            --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
-            --border-radius-sm: 8px;
-            --border-radius-md: 12px;
-            --border-radius-lg: 20px;
-            --border-radius-xl: 30px;
-            --transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            color: var(--text-dark);
-            line-height: 1.6;
-            background-color: var(--white);
-            overflow-x: hidden;
-            margin: 0;
-            padding: 0;
-        }
-        
-        /* Animation Keyframes */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        /* Hero Section */
-        .hero-section {
-            background-image: url('/images/vegetables.jpg');
-            background-size: cover;
-            background-position: center;
-            color: var(--white);
-            text-align: center;
-            padding: 140px 0;
-            position: relative;
-            width: 100%;
-            margin: 0;
-            overflow: hidden;
-        }
-        
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1;
-        }
-        
-        .hero-content {
-            position: relative;
-            max-width: 800px;
-            margin: 0 auto;
-            z-index: 2;
-            padding: 0 20px;
-            animation: fadeIn 1s ease-out;
-        }
-        
-        .text-card {
-            background-color: rgba(0, 0, 0, 0.25);
-            padding: 40px;
-            border-radius: var(--border-radius-md);
-            backdrop-filter: blur(1.5px);
-            box-shadow: var(--shadow-lg);
-            max-width: 700px;
-            margin: 0 auto;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        
-        .hero-content h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            font-weight: 700;
-            line-height: 1.2;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
-            color: #fff;
-        }
-        
-        .hero-content p {
-            font-size: 1.3rem;
-            margin-bottom: 40px;
-            font-weight: 300;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 0, 0, 0.4);
-            color: #fff;
-        }
-        
-        .cta-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-        
-        .btn {
-            padding: 15px 35px;
-            border-radius: var(--border-radius-xl);
-            font-weight: 600;
-            font-size: 1rem;
-            letter-spacing: 0.5px;
-            text-decoration: none;
-            display: inline-block;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-            box-shadow: var(--shadow-md);
-        }
-        
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.1);
-            transition: var(--transition);
-            z-index: -1;
-        }
-        
-        .btn:hover::before {
-            width: 100%;
-        }
-        
-        .btn-primary {
-            background: var(--primary-gradient);
-            color: var(--white);
-            border: none;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .btn-secondary {
-            background-color: transparent;
-            border: 2px solid var(--white);
-            color: var(--white);
-        }
-        
-        .btn-secondary:hover {
-            background-color: var(--white);
-            color: var(--primary);
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        /* Features Section */
-        .features-section {
-            padding: 100px 0;
-            background-color: var(--white);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .section-title {
-            text-align: center;
-            margin-bottom: 60px;
-            font-size: 2.8rem;
-            color: var(--text-dark);
-            font-weight: 700;
-            position: relative;
-            padding-bottom: 15px;
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 4px;
-            background: var(--primary-gradient);
-            border-radius: 10px;
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 40px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .feature-card {
-            background-color: var(--white);
-            border-radius: var(--border-radius-md);
-            padding: 40px 30px;
-            text-align: center;
-            transition: var(--transition);
-            box-shadow: var(--shadow-sm);
-            position: relative;
-            z-index: 1;
-            overflow: hidden;
-        }
-        
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: var(--primary-gradient);
-            z-index: -1;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-15px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .feature-icon {
-            font-size: 3.5rem;
-            color: var(--primary);
-            margin-bottom: 25px;
-            display: inline-block;
-            transition: var(--transition);
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        .feature-card:hover .feature-icon {
-            transform: scale(1.1);
-            color: var(--primary-dark);
-        }
-        
-        .feature-title {
-            font-size: 1.5rem;
-            color: var(--text-dark);
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        
-        .feature-description {
-            color: var(--text-medium);
-            line-height: 1.7;
-            font-size: 1.05rem;
-        }
-        
-        /* Understanding Section */
-        .understanding-section {
-            padding: 100px 0;
-            background-color: var(--bg-light);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .understanding-content {
-            background-color: var(--white);
-            border-radius: var(--border-radius-lg);
-            box-shadow: var(--shadow-md);
-            padding: 40px;
-            margin-top: 30px;
-        }
-
-        .understanding-text {
-            max-width: 100%;
-            margin: 0 auto;
-        }
-        
-        .main-description {
-            font-size: 1.1rem;
-            color: var(--text-medium);
-            margin-bottom: 30px;
-            line-height: 1.8;
-        }
-        
-        .sub-heading {
-            font-size: 1.8rem;
-            color: var(--text-dark);
-            margin-top: 40px;
-            margin-bottom: 25px;
-            font-weight: 600;
-            position: relative;
-            padding-bottom: 10px;
-        }
-        
-        .sub-heading::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: var(--primary-gradient);
-            border-radius: 5px;
-        }
-        
-        .process-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 20px;
-        }
-        
-        .check-icon {
-            flex: 0 0 25px;
-            height: 25px;
-            width: 25px;
-            background-color: var(--primary);
-            color: var(--white);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            margin-top: 5px;
-        }
-        
-        .check-icon i {
-            font-size: 0.8rem;
-        }
-        
-        .process-text {
-            flex: 1;
-            color: var(--text-medium);
-            line-height: 1.7;
-            font-size: 1.05rem;
-        }
-        
-        /* Video Container */
-        .video-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            margin: 40px auto 30px;
-            border-radius: var(--border-radius-md);
-            overflow: hidden;
-            box-shadow: var(--shadow-md);
-            background-color: var(--white);
-            transition: var(--transition);
-            border: 3px solid var(--primary-light);
-        }
-        
-        .video-container:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .feature-video {
-            width: 100%;
-            height: auto;
-            border-radius: var(--border-radius-md);
-            display: block;
-        }
-        
-        .video-caption {
-            padding: 15px;
-            text-align: center;
-            font-weight: 500;
-            color: var(--text-medium);
-            font-size: 1.05rem;
-            background-color: var(--white);
-            border-top: 1px solid var(--primary-light);
-        }
-        
-        .play-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 60px;
-            height: 60px;
-            background-color: var(--primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: var(--shadow-md);
-            transition: var(--transition);
-            z-index: 10;
-        }
-        
-        .play-button:hover {
-            background-color: var(--primary-dark);
-            transform: translate(-50%, -50%) scale(1.1);
-        }
-        
-        /* How It Works */
-        .how-it-works {
-            padding: 100px 0;
-            background-color: var(--white);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .steps-container {
-            margin-top: 60px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .steps-container::before {
-            content: '';
-            position: absolute;
-            left: 40px;
-            top: 40px;
-            height: calc(100% - 80px);
-            width: 2px;
-            background-color: var(--primary-light);
-            z-index: -1;
-        }
-        
-        .step-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 60px;
-            opacity: 0;
-            animation: fadeIn 0.6s ease-out forwards;
-        }
-        
-        .step-item:nth-child(1) { animation-delay: 0.2s; }
-        .step-item:nth-child(2) { animation-delay: 0.4s; }
-        .step-item:nth-child(3) { animation-delay: 0.6s; }
-        
-        .step-number {
-            flex: 0 0 80px;
-            width: 80px;
-            height: 80px;
-            background: var(--primary-gradient);
-            color: var(--white);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-right: 40px;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            z-index: 2;
-        }
-        
-        .step-content {
-            flex: 1;
-            background-color: var(--white);
-            border-radius: var(--border-radius-md);
-            padding: 30px;
-            box-shadow: var(--shadow-sm);
-            transition: var(--transition);
-        }
-        
-        .step-item:hover .step-content {
-            box-shadow: var(--shadow-md);
-            transform: translateX(5px);
-        }
-        
-        .step-content h3 {
-            font-size: 1.8rem;
-            color: var(--text-dark);
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        
-        .step-content p {
-            color: var(--text-medium);
-            line-height: 1.7;
-            font-size: 1.05rem;
-        }
-        
-        /* Call to Action */
-        .cta-section {
-            padding: 120px 0;
-            position: relative;
-            background: var(--primary-gradient);
-            color: var(--white);
-            text-align: center;
-            width: 100%;
-            margin: 0;
-        }
-        
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 25.523 0 20s4.477-10 10-10zm10 8c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm40 40c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            z-index: 1;
-        }
-        
-        .cta-title {
-            font-size: 3rem;
-            margin-bottom: 25px;
-            font-weight: 700;
-            position: relative;
-            z-index: 2;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-        }
-        
-        .cta-text {
-            font-size: 1.3rem;
-            margin-bottom: 40px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-            font-weight: 300;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .cta-btn {
-            background-color: var(--white);
-            color: var(--primary);
-            border: none;
-            padding: 18px 45px;
-            font-size: 1.2rem;
-            font-weight: 600;
-            border-radius: var(--border-radius-xl);
-            transition: var(--transition);
-            box-shadow: var(--shadow-md);
-            position: relative;
-            z-index: 2;
-        }
-        
-        .cta-btn:hover {
-            background-color: var(--text-dark);
-            color: var(--white);
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        /* Text Links */
-        .text-link {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition);
-            border-bottom: 1px dashed var(--primary-light);
-            padding-bottom: 2px;
-        }
-        
-        .text-link:hover {
-            color: var(--primary-dark);
-            border-bottom: 1px solid var(--primary-dark);
-        }
-        
-        /* Responsive */
-        @media (max-width: 992px) {
-            .hero-content h1 {
-                font-size: 3rem;
-            }
-            
-            .section-title {
-                font-size: 2.4rem;
-            }
-            
-            .cta-title {
-                font-size: 2.6rem;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .hero-section {
-                padding: 100px 0;
-            }
-            
-            .text-card {
-                padding: 30px 20px;
-                margin: 0 15px;
-            }
-            
-            .hero-content h1 {
-                font-size: 2.4rem;
-            }
-            
-            .hero-content p {
-                font-size: 1.1rem;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 30px;
-            }
-            
-            .understanding-content {
-                padding: 25px;
-            }
-            
-            .video-container {
-                margin: 30px auto 20px;
-            }
-            
-            .steps-container::before {
-                display: none;
-            }
-            
-            .step-item {
-                flex-direction: column;
-                text-align: center;
-                margin-bottom: 50px;
-            }
-            
-            .step-number {
-                margin-right: 0;
-                margin-bottom: 20px;
-            }
-            
-            .cta-title {
-                font-size: 2rem;
-            }
-            
-            .cta-text {
-                font-size: 1.1rem;
-            }
-            
-            .cta-btn {
-                padding: 15px 35px;
-                font-size: 1.1rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .cta-buttons {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .btn {
-                width: 100%;
-                text-align: center;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- Index page styles moved to main.css -->
 </head>
 <body>
     <!-- Hero Section -->
@@ -700,65 +38,58 @@
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <i class="fas fa-users"></i>
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
-                    <h3 class="feature-title">Build Community</h3>
-                    <p class="feature-description">Connect with neighbors and like-minded individuals who share your passion for food and sustainability.</p>
+                    <h3 class="feature-title">Save Money</h3>
+                    <p class="feature-description">Access wholesale prices by coordinating purchases with your neighbors and friends.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <i class="fas fa-dollar-sign"></i>
+                        <i class="fas fa-users"></i>
                     </div>
-                    <h3 class="feature-title">Cost Savings</h3>
-                    <p class="feature-description">Unlock wholesale savings with the power of bulk buying and enjoy fresh, quality food straight from the wholesaler.</p>
+                    <h3 class="feature-title">Build Community</h3>
+                    <p class="feature-description">Connect with like-minded neighbors who share your values around food and sustainability.</p>
                 </div>
-               
             </div>
         </div>
     </section>
 
-    <!-- Understanding Fresh Share Section -->
+    <!-- Understanding Section -->
     <section class="understanding-section">
         <div class="container">
             <h2 class="section-title">Understanding Fresh Share</h2>
             <div class="understanding-content">
                 <div class="understanding-text">
-                    <p class="main-description">
-                        A <strong>Fresh Share group</strong> is a collective of neighbors who pool their resources to purchase fresh, local food directly from farmers and suppliers. This collaborative approach enables members to access high-quality products at reduced prices while supporting local communities.
-                    </p>
+                    <p class="main-description">FreshShare is a community platform that helps neighbors coordinate bulk food purchases to access wholesale prices, reduce packaging waste, and build stronger local connections. Our mission is to make healthy, sustainable food more accessible to everyone.</p>
                     
-                    <!-- Video integrated within the content flow -->
-                    <div class="video-container">
-                        <video class="feature-video" poster="/api/placeholder/480/270" controls>
-                            <source src="/images/video.mp4" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                        <div class="play-button" id="playVideoBtn">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-caption">Watch: How Fresh Share helps communities access quality food</div>
-                    </div>
-                    
-                    <h3 class="sub-heading">How Fresh Share Works</h3>
-                    
-                    <div class="process-item">
-                        <div class="check-icon"><i class="fas fa-check"></i></div>
-                        <div class="process-text">
-                            <strong>🌱Group Ordering:</strong> Members express interest in bulk fresh products, and once enough people agree, the group places a bulk order directly from local wholesalers and farmers.
-                        </div>
-                    </div>
-                    
-                    <div class="process-item">
-                        <div class="check-icon"><i class="fas fa-check"></i></div>
-                        <div class="process-text">
-                            <strong>💰 Cost Sharing: </strong> The total cost is split among participants based on their individual orders, ensuring significant savings compared to standard retail prices.
-                        </div>
-                    </div>
-                    
-                    <div class="process-item">
-                        <div class="check-icon"><i class="fas fa-check"></i></div>
-                        <div class="process-text">
-                            <strong>📦 Easy Distribution: </strong> Fresh items are divided among members for pickup at convenient locations or delivered locally—making the process simple, affordable, and community-driven.
+                    <div class="benefits-container">
+                        <h3 class="sub-heading">How It Benefits You</h3>
+                        <div class="benefits-grid">
+                            <div class="video-container">
+                                <img src="/images/video-placeholder.jpg" alt="How FreshShare Benefits You" class="feature-video">
+                                <div class="play-button">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <div class="video-caption">Watch how FreshShare benefits your community</div>
+                            </div>
+                            <div class="benefits-list">
+                                <div class="process-item">
+                                    <div class="check-icon"><i class="fas fa-check"></i></div>
+                                    <p class="process-text">Save 20-40% on fresh produce and pantry staples by purchasing at wholesale prices</p>
+                                </div>
+                                <div class="process-item">
+                                    <div class="check-icon"><i class="fas fa-check"></i></div>
+                                    <p class="process-text">Reduce food waste by sharing bulk purchases with neighbors</p>
+                                </div>
+                                <div class="process-item">
+                                    <div class="check-icon"><i class="fas fa-check"></i></div>
+                                    <p class="process-text">Support local farmers and sustainable food systems</p>
+                                </div>
+                                <div class="process-item">
+                                    <div class="check-icon"><i class="fas fa-check"></i></div>
+                                    <p class="process-text">Connect with your community and build meaningful relationships</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -766,42 +97,54 @@
         </div>
     </section>
 
-    <!-- How It Works -->
+    <!-- How It Works Section -->
     <section class="how-it-works">
         <div class="container">
             <h2 class="section-title">How It Works</h2>
             <div class="steps-container">
-                <div class="step-item">
+                <div class="step-card">
                     <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Create an Account</h3>
-                        <p>Sign up for FreshShare with your email and set up your profile. Let us know your food preferences and location to connect with the right community.</p>
+                    <div class="step-icon">
+                        <i class="fas fa-users-gear"></i>
+                    </div>
+                    <h3>Create or Join a Group</h3>
+                    <p>Start a FreshShare group in your neighborhood or join an existing one. Groups can be based on location, dietary preferences, or specific interests.</p>
+                    <div class="step-image">
+                        <img src="/images/create-group.jpg" alt="Create or Join Group">
                     </div>
                 </div>
-                <div class="step-item">
+                <div class="step-card">
                     <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Browse Food</h3>
-                        <p>Explore fresh, locally available food shared by your community, or list your own help reduce waste and support others.</p>
+                    <div class="step-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3>Coordinate Purchases</h3>
+                    <p>Use our platform to coordinate bulk purchases with your group. One person places the order, and our tools help divide costs and organize distribution.</p>
+                    <div class="step-image">
+                        <img src="/images/coordinate.jpg" alt="Coordinate Purchases">
                     </div>
                 </div>
-                <div class="step-item">
+                <div class="step-card">
                     <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Connect and Share</h3>
-                        <p>Coordinate pick-ups with neighbors, exchange food, and strengthen your local food network—saving money while building a sustainable, connected community.</p>
+                    <div class="step-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>Share and Save</h3>
+                    <p>Pick up your portion of the order, enjoy fresh food at lower prices, and build community connections in the process!</p>
+                    <div class="step-image">
+                        <img src="/images/share.jpg" alt="Share and Save">
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Call to Action -->
+    <!-- Call to Action Section -->
     <section class="cta-section">
         <div class="container">
-            <h2 class="cta-title">Ready to Reduce Food Waste?</h2>
-            <p class="cta-text">Join thousands of community members already making a difference. Sign up today and start sharing!</p>
-            <a href="/signup" class="btn cta-btn">Join FreshShare Now</a>
+            <h2 class="cta-title">Ready to Start Sharing?</h2>
+            <p class="cta-text">Join thousands of neighbors who are already saving money and building community through food sharing.</p>
+            <a href="/signup" class="cta-btn">Get Started Today</a>
         </div>
     </section>
 
@@ -810,64 +153,33 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('FreshShare landing page loaded');
             
-            // Optional: Add animation to elements when they come into view
-            const animateOnScroll = () => {
+            // Play video functionality
+            const playButton = document.querySelector('.play-button');
+            if (playButton) {
+                playButton.addEventListener('click', function() {
+                    // This would normally load a video, but for demo purposes we're just logging
+                    console.log('Video would play here');
+                    alert('Video player would open here in the real application');
+                });
+            }
+            
+            // Animate elements on scroll
+            const animateOnScroll = function() {
                 const elements = document.querySelectorAll('.feature-card, .step-item');
-                
-                elements.forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    const isVisible = rect.top <= window.innerHeight * 0.8;
-                    
-                    if (isVisible) {
-                        el.style.opacity = '1';
-                        el.style.transform = 'translateY(0)';
+                elements.forEach(element => {
+                    const position = element.getBoundingClientRect();
+                    // If element is in viewport
+                    if(position.top < window.innerHeight && position.bottom >= 0) {
+                        element.style.opacity = '1';
                     }
                 });
             };
             
-            // Initial check
+            // Initial check on load
             animateOnScroll();
             
             // Check on scroll
             window.addEventListener('scroll', animateOnScroll);
-            
-            // Video player functionality
-            const videoElement = document.querySelector('.feature-video');
-            const playButton = document.getElementById('playVideoBtn');
-            
-            if (playButton && videoElement) {
-                // Load the video with a poster image visible by default
-                videoElement.setAttribute('preload', 'metadata');
-                
-                playButton.addEventListener('click', function() {
-                    if (videoElement.paused) {
-                        videoElement.play();
-                        playButton.style.opacity = '0';
-                        playButton.style.pointerEvents = 'none';
-                    } else {
-                        videoElement.pause();
-                        playButton.style.opacity = '1';
-                        playButton.style.pointerEvents = 'auto';
-                    }
-                });
-                
-                videoElement.addEventListener('ended', function() {
-                    playButton.style.opacity = '1';
-                    playButton.style.pointerEvents = 'auto';
-                });
-                
-                videoElement.addEventListener('click', function() {
-                    if (videoElement.paused) {
-                        videoElement.play();
-                        playButton.style.opacity = '0';
-                        playButton.style.pointerEvents = 'none';
-                    } else {
-                        videoElement.pause();
-                        playButton.style.opacity = '1';
-                        playButton.style.pointerEvents = 'auto';
-                    }
-                });
-            }
         });
     </script>
 </body>

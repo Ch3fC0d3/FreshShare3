@@ -1,497 +1,603 @@
+<%- contentFor('style') %>
+<link rel="stylesheet" href="/css/main.css">
 <style>
-    /* Variables for consistent styling */
-    :root {
-        --primary-color: #63b175;
-        --secondary-color: #4a8f5c;
-        --text-color: #333;
-        --light-bg: #f5f5f5;
-        --border-color: #ddd;
-    }
-
-    /* Layout containers */
     .profile-container {
-        max-width: 1200px;
+        max-width: 95%;
         margin: 0 auto;
-        padding: 0 var(--spacing-md);
-        margin-top: 120px; /* Add margin to account for fixed header */
+        padding: 30px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
-
-    /* Profile header section */
-    .profile-header {
-        background: white;
-        border-radius: var(--border-radius);
-        padding: var(--spacing-xl);
-        margin-bottom: var(--spacing-xl);
-        box-shadow: var(--card-shadow);
-    }
-
-    .profile-info {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: var(--spacing-xl);
-        align-items: center;
-    }
-
-    .profile-avatar {
+    
+    .profile-image-container {
         width: 150px;
         height: 150px;
         border-radius: 50%;
         overflow: hidden;
-        background: var(--secondary);
-        box-shadow: var(--card-shadow);
+        margin: 0 auto 20px;
+        border: 3px solid #f0f0f0;
     }
-
-    .profile-avatar img {
+    
+    .profile-image-container img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-
-    .profile-details h1 {
-        margin: 0 0 var(--spacing-sm) 0;
-        color: var(--text-dark);
-        font-size: 2rem;
+    
+    .section-title {
+        font-size: 28px;
+        margin-bottom: 30px;
+        color: #333;
+        text-align: center;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 15px;
     }
-
-    .profile-details p {
-        margin: 0;
-        color: var(--text-light);
+    
+    .section-subtitle {
+        font-size: 20px;
+        color: #555;
+        margin: 25px 0 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
     }
-
-    .profile-actions {
-        margin-top: var(--spacing-md);
-        display: flex;
-        gap: var(--spacing-md);
+    
+    .form-section {
+        margin-bottom: 30px;
     }
-
-    /* Statistics grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: var(--spacing-lg);
-        margin: var(--spacing-xl) 0;
+    
+    .form-actions {
+        margin-top: 30px;
+        text-align: center;
     }
-
-    .stat-card {
-        background: white;
-        padding: var(--spacing-lg);
-        border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        transition: transform 0.2s ease-in-out;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
-
-    .stat-label {
-        color: var(--text-light);
-        font-size: 0.9rem;
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .stat-value {
-        font-size: 2.5rem;
-        font-weight: 600;
-        color: var(--text-dark);
-        margin-bottom: var(--spacing-md);
-    }
-
-    .stat-footer {
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-    }
-
-    .trend-up {
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-    }
-
-    .trend-down {
-        color: #F44336;
-        display: flex;
-        align-items: center;
-    }
-
-    .trend-icon {
-        margin-right: var(--spacing-sm);
-    }
-
-    /* Charts section */
-    .charts-section {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-        gap: var(--spacing-xl);
-        margin: var(--spacing-xl) 0;
-    }
-
-    .chart-card {
-        background: white;
-        border-radius: var(--border-radius);
-        padding: var(--spacing-lg);
-        box-shadow: var(--card-shadow);
-    }
-
-    .chart-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .chart-header h2 {
-        margin: 0;
-        font-size: 1.25rem;
-        color: var(--text-dark);
-    }
-
-    .chart-actions {
-        display: flex;
-        gap: var(--spacing-sm);
-    }
-
-    .chart-btn {
-        background: var(--secondary);
-        border: none;
-        padding: var(--spacing-sm) var(--spacing-md);
+    
+    .group-item {
+        background: #f9f9f9;
         border-radius: 8px;
-        color: var(--text-dark);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: 500;
-    }
-
-    .chart-btn:hover,
-    .chart-btn.active {
-        background: var(--primary);
-        color: white;
-    }
-
-    .chart-container {
-        height: 300px;
-        position: relative;
-    }
-
-    /* Profile sections */
-    .profile-sections {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: var(--spacing-xl);
-        margin-top: var(--spacing-xl);
-    }
-
-    .profile-section {
-        background: white;
-        border-radius: var(--border-radius);
-        padding: var(--spacing-lg);
-        box-shadow: var(--card-shadow);
-    }
-
-    .section-header {
+        padding: 12px 15px;
+        margin-bottom: 10px;
         display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+    
+    .group-item:hover {
+        background: #f1f1f1;
+        transform: translateY(-2px);
+    }
+    
+    .group-item img {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        margin-right: 15px;
+    }
+    
+    .switch-container {
+        display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-lg);
+        margin-bottom: 15px;
     }
-
-    .section-header h2 {
-        margin: 0;
-        font-size: 1.25rem;
-        color: var(--text-dark);
+    
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
     }
-
-    .edit-btn {
-        background: none;
-        border: none;
-        color: var(--primary);
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
         cursor: pointer;
-        padding: 0;
-        font-weight: 500;
-        transition: color 0.2s ease;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 24px;
     }
-
-    .edit-btn:hover {
-        color: var(--primary-dark);
-        text-decoration: underline;
-    }
-
-    /* Activity list */
-    .activity-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .activity-item {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--spacing-md);
-        padding: var(--spacing-md) 0;
-        border-bottom: 1px solid var(--border);
-        transition: background-color 0.2s ease;
-    }
-
-    .activity-item:last-child {
-        border-bottom: none;
-    }
-
-    .activity-item:hover {
-        background-color: var(--secondary);
-    }
-
-    .activity-icon {
-        width: 2.5rem;
-        height: 2.5rem;
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
         border-radius: 50%;
-        background: var(--primary-light);
+    }
+    
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    
+    .account-link {
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: white;
-        flex-shrink: 0;
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
     }
-
-    .activity-content {
-        flex: 1;
-    }
-
-    .activity-title {
-        margin: 0 0 var(--spacing-sm) 0;
-        color: var(--text-dark);
-        font-weight: 500;
-    }
-
-    .activity-time {
-        font-size: 0.875rem;
-        color: var(--text-light);
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .profile-info {
-            grid-template-columns: 1fr;
-            text-align: center;
-        }
-
-        .profile-avatar {
-            margin: 0 auto;
-        }
-
-        .profile-actions {
-            justify-content: center;
-        }
-
-        .charts-section {
-            grid-template-columns: 1fr;
-        }
+    
+    .account-link i {
+        font-size: 20px;
+        margin-right: 15px;
+        width: 24px;
+        text-align: center;
     }
 </style>
 
+<%- contentFor('body') %>
 <div class="main-content">
-    <div class="profile-container">
-        <!-- Profile Header -->
-        <div class="profile-header">
-            <div class="profile-info">
-                <div class="profile-avatar">
-                    <img src="/images/default-avatar.png" alt="Profile Picture">
-                </div>
-                <div class="profile-details">
-                    <h1><%= locals.user ? locals.user.username : 'User' %></h1>
-                    <p>Member since <%= locals.user ? new Date(locals.user.createdAt).toLocaleDateString() : 'Unknown' %></p>
-                    <div class="profile-actions">
-                        <button class="btn btn-primary">Edit Profile</button>
-                        <button class="btn btn-secondary">Change Password</button>
+    <div class="container">
+        <div class="profile-container">
+            <h1 class="section-title">Edit Profile</h1>
+            
+            <form id="profileForm" class="profile-form">
+                <!-- Profile Image -->
+                <div class="profile-image-section">
+                    <div class="profile-image-container">
+                        <img id="profileImagePreview" src="/assets/images/avatar-placeholder.jpg" alt="Profile Image">
+                    </div>
+                    <div class="text-center">
+                        <label for="profileImage" class="btn btn-outline-primary mt-3">
+                            <i class="fas fa-camera"></i> Change Profile Picture
+                        </label>
+                        <input type="file" id="profileImage" name="profileImage" accept="image/*" class="d-none">
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Items Shared</div>
-                <div class="stat-value">42</div>
-                <div class="stat-footer">
-                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>12%</span>
-                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">People Helped</div>
-                <div class="stat-value">68</div>
-                <div class="stat-footer">
-                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>8%</span>
-                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">Food Waste Reduced (kg)</div>
-                <div class="stat-value">156</div>
-                <div class="stat-footer">
-                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>15%</span>
-                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-label">CO₂ Emissions Saved (kg)</div>
-                <div class="stat-value">234</div>
-                <div class="stat-footer">
-                    <span class="trend-up"><i class="fas fa-arrow-up trend-icon"></i>9%</span>
-                    <span style="margin-left: 5px; color: var(--text-light);">from last month</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="charts-section">
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h2>Impact Over Time</h2>
-                    <div class="chart-actions">
-                        <button class="chart-btn" id="weeklyBtn">Weekly</button>
-                        <button class="chart-btn" id="monthlyBtn">Monthly</button>
-                        <button class="chart-btn" id="yearlyBtn">Yearly</button>
-                    </div>
-                </div>
-                <div class="chart-container">
-                    <canvas id="impactChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h2>Food Category Breakdown</h2>
-                </div>
-                <div class="chart-container">
-                    <canvas id="categoryChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="profile-sections">
-            <div class="profile-section">
-                <div class="section-header">
-                    <h2>Personal Information</h2>
-                    <button class="edit-btn">Edit</button>
-                </div>
-                <div class="section-content">
-                    <div class="preferences-list">
-                        <li>
-                            <span>Email</span>
-                            <span><%= locals.user ? locals.user.email : 'Not set' %></span>
-                        </li>
-                        <li>
-                            <span>Phone</span>
-                            <span>Not set</span>
-                        </li>
-                        <li>
-                            <span>Location</span>
-                            <span>Not set</span>
-                        </li>
-                    </div>
-                </div>
-            </div>
-
-            <div class="profile-section">
-                <div class="section-header">
-                    <h2>Recent Activity</h2>
-                    <a href="#" class="edit-btn">View All</a>
-                </div>
-                <div class="section-content">
-                    <div class="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-share-alt"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-title">Shared 2kg of vegetables</p>
-                                <p class="activity-time">2 hours ago</p>
-                            </div>
+                
+                <!-- Personal Information -->
+                <div class="form-section">
+                    <h2 class="section-subtitle">Personal Information</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="firstName" class="form-control" required>
                         </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-handshake"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-title">Received bread from Downtown Bakery</p>
-                                <p class="activity-time">Yesterday</p>
-                            </div>
+                        
+                        <div class="form-group col-md-6">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" class="form-control" required>
                         </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-star"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-title">Got a 5-star rating</p>
-                                <p class="activity-time">3 days ago</p>
-                            </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nickname">Nickname (Optional)</label>
+                        <input type="text" id="nickname" name="nickname" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control">
+                    </div>
+                </div>
+                
+                <!-- Location Information -->
+                <div class="form-section">
+                    <h2 class="section-subtitle">Location Information <small class="text-muted">(Optional for privacy)</small></h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-5">
+                            <label for="city">City</label>
+                            <input type="text" id="city" name="city" class="form-control">
+                        </div>
+                        
+                        <div class="form-group col-md-3">
+                            <label for="state">State</label>
+                            <input type="text" id="state" name="state" class="form-control">
+                        </div>
+                        
+                        <div class="form-group col-md-4">
+                            <label for="zipCode">Zip Code</label>
+                            <input type="text" id="zipCode" name="zipCode" class="form-control">
                         </div>
                     </div>
                 </div>
-            </div>
+                
+                <!-- Group Involvement -->
+                <div class="form-section">
+                    <h2 class="section-subtitle">Group Involvement</h2>
+                    
+                    <div id="joinedGroups">
+                        <p class="text-muted">You haven't joined any groups yet.</p>
+                        
+                        <!-- Groups will be dynamically added here -->
+                        <!-- Example of how a group item will look: -->
+                        <div class="group-item d-none" id="groupItemTemplate">
+                            <img src="/assets/images/group-placeholder.jpg" alt="Group">
+                            <div class="group-info">
+                                <h5 class="group-name mb-1">Group Name</h5>
+                                <p class="group-role mb-0">Member since: <span class="join-date">Jan 1, 2025</span></p>
+                            </div>
+                            <a href="#" class="btn btn-sm btn-outline-primary ml-auto group-link">View Group</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings & Privacy Controls -->
+                <div class="form-section">
+                    <h2 class="section-subtitle">Settings & Privacy Controls</h2>
+                    
+                    <h5 class="mt-4 mb-3">Profile Visibility</h5>
+                    
+                    <div class="switch-container">
+                        <span>Show full name to group members</span>
+                        <label class="switch">
+                            <input type="checkbox" id="showNameToggle" name="showNameToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="switch-container">
+                        <span>Show location information to group members</span>
+                        <label class="switch">
+                            <input type="checkbox" id="showLocationToggle" name="showLocationToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="switch-container">
+                        <span>Show profile picture to non-members</span>
+                        <label class="switch">
+                            <input type="checkbox" id="showPictureToggle" name="showPictureToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">Notification Preferences</h5>
+                    
+                    <div class="switch-container">
+                        <span>Email notifications for group activities</span>
+                        <label class="switch">
+                            <input type="checkbox" id="emailNotifyToggle" name="emailNotifyToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="switch-container">
+                        <span>In-app notifications</span>
+                        <label class="switch">
+                            <input type="checkbox" id="appNotifyToggle" name="appNotifyToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="switch-container">
+                        <span>New group invitations</span>
+                        <label class="switch">
+                            <input type="checkbox" id="groupInviteToggle" name="groupInviteToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">Connected Accounts</h5>
+                    
+                    <div class="account-links">
+                        <div class="account-link">
+                            <i class="fab fa-facebook text-primary"></i>
+                            <div class="flex-grow-1">
+                                <p class="mb-0">Facebook</p>
+                                <small class="text-muted">Not connected</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary connect-account" data-platform="facebook">Connect</button>
+                        </div>
+                        
+                        <div class="account-link">
+                            <i class="fab fa-twitter text-info"></i>
+                            <div class="flex-grow-1">
+                                <p class="mb-0">Twitter</p>
+                                <small class="text-muted">Not connected</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary connect-account" data-platform="twitter">Connect</button>
+                        </div>
+                        
+                        <div class="account-link">
+                            <i class="fab fa-linkedin text-primary"></i>
+                            <div class="flex-grow-1">
+                                <p class="mb-0">LinkedIn</p>
+                                <small class="text-muted">Not connected</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary connect-account" data-platform="linkedin">Connect</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="/profile" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+            
+            <div id="errorMessage" class="alert alert-danger d-none"></div>
+            <div id="successMessage" class="alert alert-success d-none"></div>
         </div>
     </div>
 </div>
 
+<%- contentFor('script') %>
 <script>
-    // Initialize charts when the page loads
     document.addEventListener('DOMContentLoaded', function() {
-        // Impact Over Time Chart
-        const impactCtx = document.getElementById('impactChart').getContext('2d');
-        new Chart(impactCtx, {
-            type: 'line',
-            data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                datasets: [{
-                    label: 'Food Shared (kg)',
-                    data: [65, 78, 90, 85, 95, 110],
-                    borderColor: '#4CAF50',
-                    tension: 0.4,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
+        const profileForm = document.getElementById('profileForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const profileImageInput = document.getElementById('profileImage');
+        const profileImagePreview = document.getElementById('profileImagePreview');
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login?redirect=/profile-edit';
+            return;
+        }
+        
+        // Load user profile data
+        loadUserProfile();
+        
+        // Handle profile image change
+        profileImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    profileImagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
             }
         });
-
-        // Food Category Breakdown Chart
-        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-        new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Vegetables', 'Fruits', 'Bakery', 'Dairy', 'Grains'],
-                datasets: [{
-                    data: [30, 25, 20, 15, 10],
-                    backgroundColor: [
-                        '#4CAF50',
-                        '#8BC34A',
-                        '#CDDC39',
-                        '#FFEB3B',
-                        '#FFC107'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
+        
+        // Load user groups
+        loadUserGroups();
+        
+        // Handle form submission
+        profileForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Hide previous messages
+            errorMessage.classList.add('d-none');
+            successMessage.classList.add('d-none');
+            
+            // Get form values
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const nickname = document.getElementById('nickname').value;
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const zipCode = document.getElementById('zipCode').value;
+            
+            // Get privacy settings
+            const showName = document.getElementById('showNameToggle').checked;
+            const showLocation = document.getElementById('showLocationToggle').checked;
+            const showPicture = document.getElementById('showPictureToggle').checked;
+            
+            // Get notification preferences
+            const emailNotify = document.getElementById('emailNotifyToggle').checked;
+            const appNotify = document.getElementById('appNotifyToggle').checked;
+            const groupInvite = document.getElementById('groupInviteToggle').checked;
+            
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({
+                        firstName,
+                        lastName,
+                        nickname,
+                        username,
+                        email,
+                        phoneNumber,
+                        city,
+                        state,
+                        zipCode,
+                        privacy: {
+                            showName,
+                            showLocation,
+                            showPicture
+                        },
+                        notifications: {
+                            emailNotify,
+                            appNotify,
+                            groupInvite
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update user data in localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    successMessage.textContent = 'Profile updated successfully!';
+                    successMessage.classList.remove('d-none');
+                    
+                    // Scroll to top of form
+                    window.scrollTo(0, 0);
+                } else {
+                    // Show error message
+                    errorMessage.textContent = data.message || 'An error occurred while updating profile.';
+                    errorMessage.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                errorMessage.textContent = 'An error occurred while updating profile. Please try again.';
+                errorMessage.classList.remove('d-none');
+            }
+        });
+        
+        // Function to load user profile data
+        async function loadUserProfile() {
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const user = data.user;
+                    
+                    // Fill form with user data
+                    document.getElementById('firstName').value = user.firstName || '';
+                    document.getElementById('lastName').value = user.lastName || '';
+                    document.getElementById('nickname').value = user.nickname || '';
+                    document.getElementById('username').value = user.username || '';
+                    document.getElementById('email').value = user.email || '';
+                    document.getElementById('phoneNumber').value = user.phoneNumber || '';
+                    document.getElementById('city').value = user.city || '';
+                    document.getElementById('state').value = user.state || '';
+                    document.getElementById('zipCode').value = user.zipCode || '';
+                    
+                    // Set privacy toggles
+                    if (user.privacy) {
+                        document.getElementById('showNameToggle').checked = user.privacy.showName !== false;
+                        document.getElementById('showLocationToggle').checked = !!user.privacy.showLocation;
+                        document.getElementById('showPictureToggle').checked = !!user.privacy.showPicture;
+                    }
+                    
+                    // Set notification toggles
+                    if (user.notifications) {
+                        document.getElementById('emailNotifyToggle').checked = user.notifications.emailNotify !== false;
+                        document.getElementById('appNotifyToggle').checked = user.notifications.appNotify !== false;
+                        document.getElementById('groupInviteToggle').checked = user.notifications.groupInvite !== false;
+                    }
+                    
+                    // Update profile image if available
+                    if (user.profileImage) {
+                        profileImagePreview.src = user.profileImage;
+                    }
+                } else {
+                    // If unauthorized, redirect to login
+                    if (response.status === 401 || response.status === 403) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '/login?redirect=/profile-edit';
+                    } else {
+                        const data = await response.json();
+                        errorMessage.textContent = data.message || 'Failed to load profile data.';
+                        errorMessage.classList.remove('d-none');
                     }
                 }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                errorMessage.textContent = 'An error occurred while loading profile data.';
+                errorMessage.classList.remove('d-none');
             }
+        }
+        
+        // Function to load user groups
+        async function loadUserGroups() {
+            try {
+                const response = await fetch('/api/groups/user', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const groups = data.groups;
+                    
+                    const joinedGroupsContainer = document.getElementById('joinedGroups');
+                    const template = document.getElementById('groupItemTemplate');
+                    
+                    // Clear container except for template
+                    while (joinedGroupsContainer.firstChild) {
+                        joinedGroupsContainer.removeChild(joinedGroupsContainer.firstChild);
+                    }
+                    
+                    if (groups && groups.length > 0) {
+                        groups.forEach(group => {
+                            const groupItem = template.cloneNode(true);
+                            groupItem.classList.remove('d-none');
+                            groupItem.removeAttribute('id');
+                            
+                            const groupImg = groupItem.querySelector('img');
+                            const groupName = groupItem.querySelector('.group-name');
+                            const joinDate = groupItem.querySelector('.join-date');
+                            const groupLink = groupItem.querySelector('.group-link');
+                            
+                            if (group.image) {
+                                groupImg.src = group.image;
+                            }
+                            
+                            groupName.textContent = group.name;
+                            
+                            if (group.joinedDate) {
+                                // Format date
+                                const date = new Date(group.joinedDate);
+                                joinDate.textContent = date.toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    year: 'numeric' 
+                                });
+                            }
+                            
+                            groupLink.href = `/groups/${group.id}`;
+                            
+                            joinedGroupsContainer.appendChild(groupItem);
+                        });
+                    } else {
+                        const noGroupsMsg = document.createElement('p');
+                        noGroupsMsg.className = 'text-muted';
+                        noGroupsMsg.textContent = 'You haven\'t joined any groups yet.';
+                        joinedGroupsContainer.appendChild(noGroupsMsg);
+                    }
+                    
+                    // Add the template back (hidden)
+                    joinedGroupsContainer.appendChild(template);
+                } else {
+                    console.error('Failed to load user groups');
+                }
+            } catch (error) {
+                console.error('Error loading user groups:', error);
+            }
+        }
+        
+        // Handle social account connections
+        const connectButtons = document.querySelectorAll('.connect-account');
+        connectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const platform = this.getAttribute('data-platform');
+                // This would typically open a popup for OAuth authentication
+                alert(`Connect to ${platform} functionality would go here.`);
+            });
         });
     });
 </script>

@@ -6,9 +6,11 @@ function isAuthenticated() {
 }
 
 // Redirect to login if not authenticated
-function requireAuth() {
+function requireAuth(redirectUrl) {
     if (!isAuthenticated()) {
-        window.location.href = '/login';
+        window.location.href = redirectUrl ? 
+            `/login?redirect=${encodeURIComponent(redirectUrl)}` : 
+            '/login';
         return false;
     }
     return true;
@@ -38,22 +40,67 @@ async function fetchUserProfile() {
             throw new Error('No token found');
         }
 
-        const response = await fetch('/api/user/profile', {
+        const response = await fetch('/api/auth/profile', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': token,
                 'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                // Token is invalid or expired
+                logout();
+                throw new Error('Session expired. Please login again.');
+            }
             throw new Error('Failed to fetch profile');
         }
 
         const data = await response.json();
-        return data;
+        return data.user;
     } catch (error) {
         console.error('Error fetching profile:', error);
+        throw error;
+    }
+}
+
+// Update user profile
+async function updateUserProfile(profileData) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No token found');
+        }
+
+        const response = await fetch('/api/auth/profile', {
+            method: 'PUT',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(profileData)
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                // Token is invalid or expired
+                logout();
+                throw new Error('Session expired. Please login again.');
+            }
+            
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        const data = await response.json();
+        
+        // Update user in localStorage
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        return data;
+    } catch (error) {
+        console.error('Error updating profile:', error);
         throw error;
     }
 }

@@ -11,11 +11,11 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Base Styles -->
-    <link rel="stylesheet" href="/css/styles.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     
-    <!-- Global Styles -->
-    <link rel="stylesheet" href="/css/style.css">
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="/css/main.css">
     
     <!-- Custom Styles -->
     <style>
@@ -29,6 +29,9 @@
     <%- typeof style !== 'undefined' ? style : '' %>
 </head>
 <body>
+    <!-- Header -->
+    <%- include('../partials/header') %>
+
     <!-- Main Content -->
     <%- body %>
 
@@ -37,6 +40,7 @@
 
     <!-- Common Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/js/header.js"></script>
     
     <!-- Page-specific scripts -->
     <%- typeof script !== 'undefined' ? script : '' %>

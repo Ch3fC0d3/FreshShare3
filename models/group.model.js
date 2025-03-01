@@ -6,7 +6,8 @@ const Group = mongoose.model(
         name: {
             type: String,
             required: true,
-            unique: true
+            unique: true,
+            trim: true
         },
         description: {
             type: String,
@@ -39,9 +40,15 @@ const Group = mongoose.model(
         },
         location: {
             street: String,
-            city: String,
+            city: {
+                type: String,
+                required: true
+            },
             state: String,
-            zipCode: String,
+            zipCode: {
+                type: String,
+                required: true
+            },
             coordinates: {
                 type: {
                     type: String,
@@ -54,6 +61,46 @@ const Group = mongoose.model(
                 }
             }
         },
+        organizers: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
+        shoppingList: [{
+            productName: String,
+            vendor: String,
+            casePrice: Number,
+            quantity: Number,
+            totalUnits: Number
+        }],
+        proposedProducts: [{
+            productName: String,
+            vendor: String,
+            casePrice: Number,
+            quantity: Number,
+            votes: { 
+                type: Number, 
+                default: 0 
+            },
+            approved: { 
+                type: Boolean, 
+                default: false 
+            }
+        }],
+        deliveryDays: {
+            type: [String], // Example: ["Monday", "Thursday"]
+            required: true
+        },
+        discussionBoard: [{
+            user: { 
+                type: mongoose.Schema.Types.ObjectId, 
+                ref: "User" 
+            },
+            message: String,
+            timestamp: { 
+                type: Date, 
+                default: Date.now 
+            }
+        }],
         isPrivate: {
             type: Boolean,
             default: false
@@ -72,6 +119,20 @@ const Group = mongoose.model(
                 ref: "User"
             }]
         }],
+        stats: {
+            activeMembers: { 
+                type: Number, 
+                default: 0 
+            },
+            totalProductsOrdered: { 
+                type: Number, 
+                default: 0 
+            },
+            pastOrders: [{ 
+                type: mongoose.Schema.Types.ObjectId, 
+                ref: "Order" 
+            }]
+        },
         createdAt: {
             type: Date,
             default: Date.now

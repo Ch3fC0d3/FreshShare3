@@ -1,0 +1,119 @@
+/* 
+ * FreshShare Color System
+ * Standardized color definitions for the entire application
+ *
+ * HOW TO USE THIS COLOR SYSTEM:
+ * ----------------------------
+ * 1. Use semantic variables whenever possible (e.g., --primary-color instead of --green-600)
+ * 2. For special cases, you can use the base color scale (e.g., --green-300 for a lighter green)
+ * 3. All colors are organized in scales (50-900) where higher numbers are darker
+ * 4. When creating gradients, use colors from the same family (e.g., --green-300 to --green-600)
+ * 5. For text on colored backgrounds, ensure proper contrast:
+ *    - On dark backgrounds: use --white or --gray-50
+ *    - On light backgrounds: use --text-color or --text-dark
+ */
+
+/* ===== COLOR SYSTEM ===== */
+:root {
+    /* Primary Color: Green - The main brand color */
+    --green-50: #E8F5E9;
+    --green-100: #C8E6C9;
+    --green-200: #A5D6A7;
+    --green-300: #81C784;
+    --green-400: #66BB6A;
+    --green-500: #4CAF50;
+    --green-600: #45a049;
+    --green-700: #388E3C;
+    --green-800: #2E7D32;
+    --green-900: #1B5E20;
+    
+    /* Accent Color: Orange - For calls to action and highlights */
+    --accent-50: #FFF3E0;
+    --accent-100: #FFE0B2;
+    --accent-200: #FFCC80;
+    --accent-300: #FFB74D;
+    --accent-400: #FFA726;
+    --accent-500: #FF9800;
+    --accent-600: #FF8F00;
+    --accent-700: #F57C00;
+    --accent-800: #EF6C00;
+    --accent-900: #E65100;
+    
+    /* Neutral Colors: Grays - For text, backgrounds, and borders */
+    --gray-50: #FAFAFA;
+    --gray-100: #F5F7FA;
+    --gray-200: #EEEEEE;
+    --gray-300: #E0E0E0;
+    --gray-400: #BDBDBD;
+    --gray-500: #9E9E9E;
+    --gray-600: #757575;
+    --gray-700: #616161;
+    --gray-800: #424242;
+    --gray-900: #212121;
+    
+    /* Semantic Color Variables */
+    
+    /* Primary */
+    --primary-color: var(--green-600);
+    --primary-light: var(--green-400);
+    --primary-dark: var(--green-700);
+    --primary-darker: var(--green-900);
+    --primary-lighter: var(--green-100);
+    
+    /* Accent */
+    --accent-color: var(--accent-600);
+    --accent-light: var(--accent-400);
+    --accent-dark: var(--accent-800);
+    
+    /* Feedback Colors - Using the primary green and accent orange */
+    --success-color: var(--green-600);
+    --error-color: #E53935;      /* Red for errors */
+    --warning-color: var(--accent-600);
+    --info-color: #2196F3;       /* Blue for information */
+    
+    /* Text Colors */
+    --text-color: var(--gray-900);
+    --text-medium: var(--gray-700);
+    --text-light: var(--gray-500);
+    --text-muted: var(--gray-600);
+    --text-dark: var(--gray-900);
+    
+    /* Background Colors */
+    --background-color: #ffffff;
+    --bg-light: var(--gray-100);
+    --card-background: #f9f9f9;
+    --white: #ffffff;
+    --off-white: #f8f9fa;
+    --light-green-bg: var(--green-50);
+    --dark-bg: var(--gray-900);
+    
+    /* Border Colors */
+    --border: var(--gray-300);
+    
+    /* Legacy Variables (for backward compatibility) */
+    --secondary-color: var(--green-600);
+    --complementary: var(--accent-color);
+    --secondary: var(--green-50);
+    --primary: var(--green-800);
+    --primary-hover: var(--green-700);
+    --accent: var(--accent-600);
+    --triadic-1: var(--info-color);
+    --triadic-2: var(--error-color);
+    
+    /* UI Elements */
+    --radius: 8px;
+    
+    /* Shadows */
+    --shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+    
+    /* Border Radius */
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 20px;
+
+    /* Transitions */
+    --transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}

@@ -1,0 +1,154 @@
+/* 
+ * FreshShare Design System
+ * Standardized design tokens for the entire application
+ */
+
+:root {
+    /* ===== TYPOGRAPHY ===== */
+    
+    /* Font Family */
+    --font-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    
+    /* Font Sizes - Using a typographic scale */
+    --text-xs: 0.75rem;    /* 12px */
+    --text-sm: 0.875rem;   /* 14px */
+    --text-base: 1rem;     /* 16px */
+    --text-md: 1.125rem;   /* 18px */
+    --text-lg: 1.25rem;    /* 20px */
+    --text-xl: 1.5rem;     /* 24px */
+    --text-2xl: 1.75rem;   /* 28px */
+    --text-3xl: 2rem;      /* 32px */
+    --text-4xl: 2.5rem;    /* 40px */
+    --text-5xl: 3rem;      /* 48px */
+    --text-6xl: 3.75rem;   /* 60px */
+    
+    /* Font Weights */
+    --font-thin: 100;
+    --font-extralight: 200;
+    --font-light: 300;
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+    --font-extrabold: 800;
+    --font-black: 900;
+    
+    /* Line Heights */
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+    --leading-loose: 2;
+    
+    /* Letter Spacing */
+    --tracking-tighter: -0.05em;
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.025em;
+    --tracking-wider: 0.05em;
+    --tracking-widest: 0.1em;
+    
+    /* ===== SPACING SYSTEM ===== */
+    
+    /* Base spacing unit: 4px (0.25rem) */
+    --space-0: 0;
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-12: 3rem;     /* 48px */
+    --space-16: 4rem;     /* 64px */
+    --space-20: 5rem;     /* 80px */
+    --space-24: 6rem;     /* 96px */
+    --space-32: 8rem;     /* 128px */
+    --space-40: 10rem;    /* 160px */
+    --space-48: 12rem;    /* 192px */
+    --space-56: 14rem;    /* 224px */
+    --space-64: 16rem;    /* 256px */
+    
+    /* Semantic Spacing */
+    --spacing-page: var(--space-6);
+    --spacing-section: var(--space-16);
+    --spacing-component: var(--space-4);
+    --spacing-element: var(--space-2);
+    
+    /* ===== BORDERS & SHADOWS ===== */
+    
+    /* Border Widths */
+    --border-0: 0;
+    --border-1: 1px;
+    --border-2: 2px;
+    --border-4: 4px;
+    --border-8: 8px;
+    
+    /* Border Radius */
+    --radius-none: 0;
+    --radius-sm: 0.25rem;    /* 4px */
+    --radius-md: 0.5rem;     /* 8px */ 
+    --radius-lg: 0.75rem;    /* 12px */
+    --radius-xl: 1rem;       /* 16px */
+    --radius-2xl: 1.5rem;    /* 24px */
+    --radius-full: 9999px;   /* Fully rounded (circles) */
+    
+    /* Legacy Border Radius (for backward compatibility) */
+    --border-radius-sm: var(--radius-md);  /* 8px */
+    --border-radius-md: var(--radius-lg);  /* 12px */
+    --border-radius-lg: var(--radius-2xl); /* 24px */
+    --radius: var(--radius-md);            /* 8px */
+    --border-radius: var(--radius-md);     /* 8px */
+    
+    /* Shadows */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.1);
+    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-none: none;
+    
+    /* Focus Rings */
+    --focus-ring-green: 0 0 0 3px rgba(76, 175, 80, 0.25);
+    
+    /* ===== Z-INDEX ===== */
+    --z-0: 0;
+    --z-10: 10;
+    --z-20: 20;
+    --z-30: 30;
+    --z-40: 40;
+    --z-50: 50;
+    --z-auto: auto;
+    
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: all 0.2s ease;
+    --transition-normal: all 0.3s ease;
+    --transition-slow: all 0.5s ease;
+    --transition-bezier: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    
+    /* ===== LAYOUTS ===== */
+    --container-max-width: 1200px;
+    --container-sm: 640px;
+    --container-md: 768px;
+    --container-lg: 1024px;
+    --container-xl: 1280px;
+    
+    /* ===== MEDIA QUERY BREAKPOINTS ===== */
+    --screen-sm: 640px;
+    --screen-md: 768px;
+    --screen-lg: 1024px;
+    --screen-xl: 1280px;
+}
+
+/* Legacy Variables (for backward compatibility) */
+:root {
+    --card-shadow: var(--shadow-sm);
+    --spacing-sm: var(--space-2);
+    --spacing-md: var(--space-4);
+    --spacing-lg: var(--space-6);
+    --spacing-xl: var(--space-8);
+}

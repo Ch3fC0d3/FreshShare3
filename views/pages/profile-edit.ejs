@@ -1,0 +1,217 @@
+<%- contentFor('style') %>
+<link rel="stylesheet" href="/css/main.css">
+
+<%- contentFor('body') %>
+<div class="main-content">
+    <div class="container">
+        <div class="profile-container">
+            <h1 class="section-title">Edit Profile</h1>
+            
+            <form id="profileForm" class="profile-form">
+                <!-- Profile Image -->
+                <div class="profile-image-section">
+                    <div class="profile-image-container">
+                        <img id="profileImagePreview" src="/assets/images/avatar-placeholder.jpg" alt="Profile Image">
+                    </div>
+                    <label for="profileImage" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-camera"></i> Change Profile Picture
+                    </label>
+                    <input type="file" id="profileImage" name="profileImage" accept="image/*" class="d-none">
+                </div>
+                
+                <!-- Personal Information -->
+                <div class="form-section">
+                    <h2 class="section-subtitle">Personal Information</h2>
+                    
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control">
+                    </div>
+                </div>
+                
+                <!-- Address Information -->
+                <div class="form-section">
+                    <h2 class="section-subtitle">Address Information</h2>
+                    
+                    <div class="form-group">
+                        <label for="street">Street Address</label>
+                        <input type="text" id="street" name="street" class="form-control">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group col-md-5">
+                            <label for="city">City</label>
+                            <input type="text" id="city" name="city" class="form-control">
+                        </div>
+                        
+                        <div class="form-group col-md-3">
+                            <label for="state">State</label>
+                            <input type="text" id="state" name="state" class="form-control">
+                        </div>
+                        
+                        <div class="form-group col-md-4">
+                            <label for="zipCode">Zip Code</label>
+                            <input type="text" id="zipCode" name="zipCode" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="/profile" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+            
+            <div id="errorMessage" class="alert alert-danger d-none"></div>
+            <div id="successMessage" class="alert alert-success d-none"></div>
+        </div>
+    </div>
+</div>
+
+<%- contentFor('script') %>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileForm = document.getElementById('profileForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const profileImageInput = document.getElementById('profileImage');
+        const profileImagePreview = document.getElementById('profileImagePreview');
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login?redirect=/profile-edit';
+            return;
+        }
+        
+        // Load user profile data
+        loadUserProfile();
+        
+        // Handle profile image change
+        profileImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    profileImagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Handle form submission
+        profileForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Hide previous messages
+            errorMessage.classList.add('d-none');
+            successMessage.classList.add('d-none');
+            
+            // Get form values
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const street = document.getElementById('street').value;
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const zipCode = document.getElementById('zipCode').value;
+            
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        phoneNumber,
+                        street,
+                        city,
+                        state,
+                        zipCode
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update user data in localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    successMessage.textContent = 'Profile updated successfully!';
+                    successMessage.classList.remove('d-none');
+                    
+                    // Scroll to top of form
+                    window.scrollTo(0, 0);
+                } else {
+                    // Show error message
+                    errorMessage.textContent = data.message || 'An error occurred while updating profile.';
+                    errorMessage.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                errorMessage.textContent = 'An error occurred while updating profile. Please try again.';
+                errorMessage.classList.remove('d-none');
+            }
+        });
+        
+        // Function to load user profile data
+        async function loadUserProfile() {
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const user = data.user;
+                    
+                    // Fill form with user data
+                    document.getElementById('username').value = user.username || '';
+                    document.getElementById('email').value = user.email || '';
+                    document.getElementById('phoneNumber').value = user.phoneNumber || '';
+                    document.getElementById('street').value = user.street || '';
+                    document.getElementById('city').value = user.city || '';
+                    document.getElementById('state').value = user.state || '';
+                    document.getElementById('zipCode').value = user.zipCode || '';
+                    
+                    // Update profile image if available
+                    if (user.profileImage) {
+                        profileImagePreview.src = user.profileImage;
+                    }
+                } else {
+                    // If unauthorized, redirect to login
+                    if (response.status === 401 || response.status === 403) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '/login?redirect=/profile-edit';
+                    } else {
+                        const data = await response.json();
+                        errorMessage.textContent = data.message || 'Failed to load profile data.';
+                        errorMessage.classList.remove('d-none');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                errorMessage.textContent = 'An error occurred while loading profile data.';
+                errorMessage.classList.remove('d-none');
+            }
+        }
+    });
+</script>

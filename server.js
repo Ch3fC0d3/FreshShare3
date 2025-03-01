@@ -24,7 +24,7 @@ db.mongoose
 
 // Initialize app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -47,6 +47,9 @@ app.set('layout', 'layouts/layout');
 
 // API Routes
 app.use('/api/marketplace', require('./routes/marketplace.routes'));
+app.use('/api/groups', require('./routes/groups.routes'));
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/orders', require('./routes/orders.routes'));
 
 // Page Routes
 app.get('/', (req, res) => {
@@ -79,6 +82,40 @@ app.get('/groups', (req, res) => {
   });
 });
 
+app.get('/create-group', (req, res) => {
+  res.render('pages/create-group', { 
+    title: 'FreshShare - Create New Group'
+  });
+});
+
+app.get('/groups/:id', (req, res) => {
+  res.render('pages/group_card', { 
+    title: 'FreshShare - Group Details',
+    groupId: req.params.id
+  });
+});
+
+app.get('/groups/:id/shopping', (req, res) => {
+  res.render('pages/group_shopping', { 
+    title: 'FreshShare - Group Shopping',
+    groupId: req.params.id
+  });
+});
+
+app.get('/groups/:id/orders', (req, res) => {
+  res.render('pages/group_orders', { 
+    title: 'FreshShare - Group Orders',
+    groupId: req.params.id
+  });
+});
+
+app.get('/orders/:id', (req, res) => {
+  res.render('pages/order_details', { 
+    title: 'FreshShare - Order Details',
+    orderId: req.params.id
+  });
+});
+
 app.get('/about', (req, res) => {
   res.render('pages/about', { 
     title: 'FreshShare - About'
@@ -104,8 +141,14 @@ app.get('/contact', (req, res) => {
 });
 
 app.get('/profile', (req, res) => {
-  res.render('pages/profile', { 
+  res.render('pages/group_card', { 
     title: 'FreshShare - Profile'
+  });
+});
+
+app.get('/profile-edit', (req, res) => {
+  res.render('pages/profile-edit', { 
+    title: 'FreshShare - Edit Profile'
   });
 });
 
