@@ -7,8 +7,24 @@ node_modules/
 # Log files
 *.log
 
-# Large media files
-public/images/video.mp4
+# Video files
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.flv
+*.mkv
+*.webm
+*.m4v
+public/videos/
+public/uploads/*.mp4
+public/uploads/*.mov
+public/uploads/*.avi
+public/uploads/*.wmv
+public/uploads/*.flv
+public/uploads/*.mkv
+public/uploads/*.webm
+public/uploads/*.m4v
 
 # OS generated files
 .DS_Store
