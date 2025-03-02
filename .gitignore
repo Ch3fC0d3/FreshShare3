@@ -26,6 +26,38 @@ public/uploads/*.mkv
 public/uploads/*.webm
 public/uploads/*.m4v
 
+# Image files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.ico
+public/uploads/*.jpg
+public/uploads/*.jpeg
+public/uploads/*.png
+public/uploads/*.gif
+public/uploads/*.bmp
+public/uploads/*.tiff
+public/uploads/*.ico
+
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Large data files
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.iso
+
+# Database files
+*.sqlite
+*.db
+
+# Build and dist directories
+dist/
+build/
