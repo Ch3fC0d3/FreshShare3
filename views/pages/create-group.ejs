@@ -125,6 +125,7 @@
                         <option value="cooking_club">Cooking Club</option>
                         <option value="other">Other</option>
                     </select>
+                    <div class="error-message" id="category-error"></div>
                 </div>
                 
                 <div class="form-group">
@@ -249,26 +250,59 @@
                 el.textContent = '';
             });
             
+            // Get auth token
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No auth token found');
+                alert('Please log in to create a group');
+                window.location.href = '/login?redirect=/create-group';
+                return;
+            }
+            
+            // Log auth status
+            console.log('Auth token found:', token ? 'Yes' : 'No');
+            
             // Validate form
             let isValid = true;
             
             // Check required fields
             const requiredFields = [
-                { id: 'group-name', error: 'name-error', message: 'Group name is required' },
-                { id: 'group-description', error: 'description-error', message: 'Group description is required' },
+                { id: 'group-name', error: 'name-error', message: 'Group name is required (min 3 characters)' },
+                { id: 'group-description', error: 'description-error', message: 'Group description is required (min 10 characters)' },
                 { id: 'group-city', error: 'city-error', message: 'City is required' },
                 { id: 'group-zipcode', error: 'zipcode-error', message: 'Zip/Postal code is required' }
             ];
             
             requiredFields.forEach(field => {
                 const input = document.getElementById(field.id);
-                if (!input.value.trim()) {
+                const value = input.value.trim();
+                
+                if (!value) {
                     const errorEl = document.getElementById(field.error);
                     errorEl.textContent = field.message;
                     errorEl.style.display = 'block';
                     isValid = false;
+                } else if (field.id === 'group-name' && value.length < 3) {
+                    const errorEl = document.getElementById(field.error);
+                    errorEl.textContent = 'Group name must be at least 3 characters';
+                    errorEl.style.display = 'block';
+                    isValid = false;
+                } else if (field.id === 'group-description' && value.length < 10) {
+                    const errorEl = document.getElementById(field.error);
+                    errorEl.textContent = 'Description must be at least 10 characters';
+                    errorEl.style.display = 'block';
+                    isValid = false;
                 }
             });
+            
+            // Check category
+            const category = document.getElementById('group-category').value;
+            if (!category) {
+                const errorEl = document.getElementById('category-error');
+                errorEl.textContent = 'Please select a category';
+                errorEl.style.display = 'block';
+                isValid = false;
+            }
             
             // Check if at least one delivery day is selected
             const deliveryDays = document.querySelectorAll('input[name="deliveryDays"]:checked');
@@ -285,46 +319,58 @@
             
             // Get form data
             const formData = {
-                name: document.getElementById('group-name').value,
-                category: document.getElementById('group-category').value,
-                description: document.getElementById('group-description').value,
+                name: document.getElementById('group-name').value.trim(),
+                category: category,
+                description: document.getElementById('group-description').value.trim(),
                 location: {
-                    street: document.getElementById('group-street').value,
-                    city: document.getElementById('group-city').value,
-                    state: document.getElementById('group-state').value,
-                    zipCode: document.getElementById('group-zipcode').value
+                    street: document.getElementById('group-street').value.trim() || '',
+                    city: document.getElementById('group-city').value.trim(),
+                    state: document.getElementById('group-state').value.trim() || '',
+                    zipCode: document.getElementById('group-zipcode').value.trim()
                 },
-                rules: document.getElementById('group-rules').value,
-                isPrivate: document.getElementById('group-privacy').value === 'true',
+                rules: document.getElementById('group-rules').value.trim() || '',
+                isPrivate: document.getElementById('group-privacy').checked,
                 deliveryDays: Array.from(deliveryDays).map(day => day.value)
             };
             
+            console.log('Submitting group data:', formData);
+            
             try {
-                // Get auth token
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                // Submit form data to API
+                // Submit form data to API with both token headers for compatibility
                 const response = await fetch('/api/groups', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'x-access-token': token
                     },
                     body: JSON.stringify(formData)
                 });
                 
+                console.log('API Response status:', response.status);
                 const data = await response.json();
+                console.log('API Response data:', data);
                 
-                if (data.success) {
-                    // Redirect to the new group page
-                    window.location.href = `/groups/${data.group._id}`;
+                if (response.ok && data.success) {
+                    // Redirect to the groups page instead of the specific group
+                    window.location.href = '/groups';
                 } else {
-                    // Show error message
-                    alert('Failed to create group: ' + data.message);
+                    // Show validation errors if present
+                    if (data.errors && Array.isArray(data.errors)) {
+                        data.errors.forEach(error => {
+                            const field = error.split(' ')[0].toLowerCase();
+                            const errorEl = document.getElementById(`${field}-error`);
+                            if (errorEl) {
+                                errorEl.textContent = error;
+                                errorEl.style.display = 'block';
+                            }
+                        });
+                    } else {
+                        // Show general error message
+                        const errorMessage = data.message || 'An unknown error occurred';
+                        console.error('Failed to create group:', errorMessage);
+                        alert('Failed to create group: ' + errorMessage);
+                    }
                 }
             } catch (error) {
                 console.error('Error creating group:', error);

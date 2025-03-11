@@ -1,8 +1,7 @@
 // Check if user is authenticated
 function isAuthenticated() {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    return token && user;
+    // Check for token in cookies
+    return document.cookie.includes('token');
 }
 
 // Redirect to login if not authenticated
@@ -27,25 +26,28 @@ function redirectIfAuthenticated() {
 
 // Handle logout
 function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    // Clear token cookie by making a request to the logout endpoint
+    fetch('/logout', {
+        method: 'GET',
+        credentials: 'same-origin'
+    }).then(() => {
+        window.location.href = '/login';
+    }).catch(error => {
+        console.error('Logout error:', error);
+        // Fallback: redirect anyway
+        window.location.href = '/login';
+    });
 }
 
 // Fetch user profile
 async function fetchUserProfile() {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No token found');
-        }
-
         const response = await fetch('/api/auth/profile', {
             method: 'GET',
             headers: {
-                'Authorization': token,
                 'Content-Type': 'application/json'
-            }
+            },
+            credentials: 'same-origin' // Include cookies in the request
         });
 
         if (!response.ok) {
@@ -68,17 +70,12 @@ async function fetchUserProfile() {
 // Update user profile
 async function updateUserProfile(profileData) {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No token found');
-        }
-
         const response = await fetch('/api/auth/profile', {
             method: 'PUT',
             headers: {
-                'Authorization': token,
                 'Content-Type': 'application/json'
             },
+            credentials: 'same-origin', // Include cookies in the request
             body: JSON.stringify(profileData)
         });
 
@@ -94,10 +91,6 @@ async function updateUserProfile(profileData) {
         }
 
         const data = await response.json();
-        
-        // Update user in localStorage
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
         return data;
     } catch (error) {
         console.error('Error updating profile:', error);

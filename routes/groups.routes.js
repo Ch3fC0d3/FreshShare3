@@ -3,22 +3,17 @@ const router = express.Router();
 const { authJwt } = require('../middleware');
 const groupController = require('../controllers/group.controller');
 
-// Public routes
-// Make the GET all groups endpoint public
-router.get('/', groupController.getAllGroups);
-
-// Make the GET specific group endpoint public
-router.get('/:id', groupController.getGroupById);
-
-// Protected routes
-// Apply authentication middleware to all other routes
+// Apply authentication middleware to all routes
 router.use(authJwt.verifyToken);
-
-// Get user's groups - must be before /:id route to avoid conflict
-router.get('/user', groupController.getUserGroups);
 
 // Create a new group
 router.post('/', groupController.createGroup);
+
+// Get all groups
+router.get('/', groupController.getAllGroups);
+
+// Get a specific group
+router.get('/:id', groupController.getGroupById);
 
 // Update a group
 router.put('/:id', groupController.updateGroup);
@@ -27,10 +22,10 @@ router.put('/:id', groupController.updateGroup);
 router.delete('/:id', groupController.deleteGroup);
 
 // Join a group
-router.post('/join/:id', groupController.joinGroup);
+router.post('/:id/join', groupController.joinGroup);
 
 // Leave a group
-router.post('/leave/:id', groupController.leaveGroup);
+router.post('/:id/leave', groupController.leaveGroup);
 
 // Add a product to shopping list
 router.post('/:id/shopping-list', async (req, res) => {

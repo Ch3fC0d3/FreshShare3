@@ -1,5 +1,4 @@
 <%- contentFor('style') %>
-<!-- CSS moved to main.css -->
 <style>
     .groups-page {
         display: flex;
@@ -23,6 +22,78 @@
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 20px;
+    }
+
+    .group-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.2s;
+    }
+
+    .group-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .group-card-image-container {
+        background: #f8f9fa;
+        height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+
+    .group-card-image-container i {
+        font-size: 48px;
+    }
+
+    .group-card-content {
+        padding: 20px;
+    }
+
+    .group-name {
+        margin: 0 0 10px;
+        font-size: 1.25rem;
+        color: #2c3e50;
+    }
+
+    .group-description {
+        color: #6c757d;
+        margin-bottom: 15px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .group-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 15px;
+    }
+
+    .group-meta i {
+        margin-right: 5px;
+    }
+
+    .join-group-btn {
+        display: block;
+        width: 100%;
+        padding: 8px;
+        background: #007bff;
+        color: white;
+        text-align: center;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .join-group-btn:hover {
+        background: #0056b3;
+        text-decoration: none;
+        color: white;
     }
     
     @media (max-width: 1200px) {
@@ -98,7 +169,9 @@
 <!-- Group Card Template -->
 <template id="group-card-template">
     <div class="group-card">
-        <img src="" alt="Group" class="group-card-image">
+        <div class="group-card-image-container">
+            <i class="fas fa-users fa-3x"></i>
+        </div>
         <div class="group-card-content">
             <h3 class="group-name"></h3>
             <p class="group-description"></p>
@@ -110,7 +183,7 @@
                     <i class="fas fa-map-marker-alt"></i> <span class="group-city"></span>
                 </div>
             </div>
-            <a href="#" class="join-group-btn">View Group</a>
+            <a href="/group-details?id=${group._id}" class="join-group-btn">View Group</a>
         </div>
     </div>
 </template>
@@ -118,7 +191,7 @@
 <%- contentFor('script') %>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const token = localStorage.getItem('accessToken');
+        const token = localStorage.getItem('token'); 
         const groupsContainer = document.getElementById('groups-container');
         const groupCardTemplate = document.getElementById('group-card-template');
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -146,13 +219,18 @@
         async function loadGroups() {
             try {
                 console.log('Loading groups...');
+                console.log('Using auth token:', token ? 'Yes' : 'No');
                 
                 // Try to load groups
                 const response = await fetch('/api/groups', {
                     method: 'GET',
-                    headers: token ? {
-                        'Authorization': `Bearer ${token}`
-                    } : {}
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? {
+                            'Authorization': `Bearer ${token}`,
+                            'x-access-token': token
+                        } : {})
+                    }
                 });
                 
                 console.log('API response status:', response.status);
@@ -201,9 +279,8 @@
                     const groupCard = groupCardTemplate.content.cloneNode(true);
                     
                     // Set group image
-                    const groupImage = groupCard.querySelector('.group-card-image');
-                    groupImage.src = getGroupImage(group.category);
-                    groupImage.alt = group.name;
+                    const groupImage = groupCard.querySelector('.group-card-image-container');
+                    groupImage.innerHTML = getGroupImage(group.category);
                     
                     // Set group details
                     groupCard.querySelector('.group-name').textContent = group.name;
@@ -216,7 +293,7 @@
                     
                     // Set view group link
                     const viewGroupLink = groupCard.querySelector('.join-group-btn');
-                    viewGroupLink.href = `/groups/${group._id}`;
+                    viewGroupLink.href = `/group-details?id=${group._id}`;
                     
                     // Add to container
                     groupsContainer.appendChild(groupCard);
@@ -234,15 +311,16 @@
         
         // Get appropriate image based on group category
         function getGroupImage(category) {
-            const images = {
-                'neighborhood': '/img/groups/neighborhood.jpg',
-                'community_garden': '/img/groups/garden.jpg',
-                'food_bank': '/img/groups/foodbank.jpg',
-                'cooking_club': '/img/groups/cooking.jpg',
-                'other': '/img/groups/default.jpg'
+            // Use Font Awesome icons instead of images for more reliability
+            const iconMap = {
+                'neighborhood': '<i class="fas fa-home fa-3x"></i>',
+                'community_garden': '<i class="fas fa-seedling fa-3x"></i>',
+                'food_bank': '<i class="fas fa-box-open fa-3x"></i>',
+                'cooking_club': '<i class="fas fa-utensils fa-3x"></i>',
+                'other': '<i class="fas fa-users fa-3x"></i>'
             };
             
-            return images[category] || images.other;
+            return iconMap[category] || iconMap.other;
         }
         
         // Truncate text to specified length

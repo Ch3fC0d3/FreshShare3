@@ -88,7 +88,7 @@
         const redirectUrl = urlParams.get('redirect');
         
         // If user is already logged in, redirect to dashboard
-        if (isAuthenticated()) {
+        if (document.cookie.includes('token')) {
             window.location.href = '/dashboard';
             return;
         }
@@ -111,7 +111,14 @@
                 return;
             }
             
+            // Show loading state
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+            submitBtn.disabled = true;
+            
             try {
+                console.log('Sending signup request...');
                 const response = await fetch("/api/auth/signup", {
                     method: "POST",
                     headers: {
@@ -127,15 +134,28 @@
                     }),
                 });
                 
+                console.log('Signup response status:', response.status);
+                const data = await response.json();
+                console.log('Signup response data:', data);
+                
                 if (response.ok) {
                     document.getElementById("signupForm").style.display = "none";
                     document.getElementById("signupSuccess").style.display = "block";
                 } else {
-                    const data = await response.json();
+                    // Reset button
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
+                    
+                    // Show error message
                     alert(data.message || "Registration failed. Please try again.");
                 }
             } catch (error) {
                 console.error("Error:", error);
+                
+                // Reset button
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+                
                 alert("An error occurred. Please try again later.");
             }
         });

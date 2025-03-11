@@ -1,0 +1,308 @@
+<%- contentFor('style') %>
+<style>
+    .group-details {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .group-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .group-info {
+        flex: 1;
+    }
+
+    .group-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .group-section {
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .members-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .member-card {
+        text-align: center;
+        padding: 10px;
+    }
+
+    .member-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin-bottom: 8px;
+    }
+
+    .events-list {
+        display: grid;
+        gap: 15px;
+    }
+
+    .event-card {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 15px;
+    }
+
+    .discussion-board {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .message {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .shopping-list table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .shopping-list th, .shopping-list td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+</style>
+
+<%- contentFor('body') %>
+<div class="group-details">
+    <div class="group-header group-section">
+        <div class="group-info">
+            <h1 id="group-name"></h1>
+            <p id="group-description"></p>
+            <div class="group-meta">
+                <span><i class="fas fa-users"></i> <span id="member-count"></span> members</span>
+                <span><i class="fas fa-map-marker-alt"></i> <span id="group-location"></span></span>
+            </div>
+        </div>
+        <div class="group-actions">
+            <button class="btn btn-primary" id="join-group-btn">Join Group</button>
+            <button class="btn btn-outline-primary" id="share-group-btn">Share</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Shopping List Section -->
+            <div class="group-section shopping-list">
+                <h3>Shopping List</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Vendor</th>
+                            <th>Case Price</th>
+                            <th>Quantity</th>
+                            <th>Total Units</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shopping-list-body">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Discussion Board Section -->
+            <div class="group-section">
+                <h3>Discussion Board</h3>
+                <div class="discussion-board" id="discussion-board">
+                </div>
+                <div class="mt-3">
+                    <textarea class="form-control" id="message-input" placeholder="Write a message..."></textarea>
+                    <button class="btn btn-primary mt-2" id="send-message-btn">Send Message</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Events Section -->
+            <div class="group-section">
+                <h3>Upcoming Events</h3>
+                <div class="events-list" id="events-list">
+                </div>
+            </div>
+
+            <!-- Members Section -->
+            <div class="group-section">
+                <h3>Members</h3>
+                <div class="members-grid" id="members-grid">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- contentFor('script') %>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const token = localStorage.getItem('accessToken');
+        const groupId = new URLSearchParams(window.location.search).get('id');
+        
+        if (!groupId) {
+            alert('Group ID not found');
+            window.location.href = '/groups';
+            return;
+        }
+
+        try {
+            // Fetch group details
+            const response = await fetch(`/api/groups/${groupId}`, {
+                headers: token ? {
+                    'Authorization': `Bearer ${token}`
+                } : {}
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch group details');
+            }
+
+            const group = await response.json();
+            
+            // Update group header
+            document.getElementById('group-name').textContent = group.name;
+            document.getElementById('group-description').textContent = group.description;
+            document.getElementById('member-count').textContent = group.members.length;
+            document.getElementById('group-location').textContent = `${group.location.city}, ${group.location.state}`;
+
+            // Render shopping list
+            const shoppingListBody = document.getElementById('shopping-list-body');
+            group.shoppingList.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.productName}</td>
+                    <td>${item.vendor}</td>
+                    <td>$${item.casePrice.toFixed(2)}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.totalUnits}</td>
+                `;
+                shoppingListBody.appendChild(row);
+            });
+
+            // Render discussion board
+            const discussionBoard = document.getElementById('discussion-board');
+            group.discussionBoard.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                messageDiv.innerHTML = `
+                    <strong>${message.user.username}</strong>
+                    <small class="text-muted">${new Date(message.timestamp).toLocaleString()}</small>
+                    <p>${message.message}</p>
+                `;
+                discussionBoard.appendChild(messageDiv);
+            });
+
+            // Render events
+            const eventsList = document.getElementById('events-list');
+            group.events.forEach(event => {
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event-card';
+                eventDiv.innerHTML = `
+                    <h4>${event.title}</h4>
+                    <p>${event.description}</p>
+                    <div>
+                        <i class="far fa-calendar"></i> ${new Date(event.date).toLocaleDateString()}
+                        <i class="fas fa-map-marker-alt ml-2"></i> ${event.location}
+                    </div>
+                `;
+                eventsList.appendChild(eventDiv);
+            });
+
+            // Render members
+            const membersGrid = document.getElementById('members-grid');
+            group.members.forEach(member => {
+                const memberDiv = document.createElement('div');
+                memberDiv.className = 'member-card';
+                memberDiv.innerHTML = `
+                    <img src="${member.user.avatar || '/images/default-avatar.png'}" alt="${member.user.username}" class="member-avatar">
+                    <div>${member.user.username}</div>
+                    <small class="text-muted">${member.role}</small>
+                `;
+                membersGrid.appendChild(memberDiv);
+            });
+
+            // Handle join group button
+            const joinGroupBtn = document.getElementById('join-group-btn');
+            joinGroupBtn.addEventListener('click', async () => {
+                if (!token) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/groups/${groupId}/join`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to join group');
+                    }
+
+                    alert('Successfully joined the group!');
+                    location.reload();
+                } catch (error) {
+                    console.error('Error joining group:', error);
+                    alert('Failed to join group. Please try again later.');
+                }
+            });
+
+            // Handle send message
+            const messageInput = document.getElementById('message-input');
+            const sendMessageBtn = document.getElementById('send-message-btn');
+
+            sendMessageBtn.addEventListener('click', async () => {
+                if (!token) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const message = messageInput.value.trim();
+                if (!message) return;
+
+                try {
+                    const response = await fetch(`/api/groups/${groupId}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ message })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to send message');
+                    }
+
+                    messageInput.value = '';
+                    location.reload();
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    alert('Failed to send message. Please try again later.');
+                }
+            });
+
+        } catch (error) {
+            console.error('Error loading group details:', error);
+            alert('Failed to load group details. Please try again later.');
+        }
+    });
+</script>

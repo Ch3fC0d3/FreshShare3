@@ -42,102 +42,33 @@
         border-bottom: 1px solid #eee;
     }
     
-    .form-section {
+    .profile-section {
         margin-bottom: 30px;
     }
     
-    .form-actions {
-        margin-top: 30px;
-        text-align: center;
+    .profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
     
-    .group-item {
-        background: #f9f9f9;
-        border-radius: 8px;
-        padding: 12px 15px;
-        margin-bottom: 10px;
+    .info-item {
         display: flex;
         align-items: center;
-        transition: all 0.3s ease;
+        gap: 10px;
     }
     
-    .group-item:hover {
-        background: #f1f1f1;
-        transform: translateY(-2px);
+    .info-label {
+        font-weight: bold;
+        min-width: 120px;
     }
     
-    .group-item img {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        margin-right: 15px;
+    .info-value {
+        color: #555;
     }
     
-    .switch-container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 15px;
-    }
-    
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 24px;
-    }
-    
-    .switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-    
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .4s;
-        border-radius: 24px;
-    }
-    
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 16px;
-        width: 16px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-    
-    input:checked + .slider {
-        background-color: #2196F3;
-    }
-    
-    input:checked + .slider:before {
-        transform: translateX(26px);
-    }
-    
-    .account-link {
-        display: flex;
-        align-items: center;
-        background: #f9f9f9;
-        border-radius: 8px;
-        padding: 12px 15px;
-        margin-bottom: 10px;
-    }
-    
-    .account-link i {
-        font-size: 20px;
-        margin-right: 15px;
-        width: 24px;
+    .edit-profile-btn {
+        margin-top: 20px;
         text-align: center;
     }
 </style>
@@ -146,197 +77,71 @@
 <div class="main-content">
     <div class="container">
         <div class="profile-container">
-            <h1 class="section-title">Edit Profile</h1>
+            <h1 class="section-title">Profile</h1>
             
-            <form id="profileForm" class="profile-form">
-                <!-- Profile Image -->
-                <div class="profile-image-section">
-                    <div class="profile-image-container">
-                        <img id="profileImagePreview" src="/assets/images/avatar-placeholder.jpg" alt="Profile Image">
-                    </div>
-                    <div class="text-center">
-                        <label for="profileImage" class="btn btn-outline-primary mt-3">
-                            <i class="fas fa-camera"></i> Change Profile Picture
-                        </label>
-                        <input type="file" id="profileImage" name="profileImage" accept="image/*" class="d-none">
-                    </div>
+            <!-- Profile Image -->
+            <div class="profile-image-section text-center">
+                <div class="profile-image-container">
+                    <img id="profileImage" src="<%= user.profileImage || '/assets/images/avatar-placeholder.jpg' %>" alt="Profile Image">
                 </div>
-                
-                <!-- Personal Information -->
-                <div class="form-section">
-                    <h2 class="section-subtitle">Personal Information</h2>
-                    
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label for="firstName">First Name</label>
-                            <input type="text" id="firstName" name="firstName" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group col-md-6">
-                            <label for="lastName">Last Name</label>
-                            <input type="text" id="lastName" name="lastName" class="form-control" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="nickname">Nickname (Optional)</label>
-                        <input type="text" id="nickname" name="nickname" class="form-control">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" name="username" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="phoneNumber">Phone Number</label>
-                        <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control">
-                    </div>
-                </div>
-                
-                <!-- Location Information -->
-                <div class="form-section">
-                    <h2 class="section-subtitle">Location Information <small class="text-muted">(Optional for privacy)</small></h2>
-                    
-                    <div class="form-row">
-                        <div class="form-group col-md-5">
-                            <label for="city">City</label>
-                            <input type="text" id="city" name="city" class="form-control">
-                        </div>
-                        
-                        <div class="form-group col-md-3">
-                            <label for="state">State</label>
-                            <input type="text" id="state" name="state" class="form-control">
-                        </div>
-                        
-                        <div class="form-group col-md-4">
-                            <label for="zipCode">Zip Code</label>
-                            <input type="text" id="zipCode" name="zipCode" class="form-control">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Group Involvement -->
-                <div class="form-section">
-                    <h2 class="section-subtitle">Group Involvement</h2>
-                    
-                    <div id="joinedGroups">
-                        <p class="text-muted">You haven't joined any groups yet.</p>
-                        
-                        <!-- Groups will be dynamically added here -->
-                        <!-- Example of how a group item will look: -->
-                        <div class="group-item d-none" id="groupItemTemplate">
-                            <img src="/assets/images/group-placeholder.jpg" alt="Group">
-                            <div class="group-info">
-                                <h5 class="group-name mb-1">Group Name</h5>
-                                <p class="group-role mb-0">Member since: <span class="join-date">Jan 1, 2025</span></p>
-                            </div>
-                            <a href="#" class="btn btn-sm btn-outline-primary ml-auto group-link">View Group</a>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Settings & Privacy Controls -->
-                <div class="form-section">
-                    <h2 class="section-subtitle">Settings & Privacy Controls</h2>
-                    
-                    <h5 class="mt-4 mb-3">Profile Visibility</h5>
-                    
-                    <div class="switch-container">
-                        <span>Show full name to group members</span>
-                        <label class="switch">
-                            <input type="checkbox" id="showNameToggle" name="showNameToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="switch-container">
-                        <span>Show location information to group members</span>
-                        <label class="switch">
-                            <input type="checkbox" id="showLocationToggle" name="showLocationToggle">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="switch-container">
-                        <span>Show profile picture to non-members</span>
-                        <label class="switch">
-                            <input type="checkbox" id="showPictureToggle" name="showPictureToggle">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    
-                    <h5 class="mt-4 mb-3">Notification Preferences</h5>
-                    
-                    <div class="switch-container">
-                        <span>Email notifications for group activities</span>
-                        <label class="switch">
-                            <input type="checkbox" id="emailNotifyToggle" name="emailNotifyToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="switch-container">
-                        <span>In-app notifications</span>
-                        <label class="switch">
-                            <input type="checkbox" id="appNotifyToggle" name="appNotifyToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="switch-container">
-                        <span>New group invitations</span>
-                        <label class="switch">
-                            <input type="checkbox" id="groupInviteToggle" name="groupInviteToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    
-                    <h5 class="mt-4 mb-3">Connected Accounts</h5>
-                    
-                    <div class="account-links">
-                        <div class="account-link">
-                            <i class="fab fa-facebook text-primary"></i>
-                            <div class="flex-grow-1">
-                                <p class="mb-0">Facebook</p>
-                                <small class="text-muted">Not connected</small>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary connect-account" data-platform="facebook">Connect</button>
-                        </div>
-                        
-                        <div class="account-link">
-                            <i class="fab fa-twitter text-info"></i>
-                            <div class="flex-grow-1">
-                                <p class="mb-0">Twitter</p>
-                                <small class="text-muted">Not connected</small>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary connect-account" data-platform="twitter">Connect</button>
-                        </div>
-                        
-                        <div class="account-link">
-                            <i class="fab fa-linkedin text-primary"></i>
-                            <div class="flex-grow-1">
-                                <p class="mb-0">LinkedIn</p>
-                                <small class="text-muted">Not connected</small>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary connect-account" data-platform="linkedin">Connect</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <a href="/profile" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
+                <h3 class="mt-3"><%= user.firstName %> <%= user.lastName %></h3>
+                <p class="text-muted">@<%= user.username %></p>
+            </div>
             
-            <div id="errorMessage" class="alert alert-danger d-none"></div>
-            <div id="successMessage" class="alert alert-success d-none"></div>
+            <!-- Personal Information -->
+            <div class="profile-section">
+                <h2 class="section-subtitle">Personal Information</h2>
+                <div class="profile-info">
+                    <div class="info-item">
+                        <span class="info-label">Username:</span>
+                        <span class="info-value"><%= user.username %></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value"><%= user.email %></span>
+                    </div>
+                    <% if (user.phoneNumber) { %>
+                    <div class="info-item">
+                        <span class="info-label">Phone:</span>
+                        <span class="info-value"><%= user.phoneNumber %></span>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+            
+            <!-- Address Information -->
+            <% if (user.location && (user.location.city || user.location.state)) { %>
+            <div class="profile-section">
+                <h2 class="section-subtitle">Location</h2>
+                <div class="profile-info">
+                    <% if (user.location.street) { %>
+                    <div class="info-item">
+                        <span class="info-label">Street:</span>
+                        <span class="info-value"><%= user.location.street %></span>
+                    </div>
+                    <% } %>
+                    <% if (user.location.city || user.location.state) { %>
+                    <div class="info-item">
+                        <span class="info-label">City/State:</span>
+                        <span class="info-value"><%= user.location.city %>, <%= user.location.state %></span>
+                    </div>
+                    <% } %>
+                    <% if (user.location.zipCode) { %>
+                    <div class="info-item">
+                        <span class="info-label">Zip Code:</span>
+                        <span class="info-value"><%= user.location.zipCode %></span>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+            <% } %>
+            
+            <!-- Edit Profile Button -->
+            <div class="edit-profile-btn">
+                <a href="/profile-edit" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -344,260 +149,70 @@
 <%- contentFor('script') %>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const profileForm = document.getElementById('profileForm');
-        const errorMessage = document.getElementById('errorMessage');
-        const successMessage = document.getElementById('successMessage');
-        const profileImageInput = document.getElementById('profileImage');
-        const profileImagePreview = document.getElementById('profileImagePreview');
+        console.log('Profile page loaded');
         
-        // Check if user is logged in
-        const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = '/login?redirect=/profile-edit';
-            return;
+        // Check if there's an error message in the URL (e.g., from a redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorMsg = urlParams.get('error');
+        
+        if (errorMsg) {
+            // Display error to user
+            const errorContainer = document.createElement('div');
+            errorContainer.className = 'alert alert-danger mt-3';
+            errorContainer.textContent = decodeURIComponent(errorMsg);
+            document.querySelector('.profile-container').prepend(errorContainer);
         }
         
-        // Load user profile data
-        loadUserProfile();
-        
-        // Handle profile image change
-        profileImageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    profileImagePreview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+        // Add error handling for missing data and API errors
+        const handleMissingData = () => {
+            // Check if we have the minimum required user data
+            const username = document.querySelector('.text-muted')?.textContent;
+            if (!username || username === '@') {
+                console.error('Missing user data - authentication may have failed');
+                // Redirect to login if no data is available
+                window.location.href = '/login?redirect=/profile&error=' + encodeURIComponent('Please log in to view your profile');
+                return;
             }
-        });
-        
-        // Load user groups
-        loadUserGroups();
-        
-        // Handle form submission
-        profileForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
             
-            // Hide previous messages
-            errorMessage.classList.add('d-none');
-            successMessage.classList.add('d-none');
-            
-            // Get form values
-            const firstName = document.getElementById('firstName').value;
-            const lastName = document.getElementById('lastName').value;
-            const nickname = document.getElementById('nickname').value;
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            const city = document.getElementById('city').value;
-            const state = document.getElementById('state').value;
-            const zipCode = document.getElementById('zipCode').value;
-            
-            // Get privacy settings
-            const showName = document.getElementById('showNameToggle').checked;
-            const showLocation = document.getElementById('showLocationToggle').checked;
-            const showPicture = document.getElementById('showPictureToggle').checked;
-            
-            // Get notification preferences
-            const emailNotify = document.getElementById('emailNotifyToggle').checked;
-            const appNotify = document.getElementById('appNotifyToggle').checked;
-            const groupInvite = document.getElementById('groupInviteToggle').checked;
-            
-            try {
-                const response = await fetch('/api/auth/profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': token
-                    },
-                    body: JSON.stringify({
-                        firstName,
-                        lastName,
-                        nickname,
-                        username,
-                        email,
-                        phoneNumber,
-                        city,
-                        state,
-                        zipCode,
-                        privacy: {
-                            showName,
-                            showLocation,
-                            showPicture
-                        },
-                        notifications: {
-                            emailNotify,
-                            appNotify,
-                            groupInvite
-                        }
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    // Update user data in localStorage
-                    localStorage.setItem('user', JSON.stringify(data.user));
+            // Add fetch error handling for API requests
+            const originalFetch = window.fetch;
+            window.fetch = async function(url, options) {
+                try {
+                    const response = await originalFetch(url, options);
                     
-                    // Show success message
-                    successMessage.textContent = 'Profile updated successfully!';
-                    successMessage.classList.remove('d-none');
+                    // Handle 403 Forbidden errors
+                    if (response.status === 403) {
+                        console.error('403 Forbidden error detected');
+                        // Show error message
+                        const errorContainer = document.createElement('div');
+                        errorContainer.className = 'alert alert-danger mt-3';
+                        errorContainer.textContent = 'Authentication error: Your session may have expired. Please log in again.';
+                        document.querySelector('.profile-container').prepend(errorContainer);
+                        
+                        // Redirect after a short delay
+                        setTimeout(() => {
+                            window.location.href = '/login?redirect=/profile&error=' + 
+                                encodeURIComponent('Your session has expired. Please log in again.');
+                        }, 2000);
+                    }
                     
-                    // Scroll to top of form
-                    window.scrollTo(0, 0);
-                } else {
-                    // Show error message
-                    errorMessage.textContent = data.message || 'An error occurred while updating profile.';
-                    errorMessage.classList.remove('d-none');
+                    return response;
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    // Show network error message
+                    const errorContainer = document.createElement('div');
+                    errorContainer.className = 'alert alert-danger mt-3';
+                    errorContainer.textContent = 'Network error: Could not connect to the server. Please try again later.';
+                    document.querySelector('.profile-container').prepend(errorContainer);
+                    return new Response(JSON.stringify({ error: error.message }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                 }
-            } catch (error) {
-                console.error('Error updating profile:', error);
-                errorMessage.textContent = 'An error occurred while updating profile. Please try again.';
-                errorMessage.classList.remove('d-none');
-            }
-        });
+            };
+        };
         
-        // Function to load user profile data
-        async function loadUserProfile() {
-            try {
-                const response = await fetch('/api/auth/profile', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': token
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const user = data.user;
-                    
-                    // Fill form with user data
-                    document.getElementById('firstName').value = user.firstName || '';
-                    document.getElementById('lastName').value = user.lastName || '';
-                    document.getElementById('nickname').value = user.nickname || '';
-                    document.getElementById('username').value = user.username || '';
-                    document.getElementById('email').value = user.email || '';
-                    document.getElementById('phoneNumber').value = user.phoneNumber || '';
-                    document.getElementById('city').value = user.city || '';
-                    document.getElementById('state').value = user.state || '';
-                    document.getElementById('zipCode').value = user.zipCode || '';
-                    
-                    // Set privacy toggles
-                    if (user.privacy) {
-                        document.getElementById('showNameToggle').checked = user.privacy.showName !== false;
-                        document.getElementById('showLocationToggle').checked = !!user.privacy.showLocation;
-                        document.getElementById('showPictureToggle').checked = !!user.privacy.showPicture;
-                    }
-                    
-                    // Set notification toggles
-                    if (user.notifications) {
-                        document.getElementById('emailNotifyToggle').checked = user.notifications.emailNotify !== false;
-                        document.getElementById('appNotifyToggle').checked = user.notifications.appNotify !== false;
-                        document.getElementById('groupInviteToggle').checked = user.notifications.groupInvite !== false;
-                    }
-                    
-                    // Update profile image if available
-                    if (user.profileImage) {
-                        profileImagePreview.src = user.profileImage;
-                    }
-                } else {
-                    // If unauthorized, redirect to login
-                    if (response.status === 401 || response.status === 403) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('user');
-                        window.location.href = '/login?redirect=/profile-edit';
-                    } else {
-                        const data = await response.json();
-                        errorMessage.textContent = data.message || 'Failed to load profile data.';
-                        errorMessage.classList.remove('d-none');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading profile:', error);
-                errorMessage.textContent = 'An error occurred while loading profile data.';
-                errorMessage.classList.remove('d-none');
-            }
-        }
-        
-        // Function to load user groups
-        async function loadUserGroups() {
-            try {
-                const response = await fetch('/api/groups/user', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': token
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const groups = data.groups;
-                    
-                    const joinedGroupsContainer = document.getElementById('joinedGroups');
-                    const template = document.getElementById('groupItemTemplate');
-                    
-                    // Clear container except for template
-                    while (joinedGroupsContainer.firstChild) {
-                        joinedGroupsContainer.removeChild(joinedGroupsContainer.firstChild);
-                    }
-                    
-                    if (groups && groups.length > 0) {
-                        groups.forEach(group => {
-                            const groupItem = template.cloneNode(true);
-                            groupItem.classList.remove('d-none');
-                            groupItem.removeAttribute('id');
-                            
-                            const groupImg = groupItem.querySelector('img');
-                            const groupName = groupItem.querySelector('.group-name');
-                            const joinDate = groupItem.querySelector('.join-date');
-                            const groupLink = groupItem.querySelector('.group-link');
-                            
-                            if (group.image) {
-                                groupImg.src = group.image;
-                            }
-                            
-                            groupName.textContent = group.name;
-                            
-                            if (group.joinedDate) {
-                                // Format date
-                                const date = new Date(group.joinedDate);
-                                joinDate.textContent = date.toLocaleDateString('en-US', { 
-                                    month: 'short', 
-                                    day: 'numeric', 
-                                    year: 'numeric' 
-                                });
-                            }
-                            
-                            groupLink.href = `/groups/${group.id}`;
-                            
-                            joinedGroupsContainer.appendChild(groupItem);
-                        });
-                    } else {
-                        const noGroupsMsg = document.createElement('p');
-                        noGroupsMsg.className = 'text-muted';
-                        noGroupsMsg.textContent = 'You haven\'t joined any groups yet.';
-                        joinedGroupsContainer.appendChild(noGroupsMsg);
-                    }
-                    
-                    // Add the template back (hidden)
-                    joinedGroupsContainer.appendChild(template);
-                } else {
-                    console.error('Failed to load user groups');
-                }
-            } catch (error) {
-                console.error('Error loading user groups:', error);
-            }
-        }
-        
-        // Handle social account connections
-        const connectButtons = document.querySelectorAll('.connect-account');
-        connectButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const platform = this.getAttribute('data-platform');
-                // This would typically open a popup for OAuth authentication
-                alert(`Connect to ${platform} functionality would go here.`);
-            });
-        });
+        // Run check after a short delay to ensure DOM is fully processed
+        setTimeout(handleMissingData, 500);
     });
 </script>

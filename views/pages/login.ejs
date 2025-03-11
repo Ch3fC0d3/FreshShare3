@@ -12,6 +12,9 @@
             <h1 class="brand-name">Fresh<span>Share</span></h1>
             <p class="text-center text-muted mb-4">Welcome back! Please login to your account.</p>
             
+            <!-- Error message container -->
+            <div id="errorMessage" class="alert alert-danger mb-4 d-none"></div>
+            
             <form id="loginForm">
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
@@ -39,7 +42,6 @@
                     <p class="mb-0">Don't have an account? <a href="/signup">Sign up</a></p>
                 </div>
             </form>
-            <div id="errorMessage" class="error-message"></div>
         </div>
     </div>
 </div>
@@ -51,9 +53,18 @@
         // Check if we should redirect to a specific page after login
         const urlParams = new URLSearchParams(window.location.search);
         const redirectUrl = urlParams.get('redirect');
+        const errorMsg = urlParams.get('error');
+        
+        // Display error message if present in URL
+        if (errorMsg) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = decodeURIComponent(errorMsg);
+            errorMessage.classList.remove('d-none');
+        }
         
         // If user is already logged in, redirect to dashboard or the redirect URL
-        if (isAuthenticated()) {
+        if (document.cookie.includes('token')) {
+            console.log('User already logged in, redirecting to:', redirectUrl || '/dashboard');
             window.location.href = redirectUrl || '/dashboard';
             return;
         }
@@ -68,30 +79,55 @@
             const password = document.getElementById('password').value;
             
             try {
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                submitBtn.disabled = true;
+                
+                console.log('Sending login request...');
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'same-origin', // Include cookies in the request
                     body: JSON.stringify({ username, password })
                 });
                 
+                console.log('Login response status:', response.status);
                 const data = await response.json();
+                console.log('Login response data:', data);
                 
                 if (response.ok) {
-                    // Store token and user info in localStorage
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    // Show success message
+                    errorMessage.textContent = 'Login successful! Redirecting...';
+                    errorMessage.className = 'alert alert-success mb-4';
+                    errorMessage.classList.remove('d-none');
                     
-                    // Redirect to dashboard or the redirect URL
-                    window.location.href = redirectUrl || '/dashboard';
+                    // Redirect to dashboard or the redirect URL (cookie is set by server)
+                    console.log('Login successful, redirecting to:', redirectUrl || '/dashboard');
+                    setTimeout(() => {
+                        window.location.href = redirectUrl || '/dashboard';
+                    }, 1000);
                 } else {
                     // Show error message
                     errorMessage.textContent = data.message || 'Login failed. Please check your credentials.';
+                    errorMessage.classList.remove('d-none');
+                    
+                    // Reset button
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
                 }
             } catch (error) {
                 console.error('Login error:', error);
                 errorMessage.textContent = 'An error occurred during login. Please try again.';
+                errorMessage.classList.remove('d-none');
+                
+                // Reset button
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+                submitBtn.disabled = false;
             }
         });
     });

@@ -4,7 +4,7 @@ const db = require('../models');
 const User = db.user;
 
 // Retrieve JWT secret from environment or use a default (in production, always use environment variable)
-const JWT_SECRET = process.env.JWT_SECRET || 'freshShare-auth-secret';
+const JWT_SECRET = process.env.JWT_SECRET || "bezkoder-secret-key";
 
 /**
  * Register a new user
@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'freshShare-auth-secret';
 exports.signup = async (req, res) => {
   try {
     // Validate request body
-    const { username, email, password, address, city, zipCode } = req.body;
+    const { username, email, password, firstName, lastName, address, city, zipCode } = req.body;
     
     if (!username || !email || !password) {
       return res.status(400).json({ 
@@ -46,9 +46,13 @@ exports.signup = async (req, res) => {
       username: username,
       email: email,
       password: hashedPassword,
-      street: address || "",
-      city: city || "",
-      zipCode: zipCode || ""
+      firstName: firstName || '',
+      lastName: lastName || '',
+      location: {
+        street: address || '',
+        city: city || '',
+        zipCode: zipCode || ''
+      }
     });
 
     // Save user to database
@@ -57,7 +61,7 @@ exports.signup = async (req, res) => {
     // Return success response
     return res.status(201).json({
       success: true,
-      message: "User registered successfully!",
+      message: "User registered successfully!"
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -112,17 +116,31 @@ exports.login = async (req, res) => {
       expiresIn: 86400 // 24 hours
     });
 
+    // Set token as cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 86400000, // 24 hours in milliseconds
+      sameSite: 'strict'
+    });
+
     // Create user object without password
     const userResponse = {
       id: user._id,
       username: user.username,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       profileImage: user.profileImage,
-      street: user.street,
-      city: user.city,
-      state: user.state,
-      zipCode: user.zipCode,
-      phoneNumber: user.phoneNumber
+      location: {
+        street: user.location.street,
+        city: user.location.city,
+        state: user.state,
+        zipCode: user.location.zipCode
+      },
+      phoneNumber: user.phoneNumber,
+      privacy: user.privacy || {},
+      notifications: user.notifications || {}
     };
 
     // Return token and user info
@@ -168,12 +186,17 @@ exports.getUserProfile = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        nickname: user.nickname,
         profileImage: user.profileImage,
-        street: user.street,
-        city: user.city,
+        phoneNumber: user.phoneNumber,
+        street: user.location.street,
+        city: user.location.city,
         state: user.state,
-        zipCode: user.zipCode,
-        phoneNumber: user.phoneNumber
+        zipCode: user.location.zipCode,
+        privacy: user.privacy || {},
+        notifications: user.notifications || {}
       }
     });
   } catch (error) {
@@ -229,10 +252,10 @@ exports.updateUserProfile = async (req, res) => {
     const updateData = {};
     if (username) updateData.username = username;
     if (email) updateData.email = email;
-    if (street) updateData.street = street;
-    if (city) updateData.city = city;
+    if (street) updateData.location.street = street;
+    if (city) updateData.location.city = city;
     if (state) updateData.state = state;
-    if (zipCode) updateData.zipCode = zipCode;
+    if (zipCode) updateData.location.zipCode = zipCode;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
     
     // Update user
@@ -258,10 +281,10 @@ exports.updateUserProfile = async (req, res) => {
         username: updatedUser.username,
         email: updatedUser.email,
         profileImage: updatedUser.profileImage,
-        street: updatedUser.street,
-        city: updatedUser.city,
+        street: updatedUser.location.street,
+        city: updatedUser.location.city,
         state: updatedUser.state,
-        zipCode: updatedUser.zipCode,
+        zipCode: updatedUser.location.zipCode,
         phoneNumber: updatedUser.phoneNumber
       }
     });
