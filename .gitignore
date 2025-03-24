@@ -57,6 +57,12 @@ Thumbs.db
 # Database files
 *.sqlite
 *.db
+# MongoDB database files
+data/db/
+data/db/*
+*.wt
+WiredTiger*
+mongod.lock
 
 # Build and dist directories
 dist/

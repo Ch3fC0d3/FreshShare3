@@ -14,16 +14,25 @@ const JWT_SECRET = process.env.JWT_SECRET || "bezkoder-secret-key";
  */
 exports.signup = async (req, res) => {
   try {
+    console.log('Signup request received:', req.body);
+    
     // Validate request body
     const { username, email, password, firstName, lastName, address, city, zipCode } = req.body;
     
     if (!username || !email || !password) {
+      console.log('Signup validation failed - missing required fields:', { 
+        hasUsername: !!username, 
+        hasEmail: !!email, 
+        hasPassword: !!password 
+      });
       return res.status(400).json({ 
         success: false, 
         message: "Username, email, and password are required!" 
       });
     }
 
+    console.log('Checking for existing user with username or email:', { username, email });
+    
     // Check if user already exists
     const existingUser = await User.findOne({ 
       $or: [
@@ -33,6 +42,10 @@ exports.signup = async (req, res) => {
     });
 
     if (existingUser) {
+      console.log('User already exists:', { 
+        existingUsername: existingUser.username, 
+        existingEmail: existingUser.email 
+      });
       return res.status(400).json({
         success: false,
         message: "Username or email is already in use!"
@@ -41,6 +54,16 @@ exports.signup = async (req, res) => {
 
     // Create new user
     const hashedPassword = bcrypt.hashSync(password, 8);
+    
+    console.log('Creating new user:', { 
+      username, 
+      email, 
+      hasFirstName: !!firstName, 
+      hasLastName: !!lastName,
+      hasAddress: !!address,
+      hasCity: !!city,
+      hasZipCode: !!zipCode
+    });
     
     const user = new User({
       username: username,
@@ -56,7 +79,9 @@ exports.signup = async (req, res) => {
     });
 
     // Save user to database
+    console.log('Attempting to save user to database...');
     await user.save();
+    console.log('User saved successfully with ID:', user._id);
 
     // Return success response
     return res.status(201).json({
@@ -65,6 +90,7 @@ exports.signup = async (req, res) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
+    console.error("Error stack:", error.stack);
     return res.status(500).json({
       success: false,
       message: "An error occurred during registration.",

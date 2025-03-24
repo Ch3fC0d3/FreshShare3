@@ -83,18 +83,23 @@
 <script src="/js/auth.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Signup page loaded');
+        
         // Check if we should redirect to a specific page after signup
         const urlParams = new URLSearchParams(window.location.search);
         const redirectUrl = urlParams.get('redirect');
+        console.log('Redirect URL:', redirectUrl);
         
         // If user is already logged in, redirect to dashboard
         if (document.cookie.includes('token')) {
+            console.log('User already logged in, redirecting to dashboard');
             window.location.href = '/dashboard';
             return;
         }
         
         document.getElementById("signupForm").addEventListener("submit", async (e) => {
             e.preventDefault();
+            console.log('Signup form submitted');
             
             // Get form values
             const username = document.getElementById("username").value;
@@ -105,8 +110,19 @@
             const city = document.getElementById("city").value;
             const zipCode = document.getElementById("zipCode").value;
             
+            console.log('Form values collected:', { 
+                username, 
+                email, 
+                passwordLength: password ? password.length : 0,
+                confirmPasswordMatch: password === confirmPassword,
+                hasAddress: !!address,
+                hasCity: !!city,
+                hasZipCode: !!zipCode
+            });
+            
             // Validate password match
             if (password !== confirmPassword) {
+                console.error('Password mismatch');
                 alert("Passwords do not match!");
                 return;
             }
@@ -118,31 +134,40 @@
             submitBtn.disabled = true;
             
             try {
-                console.log('Sending signup request...');
+                console.log('Preparing signup request...');
+                const requestBody = {
+                    username,
+                    email,
+                    password,
+                    address,
+                    city,
+                    zipCode,
+                };
+                console.log('Request body:', JSON.stringify(requestBody));
+                
+                console.log('Sending signup request to /api/auth/signup...');
                 const response = await fetch("/api/auth/signup", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({
-                        username,
-                        email,
-                        password,
-                        address,
-                        city,
-                        zipCode,
-                    }),
+                    body: JSON.stringify(requestBody),
                 });
                 
-                console.log('Signup response status:', response.status);
+                console.log('Signup response received');
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
                 const data = await response.json();
-                console.log('Signup response data:', data);
+                console.log('Response data:', data);
                 
                 if (response.ok) {
+                    console.log('Signup successful, showing success message');
                     document.getElementById("signupForm").style.display = "none";
                     document.getElementById("signupSuccess").style.display = "block";
                 } else {
                     // Reset button
+                    console.error('Signup failed:', data.message);
                     submitBtn.innerHTML = originalBtnText;
                     submitBtn.disabled = false;
                     
@@ -150,7 +175,8 @@
                     alert(data.message || "Registration failed. Please try again.");
                 }
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Signup error:", error);
+                console.error("Error details:", error.stack);
                 
                 // Reset button
                 submitBtn.innerHTML = originalBtnText;
