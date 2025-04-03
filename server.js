@@ -13,13 +13,26 @@ const PORT = process.env.PORT || 3001;
 
 // Database configuration
 const dbConfig = require('./config/db.config');
-const connectionURL = `mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`;
+
+// Prioritize MongoDB Atlas connection from environment variables
+let connectionURL;
+if (process.env.MONGODB_HOST) {
+  // Use MongoDB Atlas connection
+  connectionURL = process.env.MONGODB_HOST;
+  if (!connectionURL.endsWith('/')) {
+    connectionURL += '/';
+  }
+  connectionURL += process.env.MONGODB_DB || dbConfig.DB;
+  console.log('Using MongoDB Atlas connection');
+} else {
+  // Fallback to local MongoDB connection
+  connectionURL = `mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`;
+}
 
 // Connect to MongoDB with better error handling
 console.log('Attempting to connect to MongoDB...', {
-  host: dbConfig.HOST,
-  port: dbConfig.PORT,
-  database: dbConfig.DB
+  connectionString: connectionURL ? 'Configured' : 'Missing',
+  usingAtlas: process.env.MONGODB_HOST ? true : false
 });
 
 mongoose.connect(connectionURL, dbConfig.options)
