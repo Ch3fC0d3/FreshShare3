@@ -71,6 +71,8 @@ const populateGroupData = async (group, userId = null) => {
 exports.createGroup = async (req, res) => {
   try {
     console.log('Creating new group with data:', JSON.stringify(req.body, null, 2));
+    console.log('User ID from request:', req.userId);
+    console.log('Authorization header:', req.headers.authorization);
     
     // Validate input data
     const validation = validateGroupData(req.body);
@@ -82,9 +84,19 @@ exports.createGroup = async (req, res) => {
       });
     }
     
-    // Find the user first
+    // Require authentication for group creation
+    if (!req.userId) {
+      console.log('No user ID found in request. Authentication required for group creation.');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required to create a group'
+      });
+    }
+    
+    // Find the user by ID
     const user = await User.findById(req.userId);
     if (!user) {
+      console.log('User not found with ID:', req.userId);
       return res.status(404).json({
         success: false,
         message: 'User not found'
@@ -472,6 +484,797 @@ exports.leaveGroup = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error leaving group',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Get group members with details
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getGroupMembers = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    console.log(`Getting members for group ${groupId}`);
+    
+    // Find the group
+    const group = await Group.findById(groupId)
+      .populate('members', 'username email avatar')
+      .populate('admins', 'username email avatar');
+    
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+    
+    // Format members with roles
+    const members = group.members.map(member => {
+      const isAdmin = group.admins.some(admin => admin._id.toString() === member._id.toString());
+      return {
+        _id: member._id,
+        name: member.username,
+        email: member.email,
+        avatar: member.avatar || null,
+        role: isAdmin ? 'admin' : 'member'
+      };
+    });
+    
+    res.json({
+      success: true,
+      members
+    });
+  } catch (err) {
+    console.error('Error in getGroupMembers:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting group members',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Invite a user to join the group
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.inviteToGroup = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+    
+    // Find the group
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+    
+    // Check if user is admin or creator
+    if (!group.admins.includes(req.userId) && group.createdBy.toString() !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can invite users'
+      });
+    }
+    
+    // Find user by email
+    const invitedUser = await User.findOne({ email });
+    
+    // If user exists, add them to the group
+    if (invitedUser) {
+      // Check if already a member
+      if (invitedUser.isMemberOfGroup(groupId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'User is already a member of this group'
+        });
+      }
+      
+      // Add user to group
+      await Promise.all([
+        invitedUser.joinGroup(groupId),
+        Group.findByIdAndUpdate(groupId, { $addToSet: { members: invitedUser._id } })
+      ]);
+      
+      return res.json({
+        success: true,
+        message: 'User added to the group'
+      });
+    }
+    
+    // If user doesn't exist, we would normally send an email invitation
+    // For now, just return success message
+    res.json({
+      success: true,
+      message: 'Invitation sent to ' + email
+    });
+  } catch (err) {
+    console.error('Error in inviteToGroup:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error inviting user to group',
+      error: err.message
+    });
+  }
+};
+
+// Models for new functionality (temporary - should be moved to separate files)
+const mongoose = require('mongoose');
+
+// Shopping List Item Schema
+const ShoppingListItemSchema = new mongoose.Schema({
+  productName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  vendor: {
+    type: String,
+    trim: true
+  },
+  casePrice: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1,
+    default: 1
+  },
+  totalUnits: {
+    type: Number,
+    required: true,
+    min: 1,
+    default: 1
+  },
+  notes: {
+    type: String,
+    trim: true
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  groupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Group',
+    required: true
+  }
+}, {
+  timestamps: true
+});
+
+// Message Schema
+const MessageSchema = new mongoose.Schema({
+  content: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  groupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Group',
+    required: true
+  }
+}, {
+  timestamps: true
+});
+
+// Event Schema
+const EventSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  location: {
+    type: String,
+    trim: true
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  groupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Group',
+    required: true
+  }
+}, {
+  timestamps: true
+});
+
+// Create models from schemas or reference existing ones
+const ShoppingListItem = mongoose.model('ShoppingListItem', ShoppingListItemSchema);
+// Use the existing Message model instead of redefining it
+const Message = require('../models/message.model');
+const Event = mongoose.model('Event', EventSchema);
+
+/**
+ * Get shopping list for a group
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getShoppingList = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    
+    const items = await ShoppingListItem.find({ groupId })
+      .populate('createdBy', 'username email')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      items
+    });
+  } catch (err) {
+    console.error('Error in getShoppingList:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting shopping list',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Add item to shopping list
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.addShoppingListItem = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    
+    // Validate required fields
+    const { productName, casePrice, quantity, totalUnits } = req.body;
+    if (!productName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product name is required'
+      });
+    }
+    
+    // Find the group
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+    
+    // Check if user is a member
+    if (!group.members.includes(req.userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group members can add items'
+      });
+    }
+    
+    // Create and save the item
+    const newItem = new ShoppingListItem({
+      productName,
+      vendor: req.body.vendor || '',
+      casePrice: casePrice || 0,
+      quantity: quantity || 1,
+      totalUnits: totalUnits || 1,
+      notes: req.body.notes || '',
+      createdBy: req.userId,
+      groupId
+    });
+    
+    const savedItem = await newItem.save();
+    await savedItem.populate('createdBy', 'username email');
+    
+    res.status(201).json({
+      success: true,
+      item: savedItem
+    });
+  } catch (err) {
+    console.error('Error in addShoppingListItem:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding shopping list item',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Update shopping list item
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.updateShoppingListItem = async (req, res) => {
+  try {
+    const { id: groupId, itemId } = req.params;
+    
+    // Find the item
+    const item = await ShoppingListItem.findById(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+    
+    // Check if item belongs to the specified group
+    if (item.groupId.toString() !== groupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item does not belong to this group'
+      });
+    }
+    
+    // Check if user is the creator or an admin
+    const group = await Group.findById(groupId);
+    const isAdmin = group.admins.includes(req.userId);
+    const isCreator = item.createdBy.toString() === req.userId;
+    
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this item'
+      });
+    }
+    
+    // Update the item
+    const updatedItem = await ShoppingListItem.findByIdAndUpdate(
+      itemId,
+      {
+        productName: req.body.productName,
+        vendor: req.body.vendor || '',
+        casePrice: req.body.casePrice || 0,
+        quantity: req.body.quantity || 1,
+        totalUnits: req.body.totalUnits || 1,
+        notes: req.body.notes || ''
+      },
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'username email');
+    
+    res.json({
+      success: true,
+      item: updatedItem
+    });
+  } catch (err) {
+    console.error('Error in updateShoppingListItem:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating shopping list item',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Delete shopping list item
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.deleteShoppingListItem = async (req, res) => {
+  try {
+    const { id: groupId, itemId } = req.params;
+    
+    // Find the item
+    const item = await ShoppingListItem.findById(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+    
+    // Check if item belongs to the specified group
+    if (item.groupId.toString() !== groupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item does not belong to this group'
+      });
+    }
+    
+    // Check if user is the creator or an admin
+    const group = await Group.findById(groupId);
+    const isAdmin = group.admins.includes(req.userId);
+    const isCreator = item.createdBy.toString() === req.userId;
+    
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this item'
+      });
+    }
+    
+    // Delete the item
+    await ShoppingListItem.findByIdAndDelete(itemId);
+    
+    res.json({
+      success: true,
+      message: 'Item deleted successfully'
+    });
+  } catch (err) {
+    console.error('Error in deleteShoppingListItem:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting shopping list item',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Get messages for a group
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getMessages = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    
+    const messages = await Message.find({ groupId })
+      .populate('author', 'username email avatar')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      messages
+    });
+  } catch (err) {
+    console.error('Error in getMessages:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting messages',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Add message to discussion board
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.addMessage = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    const { content } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message content is required'
+      });
+    }
+    
+    // Find the group
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+    
+    // Check if user is a member
+    if (!group.members.includes(req.userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group members can post messages'
+      });
+    }
+    
+    // Create and save the message
+    const newMessage = new Message({
+      content,
+      author: req.userId,
+      groupId
+    });
+    
+    const savedMessage = await newMessage.save();
+    await savedMessage.populate('author', 'username email avatar');
+    
+    res.status(201).json({
+      success: true,
+      message: savedMessage
+    });
+  } catch (err) {
+    console.error('Error in addMessage:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding message',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Delete message
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { id: groupId, messageId } = req.params;
+    
+    // Find the message
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found'
+      });
+    }
+    
+    // Check if message belongs to the specified group
+    if (message.groupId.toString() !== groupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message does not belong to this group'
+      });
+    }
+    
+    // Check if user is the author or an admin
+    const group = await Group.findById(groupId);
+    const isAdmin = group.admins.includes(req.userId);
+    const isAuthor = message.author.toString() === req.userId;
+    
+    if (!isAdmin && !isAuthor) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this message'
+      });
+    }
+    
+    // Delete the message
+    await Message.findByIdAndDelete(messageId);
+    
+    res.json({
+      success: true,
+      message: 'Message deleted successfully'
+    });
+  } catch (err) {
+    console.error('Error in deleteMessage:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting message',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Get events for a group
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getEvents = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    
+    const events = await Event.find({ groupId })
+      .populate('createdBy', 'username email')
+      .sort({ date: 1 });
+    
+    res.json({
+      success: true,
+      events
+    });
+  } catch (err) {
+    console.error('Error in getEvents:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting events',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Create an event
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.createEvent = async (req, res) => {
+  try {
+    const { id: groupId } = req.params;
+    const { title, date, location, description } = req.body;
+    
+    if (!title || !date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and date are required'
+      });
+    }
+    
+    // Find the group
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+    
+    // Check if user is a member
+    if (!group.members.includes(req.userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group members can create events'
+      });
+    }
+    
+    // Create and save the event
+    const newEvent = new Event({
+      title,
+      date,
+      location: location || '',
+      description: description || '',
+      createdBy: req.userId,
+      groupId
+    });
+    
+    const savedEvent = await newEvent.save();
+    await savedEvent.populate('createdBy', 'username email');
+    
+    res.status(201).json({
+      success: true,
+      event: savedEvent
+    });
+  } catch (err) {
+    console.error('Error in createEvent:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating event',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Update an event
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.updateEvent = async (req, res) => {
+  try {
+    const { id: groupId, eventId } = req.params;
+    
+    // Find the event
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+    
+    // Check if event belongs to the specified group
+    if (event.groupId.toString() !== groupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event does not belong to this group'
+      });
+    }
+    
+    // Check if user is the creator or an admin
+    const group = await Group.findById(groupId);
+    const isAdmin = group.admins.includes(req.userId);
+    const isCreator = event.createdBy.toString() === req.userId;
+    
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this event'
+      });
+    }
+    
+    // Update the event
+    const updatedEvent = await Event.findByIdAndUpdate(
+      eventId,
+      {
+        title: req.body.title,
+        date: req.body.date,
+        location: req.body.location || '',
+        description: req.body.description || ''
+      },
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'username email');
+    
+    res.json({
+      success: true,
+      event: updatedEvent
+    });
+  } catch (err) {
+    console.error('Error in updateEvent:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating event',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * Delete an event
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.deleteEvent = async (req, res) => {
+  try {
+    const { id: groupId, eventId } = req.params;
+    
+    // Find the event
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+    
+    // Check if event belongs to the specified group
+    if (event.groupId.toString() !== groupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event does not belong to this group'
+      });
+    }
+    
+    // Check if user is the creator or an admin
+    const group = await Group.findById(groupId);
+    const isAdmin = group.admins.includes(req.userId);
+    const isCreator = event.createdBy.toString() === req.userId;
+    
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this event'
+      });
+    }
+    
+    // Delete the event
+    await Event.findByIdAndDelete(eventId);
+    
+    res.json({
+      success: true,
+      message: 'Event deleted successfully'
+    });
+  } catch (err) {
+    console.error('Error in deleteEvent:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting event',
       error: err.message
     });
   }

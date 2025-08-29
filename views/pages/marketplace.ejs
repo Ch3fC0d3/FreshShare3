@@ -6,7 +6,10 @@
     <title>FreshShare Marketplace</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/main.css">
-    <!-- Marketplace styles moved to main.css -->
+    <link rel="stylesheet" href="/css/image-optimization.css">
+    <!-- Preload critical images -->
+    <link rel="preload" as="image" href="/uploads/marketplace/vegetables.jpg">
+    <link rel="preload" as="image" href="/uploads/marketplace/people.jpg">
 </head>
 <body class="marketplace-page">
     <div class="main-container">
@@ -120,117 +123,60 @@
                 </div>
 
                 <div class="products-grid">
-                    <!-- Product 1 -->
-                    <div class="product-card">
-                        <div class="product-image">
-                            <i class="fas fa-trowel"></i>
-                        </div>
-                        <div class="product-details">
-                            <h3 class="product-title">Garden Trowel - Premium</h3>
-                            <div class="product-price">$12.99</div>
-                            <div class="product-location">
-                                <i class="fas fa-map-marker-alt"></i>
-                                1.2 miles away
-                            </div>
-                            <p class="product-desc">High-quality stainless steel garden trowel with ergonomic handle. Perfect for planting and transplanting.</p>
-                            <div class="product-seller">
-                                <div class="seller-icon">JD</div>
-                                John Doe
-                                <div class="product-actions">
-                                    <div class="action-icon">
-                                        <i class="far fa-heart"></i>
+                    <% if (typeof listings !== 'undefined' && listings && listings.length > 0) { %>
+                        <% listings.forEach(listing => { %>
+                            <div class="product-card">
+                                <div class="product-image">
+                                    <% if (listing.images && listing.images.length > 0) { %>
+                                        <img src="<%= listing.images[0] %>" alt="<%= listing.title %>" class="lazy-load" loading="lazy">
+                                    <% } else { %>
+                                        <img src="/uploads/marketplace/default-product.jpg" alt="<%= listing.title %>" class="lazy-load" loading="lazy">
+                                    <% } %>
+                                </div>
+                                <div class="product-details">
+                                    <h3 class="product-title"><%= listing.title %></h3>
+                                    <div class="product-price">$<%= typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price %><% if (listing.priceUnit) { %> / <%= listing.priceUnit %><% } %></div>
+                                    <div class="product-location">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <% if (listing.location && listing.location.distance) { %>
+                                            <%= listing.location.distance.toFixed(1) %> miles away
+                                        <% } else { %>
+                                            Local pickup
+                                        <% } %>
                                     </div>
-                                    <div class="action-icon">
-                                        <i class="fas fa-shopping-cart"></i>
+                                    <p class="product-desc"><%= listing.description %></p>
+                                    <div class="product-seller">
+                                        <% if (listing.seller) { %>
+                                            <% const initials = listing.seller.username ? listing.seller.username.substring(0, 2).toUpperCase() : 'US'; %>
+                                            <div class="seller-icon"><%= initials %></div>
+                                            <%= listing.seller.username || 'Unknown Seller' %>
+                                        <% } else { %>
+                                            <div class="seller-icon">US</div>
+                                            Unknown Seller
+                                        <% } %>
+                                        <div class="product-actions">
+                                            <div class="action-icon">
+                                                <i class="far fa-heart"></i>
+                                            </div>
+                                            <div class="action-icon">
+                                                <i class="fas fa-shopping-cart"></i>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Product 2 -->
-                    <div class="product-card">
-                        <div class="product-image">
-                            <i class="fas fa-seedling"></i>
-                        </div>
-                        <div class="product-details">
-                            <h3 class="product-title">Organic Tomato Seedlings (5)</h3>
-                            <div class="product-price">$8.50</div>
-                            <div class="product-location">
-                                <i class="fas fa-map-marker-alt"></i>
-                                0.8 miles away
-                            </div>
-                            <p class="product-desc">Healthy organic tomato seedlings, ready to plant. Variety: Beefsteak. Grown without pesticides.</p>
-                            <div class="product-seller">
-                                <div class="seller-icon">AS</div>
-                                Alice Smith
-                                <div class="product-actions">
-                                    <div class="action-icon">
-                                        <i class="far fa-heart"></i>
-                                    </div>
-                                    <div class="action-icon">
-                                        <i class="fas fa-shopping-cart"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product 3 -->
-                    <div class="product-card">
-                        <div class="product-image">
-                            <i class="fas fa-lemon"></i>
-                        </div>
-                        <div class="product-details">
-                            <h3 class="product-title">Fresh Organic Lemons (1lb)</h3>
-                            <div class="product-price">$4.25</div>
-                            <div class="product-location">
-                                <i class="fas fa-map-marker-alt"></i>
-                                2.1 miles away
-                            </div>
-                            <p class="product-desc">Freshly picked organic lemons from my backyard tree. Juicy and perfect for cooking or lemonade.</p>
-                            <div class="product-seller">
-                                <div class="seller-icon">RJ</div>
-                                Robert Johnson
-                                <div class="product-actions">
-                                    <div class="action-icon">
-                                        <i class="far fa-heart"></i>
-                                    </div>
-                                    <div class="action-icon">
-                                        <i class="fas fa-shopping-cart"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product 4 -->
-                    <div class="product-card">
-                        <div class="product-image">
+                        <% }); %>
+                    <% } else { %>
+                        <div class="no-listings-message">
                             <i class="fas fa-leaf"></i>
+                            <h3>No listings found</h3>
+                            <p>Be the first to create a listing in your area!</p>
+                            <a href="/create-listing" class="marketplace-btn">Create Listing</a>
                         </div>
-                        <div class="product-details">
-                            <h3 class="product-title">Fresh Basil Bundle</h3>
-                            <div class="product-price">$3.00</div>
-                            <div class="product-location">
-                                <i class="fas fa-map-marker-alt"></i>
-                                0.5 miles away
-                            </div>
-                            <p class="product-desc">Large bundle of fresh basil from my herb garden. Organically grown and harvested today.</p>
-                            <div class="product-seller">
-                                <div class="seller-icon">EW</div>
-                                Emma Wilson
-                                <div class="product-actions">
-                                    <div class="action-icon">
-                                        <i class="far fa-heart"></i>
-                                    </div>
-                                    <div class="action-icon">
-                                        <i class="fas fa-shopping-cart"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <% } %>
                     </div>
+
+
                 </div>
             </div>
 
@@ -266,12 +212,46 @@
     </div>
 
     <script>
-        // Simple toggle for view buttons (grid/list)
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simple toggle for view buttons (grid/list)
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
             });
+            
+            // Lazy loading for images
+            const lazyImages = document.querySelectorAll('img.lazy-load');
+            
+            // Add loading class to images initially
+            lazyImages.forEach(img => {
+                img.parentNode.classList.add('image-loading');
+            });
+            
+            // Create intersection observer for lazy loading
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.classList.add('loaded');
+                            img.parentNode.classList.remove('image-loading');
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                });
+                
+                lazyImages.forEach(img => {
+                    imageObserver.observe(img);
+                });
+            } else {
+                // Fallback for browsers that don't support IntersectionObserver
+                lazyImages.forEach(img => {
+                    img.classList.add('loaded');
+                    img.parentNode.classList.remove('image-loading');
+                });
+            }
         });
     </script>
 </body>

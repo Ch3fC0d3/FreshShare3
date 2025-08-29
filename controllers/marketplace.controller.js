@@ -1,5 +1,6 @@
 const db = require('../models');
 const Listing = db.listing;
+const usdaApi = require('../utils/usdaApi');
 
 /**
  * Create a new marketplace listing
@@ -20,8 +21,34 @@ exports.createListing = async (req, res) => {
       seller: req.body.userId, // This will be replaced with actual user ID from auth middleware
       isOrganic: req.body.isOrganic,
       quantity: req.body.quantity,
-      tags: req.body.tags
+      tags: req.body.tags,
+      upcCode: req.body.upcCode
     });
+    
+    // If UPC code is provided, fetch nutritional information
+    if (req.body.upcCode) {
+      try {
+        const productInfo = await usdaApi.getProductByUpc(req.body.upcCode);
+        if (productInfo.success) {
+          listing.nutritionalInfo = {
+            fdcId: productInfo.data.fdcId,
+            brandName: productInfo.data.brandName,
+            ingredients: productInfo.data.ingredients,
+            servingSize: productInfo.data.servingSize,
+            servingSizeUnit: productInfo.data.servingSizeUnit,
+            foodNutrients: productInfo.data.foodNutrients
+          };
+          
+          // If no title was provided, use the product description
+          if (!req.body.title || req.body.title.trim() === '') {
+            listing.title = productInfo.data.description;
+          }
+        }
+      } catch (upcError) {
+        console.error('Error fetching UPC data:', upcError);
+        // Continue with listing creation even if UPC lookup fails
+      }
+    }
 
     // If images were uploaded, add them to the listing
     if (req.files && req.files.length > 0) {
@@ -174,25 +201,48 @@ exports.updateListing = async (req, res) => {
       });
     }
     
+    // Prepare update object
+    const updateData = {
+      title: req.body.title,
+      description: req.body.description,
+      price: req.body.price,
+      priceUnit: req.body.priceUnit,
+      category: req.body.category,
+      condition: req.body.condition,
+      location: req.body.location,
+      isOrganic: req.body.isOrganic,
+      isAvailable: req.body.isAvailable,
+      quantity: req.body.quantity,
+      tags: req.body.tags,
+      updatedAt: Date.now()
+    };
+    
+    // If UPC code is updated, fetch new nutritional information
+    if (req.body.upcCode && req.body.upcCode !== listing.upcCode) {
+      updateData.upcCode = req.body.upcCode;
+      
+      try {
+        const productInfo = await usdaApi.getProductByUpc(req.body.upcCode);
+        if (productInfo.success) {
+          updateData.nutritionalInfo = {
+            fdcId: productInfo.data.fdcId,
+            brandName: productInfo.data.brandName,
+            ingredients: productInfo.data.ingredients,
+            servingSize: productInfo.data.servingSize,
+            servingSizeUnit: productInfo.data.servingSizeUnit,
+            foodNutrients: productInfo.data.foodNutrients
+          };
+        }
+      } catch (upcError) {
+        console.error('Error fetching UPC data:', upcError);
+        // Continue with listing update even if UPC lookup fails
+      }
+    }
+    
     // Update the listing
     const updatedListing = await Listing.findByIdAndUpdate(
       req.params.id,
-      { 
-        $set: {
-          title: req.body.title,
-          description: req.body.description,
-          price: req.body.price,
-          priceUnit: req.body.priceUnit,
-          category: req.body.category,
-          condition: req.body.condition,
-          location: req.body.location,
-          isOrganic: req.body.isOrganic,
-          isAvailable: req.body.isAvailable,
-          quantity: req.body.quantity,
-          tags: req.body.tags,
-          updatedAt: Date.now()
-        } 
-      },
+      { $set: updateData },
       { new: true }
     );
     
@@ -282,6 +332,78 @@ exports.searchListings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to search listings",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Look up product information by UPC code
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.lookupUpc = async (req, res) => {
+  try {
+    const { upc } = req.params;
+    console.log('Server: Received UPC lookup request for:', upc);
+    
+    if (!upc) {
+      console.log('Server: UPC code is missing');
+      return res.status(400).json({
+        success: false,
+        message: "UPC code is required"
+      });
+    }
+    
+    // Call USDA API to get product information
+    console.log('Server: Calling USDA API for UPC:', upc);
+    const productInfo = await usdaApi.getProductByUpc(upc);
+    console.log('Server: USDA API response:', JSON.stringify(productInfo, null, 2));
+    
+    if (!productInfo.success) {
+      console.log('Server: USDA API returned no results');
+      return res.status(404).json({
+        success: false,
+        message: productInfo.message || "Product not found"
+      });
+    }
+    
+    console.log('Server: Sending successful response');
+    res.status(200).json(productInfo);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to look up UPC code",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Search for food items for autocomplete
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.searchFoodItems = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required'
+      });
+    }
+    
+    // Call USDA API to search for food items
+    const result = await usdaApi.searchFoodItems(query);
+    
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error searching food items:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search food items',
       error: error.message
     });
   }

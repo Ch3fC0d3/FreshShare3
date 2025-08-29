@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const tokenController = require('../controllers/token.controller');
 const { authJwt } = require('../middleware');
 
 /**
@@ -37,5 +38,8 @@ router.get('/api/auth/profile', [authJwt.verifyToken], authController.getUserPro
 
 // Update user profile (protected route)
 router.put('/api/auth/profile', [authJwt.verifyToken], authController.updateUserProfile);
+
+// Sync token between localStorage and cookies
+router.post('/api/auth/sync-token', tokenController.syncToken);
 
 module.exports = router;

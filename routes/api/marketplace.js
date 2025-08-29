@@ -1,6 +1,10 @@
+/**
+ * Marketplace API Routes
+ * Handles API requests for marketplace functionality
+ */
 const express = require('express');
 const router = express.Router();
-const marketplaceController = require('../controllers/marketplace.controller');
+const marketplaceController = require('../../controllers/marketplace.controller');
 const multer = require('multer');
 const path = require('path');
 
@@ -42,6 +46,20 @@ router.get('/search', marketplaceController.searchListings);
 
 // Look up product information by UPC code
 router.get('/upc/:upc', marketplaceController.lookupUpc);
+
+// Test endpoint for UPC lookup
+router.get('/upc-test/:upc', (req, res) => {
+  const { upc } = req.params;
+  console.log('UPC test endpoint called with UPC:', upc);
+  res.status(200).json({
+    success: true,
+    message: 'UPC test endpoint working',
+    upc: upc
+  });
+});
+
+// Search food items for autocomplete
+router.get('/food-search', marketplaceController.searchFoodItems);
 
 // Get a single listing by ID
 router.get('/:id', marketplaceController.getListingById);

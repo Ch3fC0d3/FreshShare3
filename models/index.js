@@ -11,6 +11,8 @@ db.message = require("./message.model");
 db.group = require("./group.model");
 db.listing = require("./listing.model");
 db.order = require("./order.model");
+db.conversation = require("./conversation.model");
+db.review = require("./review.model");
 
 db.ROLES = ["user", "admin", "moderator"];
 

@@ -1,0 +1,71 @@
+<!-- UPC Scanner Modal -->
+<div id="upc-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Scan Product Barcode</h2>
+      <span id="close-upc-modal" class="close">&times;</span>
+    </div>
+    <div class="modal-body">
+      <!-- Scanner Container -->
+      <div id="scanner-container" class="scanner-container">
+        <div class="scanner-overlay">
+          <div class="scanner-guide"></div>
+        </div>
+        <div id="camera-placeholder" class="camera-placeholder">
+          <i class="fas fa-camera"></i>
+          <p>Camera access required for scanning</p>
+          <button id="start-camera-btn" class="btn btn-primary">Start Camera</button>
+        </div>
+      </div>
+
+      <!-- Manual Entry Container -->
+      <div id="manual-entry-container" class="manual-entry-container" style="display: none;">
+        <form id="upc-lookup-form">
+          <div class="form-group">
+            <label for="upc-input">Enter UPC Code:</label>
+            <input type="text" id="upc-input" class="form-control" placeholder="Enter 12-digit UPC code" pattern="\d+" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Look Up</button>
+        </form>
+      </div>
+
+      <!-- Scanner Controls -->
+      <div class="scanner-controls">
+        <button id="manual-upc-btn" class="btn btn-secondary">Enter UPC Manually</button>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div id="upc-loader" class="loader" style="display: none;">
+        <div class="spinner"></div>
+        <p>Looking up product information...</p>
+      </div>
+
+      <!-- Error Message -->
+      <div id="upc-error" class="error-message" style="display: none;"></div>
+
+      <!-- Results Container -->
+      <div id="upc-results" class="results-container" style="display: none;">
+        <h3>Product Information</h3>
+        <div class="product-info">
+          <div class="info-row">
+            <span class="info-label">Product Name:</span>
+            <span id="product-name" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Brand:</span>
+            <span id="product-brand" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Ingredients:</span>
+            <span id="product-ingredients" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nutrition:</span>
+            <div id="product-nutrients" class="info-value"></div>
+          </div>
+        </div>
+        <button id="use-upc-data" class="btn btn-primary">Use This Information</button>
+      </div>
+    </div>
+  </div>
+</div>

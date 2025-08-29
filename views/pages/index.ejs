@@ -7,7 +7,11 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/main.css">
-    <!-- Index page styles moved to main.css -->
+    <link rel="stylesheet" href="/css/image-optimization.css">
+    <link rel="stylesheet" href="/css/step-card-fix.css">
+    <!-- Preload critical images -->
+    <link rel="preload" as="image" href="/uploads/marketplace/vegetables.jpg">
+    <link rel="preload" as="image" href="/uploads/marketplace/people.jpg">
 </head>
 <body>
     <!-- Hero Section -->
@@ -66,10 +70,10 @@
                         <h3 class="sub-heading">How It Benefits You</h3>
                         <div class="benefits-grid">
                             <div class="video-container">
-                                <img src="/images/video-placeholder.jpg" alt="How FreshShare Benefits You" class="feature-video">
-                                <div class="play-button">
-                                    <i class="fas fa-play"></i>
-                                </div>
+                                <video class="feature-video" poster="/uploads/marketplace/vegetables.jpg" controls>
+                                    <source src="/uploads/marketplace/vwcc.mp4" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
                                 <div class="video-caption">Watch how FreshShare benefits your community</div>
                             </div>
                             <div class="benefits-list">
@@ -110,7 +114,7 @@
                     <h3>Create or Join a Group</h3>
                     <p>Start a FreshShare group in your neighborhood or join an existing one. Groups can be based on location, dietary preferences, or specific interests.</p>
                     <div class="step-image">
-                        <img src="/images/create-group.jpg" alt="Create or Join Group">
+                        <img src="/images/create-group.jpg" alt="Create or Join Group" class="lazy-load" loading="lazy">
                     </div>
                 </div>
                 <div class="step-card">
@@ -121,7 +125,7 @@
                     <h3>Coordinate Purchases</h3>
                     <p>Use our platform to coordinate bulk purchases with your group. One person places the order, and our tools help divide costs and organize distribution.</p>
                     <div class="step-image">
-                        <img src="/images/coordinate.jpg" alt="Coordinate Purchases">
+                        <img src="/images/coordinate.jpg" alt="Coordinate Purchases" class="lazy-load" loading="lazy">
                     </div>
                 </div>
                 <div class="step-card">
@@ -132,7 +136,7 @@
                     <h3>Share and Save</h3>
                     <p>Pick up your portion of the order, enjoy fresh food at lower prices, and build community connections in the process!</p>
                     <div class="step-image">
-                        <img src="/images/share.jpg" alt="Share and Save">
+                        <img src="/images/share.jpg" alt="Share and Save" class="lazy-load" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -153,13 +157,35 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('FreshShare landing page loaded');
             
-            // Play video functionality
-            const playButton = document.querySelector('.play-button');
-            if (playButton) {
-                playButton.addEventListener('click', function() {
-                    // This would normally load a video, but for demo purposes we're just logging
-                    console.log('Video would play here');
-                    alert('Video player would open here in the real application');
+            // Lazy loading for images
+            const lazyImages = document.querySelectorAll('img.lazy-load');
+            
+            // Add loading class to images initially
+            lazyImages.forEach(img => {
+                img.parentNode.classList.add('image-loading');
+            });
+            
+            // Create intersection observer for lazy loading
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.classList.add('loaded');
+                            img.parentNode.classList.remove('image-loading');
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                });
+                
+                lazyImages.forEach(img => {
+                    imageObserver.observe(img);
+                });
+            } else {
+                // Fallback for browsers that don't support IntersectionObserver
+                lazyImages.forEach(img => {
+                    img.classList.add('loaded');
+                    img.parentNode.classList.remove('image-loading');
                 });
             }
             

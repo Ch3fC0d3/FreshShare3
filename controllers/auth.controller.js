@@ -137,17 +137,18 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Generate JWT token (expires in 24 hours)
+    // Generate JWT token (expires in 7 days)
     const token = jwt.sign({ id: user._id }, JWT_SECRET, {
-      expiresIn: 86400 // 24 hours
+      expiresIn: 7 * 24 * 60 * 60 // 7 days
     });
 
-    // Set token as cookie
+    // Set token as cookie with longer expiration (7 days)
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 86400000, // 24 hours in milliseconds
-      sameSite: 'strict'
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      sameSite: 'lax', // Changed from 'strict' to 'lax' to work better across pages
+      path: '/' // Ensure cookie is available on all paths
     });
 
     // Create user object without password

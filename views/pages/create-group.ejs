@@ -104,6 +104,15 @@
             Create a group to connect with people who share your interests in food, gardening, or community building.
         </p>
         
+        <!-- Auth Debug Info -->
+        <div id="auth-debug" style="background-color: #f8f9fa; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+            <h5>Authentication Debug</h5>
+            <div id="cookie-status"></div>
+            <div id="localstorage-status"></div>
+            <div id="token-value"></div>
+            <button id="debug-toggle" class="btn btn-sm btn-secondary mt-2">Show Token</button>
+        </div>
+        
         <form id="create-group-form">
             <!-- Basic Information -->
             <div class="form-section">
@@ -230,6 +239,45 @@
         const form = document.getElementById('create-group-form');
         const cancelBtn = document.getElementById('cancel-btn');
         
+        // Debug authentication status
+        const cookieStatus = document.getElementById('cookie-status');
+        const localStorageStatus = document.getElementById('localstorage-status');
+        const tokenValue = document.getElementById('token-value');
+        const debugToggle = document.getElementById('debug-toggle');
+        
+        // Check cookie token
+        const hasCookieToken = document.cookie.includes('token');
+        cookieStatus.innerHTML = `<strong>Cookie Token:</strong> ${hasCookieToken ? 'Present' : 'Not found'}`;
+        cookieStatus.style.color = hasCookieToken ? 'green' : 'red';
+        
+        // Check localStorage token
+        const localToken = localStorage.getItem('token');
+        localStorageStatus.innerHTML = `<strong>LocalStorage Token:</strong> ${localToken ? 'Present' : 'Not found'}`;
+        localStorageStatus.style.color = localToken ? 'green' : 'red';
+        
+        // Setup token display toggle
+        debugToggle.addEventListener('click', function() {
+            if (debugToggle.textContent === 'Show Token') {
+                // Extract token from cookie
+                let cookieToken = '';
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith('token=')) {
+                        cookieToken = cookie.substring('token='.length);
+                        break;
+                    }
+                }
+                
+                tokenValue.innerHTML = `<strong>Cookie Token Value:</strong> ${cookieToken ? cookieToken.substring(0, 10) + '...' : 'None'}<br>` +
+                                      `<strong>LocalStorage Token Value:</strong> ${localToken ? localToken.substring(0, 10) + '...' : 'None'}`;
+                debugToggle.textContent = 'Hide Token';
+            } else {
+                tokenValue.innerHTML = '';
+                debugToggle.textContent = 'Show Token';
+            }
+        });
+        
         // Preview category image when category changes
         const categorySelect = document.getElementById('group-category');
         
@@ -250,17 +298,8 @@
                 el.textContent = '';
             });
             
-            // Get auth token
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error('No auth token found');
-                alert('Please log in to create a group');
-                window.location.href = '/login?redirect=/create-group';
-                return;
-            }
-            
-            // Log auth status
-            console.log('Auth token found:', token ? 'Yes' : 'No');
+            // Skip client-side token checks and rely on server-side authentication
+            // The server will handle authentication through cookies or redirect as needed
             
             // Validate form
             let isValid = true;
@@ -336,14 +375,24 @@
             console.log('Submitting group data:', formData);
             
             try {
-                // Submit form data to API with both token headers for compatibility
+                // Get token from localStorage if available
+                const token = localStorage.getItem('token');
+                
+                // Prepare headers with token if available
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                    console.log('Including token in Authorization header');
+                }
+                
+                // Submit form data to API with token in Authorization header
                 const response = await fetch('/api/groups', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                        'x-access-token': token
-                    },
+                    headers: headers,
+                    credentials: 'same-origin', // Include cookies in the request
                     body: JSON.stringify(formData)
                 });
                 
@@ -354,6 +403,25 @@
                 if (response.ok && data.success) {
                     // Redirect to the groups page instead of the specific group
                     window.location.href = '/groups';
+                } else if (response.status === 401) {
+                    // Authentication error - redirect to login page
+                    console.log('Authentication required. Redirecting to login page.');
+                    const debugInfo = document.getElementById('auth-debug');
+                    if (debugInfo) {
+                        debugInfo.innerHTML += `<div class="alert alert-danger">Server says you are not authenticated. Redirecting to login page...</div>`;
+                    }
+                    
+                    // Add the token to localStorage before redirecting (for debugging)
+                    if (localStorage.getItem('token')) {
+                        console.log('Token exists in localStorage. Token value:', localStorage.getItem('token').substring(0, 10) + '...');
+                    } else {
+                        console.log('No token in localStorage');
+                    }
+                    
+                    // Redirect to login page
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/login?redirect=/create-group';
+                    }, 2000);
                 } else {
                     // Show validation errors if present
                     if (data.errors && Array.isArray(data.errors)) {

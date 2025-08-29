@@ -6,44 +6,96 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const config = require('./config/auth.config');
-require('dotenv').config();
+const fs = require('fs');
+
+// Load environment variables from .env file
+const dotenv = require('dotenv');
+const envPath = path.resolve(__dirname, '.env');
+console.log('Loading environment variables from:', envPath);
+if (fs.existsSync(envPath)) {
+  const result = dotenv.config({ path: envPath });
+  if (result.error) {
+    console.error('Error loading .env file:', result.error);
+  } else {
+    console.log('Successfully loaded environment variables');
+  }
+} else {
+  console.error('.env file not found at path:', envPath);
+  dotenv.config(); // Fallback to default dotenv behavior
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Database configuration
-const dbConfig = require('./config/db.config');
+const dbConfig = require('./config/db.config.js');
 
-// Prioritize MongoDB Atlas connection from environment variables
-let connectionURL;
-if (process.env.MONGODB_HOST) {
-  // Use MongoDB Atlas connection
-  connectionURL = process.env.MONGODB_HOST;
-  if (!connectionURL.endsWith('/')) {
-    connectionURL += '/';
+// Connect to MongoDB with retry logic
+console.log('Connecting to MongoDB...');
+    
+const connectWithRetry = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    
+    console.log('Successfully connected to MongoDB!');
+    console.log('Connection details:', {
+      host: mongoose.connection.host,
+      port: mongoose.connection.port,
+      name: mongoose.connection.name
+    });
+    
+    // Initialize database and start server
+    initializeDatabase();
+    startServer();
+  } catch (err) {
+    console.error('MongoDB connection error:', err.message);
+    console.error('Connection details:', {
+      code: err.code,
+      name: err.name,
+      message: err.message
+    });
+    
+    // Retry connection after 5 seconds
+    console.log('Retrying connection in 5 seconds...');
+    setTimeout(connectWithRetry, 5000);
   }
-  connectionURL += process.env.MONGODB_DB || dbConfig.DB;
-  console.log('Using MongoDB Atlas connection');
-} else {
-  // Fallback to local MongoDB connection
-  connectionURL = `mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`;
+};
+
+connectWithRetry();
+
+// Start server function
+function startServer() {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
 }
 
-// Connect to MongoDB with better error handling
-console.log('Attempting to connect to MongoDB...', {
-  connectionString: connectionURL ? 'Configured' : 'Missing',
-  usingAtlas: process.env.MONGODB_HOST ? true : false
+// Add event listeners for MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connection established successfully');
 });
 
-mongoose.connect(connectionURL, dbConfig.options)
-  .then(() => {
-    console.log('Successfully connected to MongoDB.');
-    initializeDatabase();
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+  console.error('Error details:', {
+    name: err.name,
+    message: err.message,
+    code: err.code,
+    stack: err.stack
   });
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB connection disconnected');
+});
+
+// Add a process exit handler to close MongoDB connection
+process.on('SIGINT', () => {
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed through app termination');
+    process.exit(0);
+  });
+});
 
 // Initialize database with roles if needed
 async function initializeDatabase() {
@@ -79,6 +131,41 @@ app.use((req, res, next) => {
   next();
 });
 
+// Token synchronization middleware - ensures tokens in Authorization headers are set as cookies
+app.use((req, res, next) => {
+  try {
+    // Check if there's an Authorization header but no token cookie
+    if (req.headers.authorization && (!req.cookies.token || req.cookies.token === 'undefined')) {
+      const authHeader = req.headers.authorization;
+      const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+      
+      if (token && token !== 'undefined' && token !== 'null') {
+        // Try to verify the token before setting it as a cookie
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || "bezkoder-secret-key");
+          if (decoded && decoded.id) {
+            // Set the token as a cookie
+            res.cookie('token', token, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+              sameSite: 'lax',
+              path: '/'
+            });
+            console.log(`Set token cookie from Authorization header for user ID: ${decoded.id}`);
+          }
+        } catch (err) {
+          console.error('Error verifying token from Authorization header:', err.message);
+        }
+      }
+    }
+    next();
+  } catch (err) {
+    console.error('Token sync middleware error:', err);
+    next();
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -90,7 +177,6 @@ app.use((err, req, res, next) => {
 });
 
 // Ensure uploads directory exists
-const fs = require('fs');
 const uploadDir = path.join(__dirname, 'public/uploads/marketplace');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -105,10 +191,36 @@ app.set('layout', 'layouts/layout');
 // Authentication middleware for views
 app.use(async (req, res, next) => {
   try {
-    // Get token from various sources
-    const token = req.headers.authorization?.split(' ')[1] || 
-                 req.cookies?.token || 
-                 req.query?.token;
+    // Get token from various sources with better error handling
+    let token = null;
+    
+    // Check cookies first (most common for web pages)
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    } 
+    // Then check authorization header (for API requests)
+    else if (req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      } else {
+        token = authHeader;
+      }
+    } 
+    // Finally check query parameter (for special cases like redirects)
+    else if (req.query && req.query.token) {
+      token = req.query.token;
+      
+      // If token is in query, set it as a cookie for persistence
+      // This helps with redirects that include the token
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        sameSite: 'lax',
+        path: '/'
+      });
+    }
 
     if (token) {
       try {
@@ -121,6 +233,28 @@ app.use(async (req, res, next) => {
           // Add user data to locals for all views
           res.locals.user = user;
           console.log('User authenticated:', user.username, 'ID:', user._id); // Enhanced debug log
+          
+          // Check if token is close to expiration (less than 24 hours remaining)
+          // and renew it if needed
+          if (decoded.exp && decoded.exp - (Date.now() / 1000) < 24 * 60 * 60) {
+            console.log('Token close to expiration, renewing for user:', user.username);
+            
+            // Generate new token with fresh expiration (7 days)
+            const newToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "bezkoder-secret-key", {
+              expiresIn: 7 * 24 * 60 * 60 // 7 days
+            });
+            
+            // Set new token as cookie
+            res.cookie('token', newToken, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+              sameSite: 'lax',
+              path: '/'
+            });
+            
+            console.log('Token renewed successfully for user:', user.username);
+          }
         } else {
           console.log('Token valid but user not found in database');
           res.clearCookie('token'); // Clear token if user doesn't exist
@@ -146,10 +280,13 @@ const wrapAsync = fn => (req, res, next) => {
 
 // Auth routes (both pages and API)
 const authRoutes = require('./routes/auth.routes');
+
+// Marketplace API routes
+const marketplaceApiRoutes = require('./routes/api/marketplace');
 app.use('/', authRoutes); // Mount at root for pages
 
 // Other API routes
-app.use('/api/marketplace', require('./routes/marketplace.routes'));
+app.use('/api/marketplace', marketplaceApiRoutes);
 app.use('/api/groups', require('./routes/groups.routes'));
 app.use('/api/orders', require('./routes/orders.routes'));
 
@@ -160,10 +297,73 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/marketplace', (req, res) => {
-  res.render('pages/marketplace', { 
-    title: 'FreshShare - Marketplace'
-  });
+app.get('/marketplace', async (req, res) => {
+  try {
+    // Fetch listings from the database
+    const db = require('./models');
+    const Listing = db.listing;
+    
+    // Get query parameters for filtering
+    const { 
+      category, 
+      minPrice, 
+      maxPrice, 
+      isOrganic, 
+      sortBy = 'latest',
+      search
+    } = req.query;
+    
+    // Build filter object
+    const filter = {};
+    
+    if (category) filter.category = category;
+    if (isOrganic) filter.isOrganic = isOrganic === 'true';
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
+    
+    // Add text search if search parameter is provided
+    if (search) {
+      filter.$text = { $search: search };
+    }
+    
+    // Build sort object
+    let sort = { createdAt: -1 }; // Default sort by newest
+    
+    if (sortBy === 'price-asc') sort = { price: 1 };
+    if (sortBy === 'price-desc') sort = { price: -1 };
+    
+    // Execute query
+    const listings = await Listing.find(filter)
+      .sort(sort)
+      .limit(12) // Limit to 12 listings for the page
+      .populate('seller', 'username profileImage');
+    
+    // Render the marketplace page with the listings
+    res.render('pages/marketplace', { 
+      title: 'FreshShare - Marketplace',
+      listings: listings || [],
+      filters: {
+        category,
+        minPrice,
+        maxPrice,
+        isOrganic,
+        sortBy,
+        search
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching marketplace listings:', error);
+    // Render the page with an empty listings array if there's an error
+    res.render('pages/marketplace', { 
+      title: 'FreshShare - Marketplace',
+      listings: [],
+      filters: {},
+      error: 'Failed to load marketplace listings'
+    });
+  }
 });
 
 app.get('/create-listing', (req, res) => {
@@ -306,17 +506,21 @@ app.get('/profile-edit', async (req, res) => {
 app.get('/dashboard', (req, res) => {
   // Check if user is logged in
   if (!res.locals.user) {
-    return res.redirect('/login');
+    console.log('User not authenticated, redirecting to login with noRedirect flag');
+    return res.redirect('/login?noRedirect=true');
   }
+  
+  console.log('User authenticated, rendering dashboard');
   res.render('pages/dashboard', { 
     title: 'FreshShare - Dashboard'
   });
 });
 
 app.get('/login', (req, res) => {
-  if (res.locals.user) {
-    return res.redirect('/dashboard');
-  }
+  // COMPLETELY DISABLE REDIRECTS to break the infinite loop
+  console.log('Rendering login page without any redirects');
+  
+  // Always render the login page regardless of authentication status
   res.render('pages/login', { 
     title: 'FreshShare - Login'
   });
@@ -334,9 +538,4 @@ app.get('/signup', (req, res) => {
 app.get('/logout', (req, res) => {
   res.clearCookie('token');
   res.redirect('/');
-});
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
 });

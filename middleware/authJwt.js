@@ -20,10 +20,66 @@ const verifyToken = (req, res, next) => {
     return key ? headers[key] : null;
   };
   
-  const token = 
-    getHeaderCaseInsensitive(req.headers, 'x-access-token') || 
-    getHeaderCaseInsensitive(req.headers, 'authorization') ||
-    req.cookies?.token; // Also check cookies for token
+  // Enhanced token extraction with detailed logging
+  let token = null;
+  
+  // Check cookies first (preferred method for web pages)
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+    console.log(`Token found in cookies for ${req.method} ${req.originalUrl}`);
+  } 
+  // Then check authorization header (for API calls)
+  else if (getHeaderCaseInsensitive(req.headers, 'authorization')) {
+    const authHeader = getHeaderCaseInsensitive(req.headers, 'authorization');
+    // Check if it has Bearer prefix and extract token
+    token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+    console.log(`Token found in Authorization header for ${req.method} ${req.originalUrl}`);
+    
+    // If token is valid, set it as a cookie for future requests
+    try {
+      // Verify token before setting cookie
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded && decoded.id) {
+        // Set token as cookie
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+          sameSite: 'lax',
+          path: '/'
+        });
+        console.log(`Set token cookie from Authorization header for user ID: ${decoded.id}`);
+      }
+    } catch (err) {
+      console.error('Error verifying token from Authorization header:', err.message);
+      // Continue with normal flow, don't set cookie for invalid token
+    }
+  } 
+  // Finally check x-access-token (legacy support)
+  else if (getHeaderCaseInsensitive(req.headers, 'x-access-token')) {
+    token = getHeaderCaseInsensitive(req.headers, 'x-access-token');
+    console.log(`Token found in x-access-token header for ${req.method} ${req.originalUrl}`);
+    
+    // If token is valid, set it as a cookie for future requests
+    try {
+      // Verify token before setting cookie
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded && decoded.id) {
+        // Set token as cookie
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+          sameSite: 'lax',
+          path: '/'
+        });
+        console.log(`Set token cookie from x-access-token header for user ID: ${decoded.id}`);
+      }
+    } catch (err) {
+      console.error('Error verifying token from x-access-token header:', err.message);
+      // Continue with normal flow, don't set cookie for invalid token
+    }
+  }
   
   // Make authentication optional for the groups API
   if (req.originalUrl === '/api/groups' && req.method === 'GET') {
@@ -58,6 +114,28 @@ const verifyToken = (req, res, next) => {
     
     // Set userId in request
     req.userId = decoded.id;
+    
+    // Check if token is close to expiration (less than 24 hours remaining)
+    // and renew it if needed
+    if (decoded.exp && decoded.exp - (Date.now() / 1000) < 24 * 60 * 60) {
+      console.log('Token close to expiration, renewing...');
+      
+      // Generate new token with fresh expiration
+      const newToken = jwt.sign({ id: decoded.id }, JWT_SECRET, {
+        expiresIn: 7 * 24 * 60 * 60 // 7 days
+      });
+      
+      // Set new token as cookie
+      res.cookie('token', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        sameSite: 'lax',
+        path: '/'
+      });
+      
+      console.log('Token renewed successfully');
+    }
     
     next();
   } catch (error) {

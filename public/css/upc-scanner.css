@@ -1,0 +1,314 @@
+/**
+ * UPC Scanner Styles
+ */
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: 10% auto;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  padding: 16px 24px;
+  background-color: #4caf50;
+  color: white;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.close {
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Scanner Styles */
+.scanner-container {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  background-color: transparent;
+}
+
+/* Quagga viewport styles */
+.scanner-container .viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.scanner-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Hide Quagga's canvas */
+.scanner-container canvas.drawingBuffer {
+  display: none !important;
+}
+
+/* Camera Placeholder */
+.camera-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  z-index: 20;
+}
+
+.camera-placeholder i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #4caf50;
+}
+
+.camera-placeholder p {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scanner-guide {
+  width: 80%;
+  height: 100px;
+  border: 3px solid #4caf50;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(76, 175, 80, 0.7); }
+  70% { box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3), 0 0 0 15px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+/* Scanner Controls */
+.scanner-controls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+/* Manual Entry Container */
+.manual-entry-container {
+  margin-bottom: 16px;
+}
+
+.manual-entry-container .form-group {
+  margin-bottom: 12px;
+}
+
+.manual-entry-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.manual-entry-container input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+/* Loader */
+.loader {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(76, 175, 80, 0.3);
+  border-radius: 50%;
+  border-top-color: #4caf50;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error Message */
+.error-message {
+  background-color: #ffebee;
+  color: #d32f2f;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* Results Container */
+.results-container {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.results-container h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+  font-size: 18px;
+}
+
+.product-info {
+  margin-bottom: 16px;
+}
+
+.info-row {
+  margin-bottom: 12px;
+  display: flex;
+}
+
+.info-label {
+  font-weight: 500;
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.info-value {
+  flex-grow: 1;
+}
+
+#product-nutrients ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #4caf50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #388e3c;
+}
+
+.btn-secondary {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background-color: #e0e0e0;
+}
+
+/* UPC Scan Button */
+.upc-scan-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.upc-scan-btn:hover {
+  background-color: #388e3c;
+}
+
+.upc-scan-btn i {
+  font-size: 18px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 5% auto;
+    width: 95%;
+  }
+  
+  .info-row {
+    flex-direction: column;
+  }
+  
+  .info-label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+}

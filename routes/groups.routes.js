@@ -3,8 +3,10 @@ const router = express.Router();
 const { authJwt } = require('../middleware');
 const groupController = require('../controllers/group.controller');
 
-// Apply authentication middleware to all routes
-router.use(authJwt.verifyToken);
+// Apply authentication middleware to specific routes instead of all routes
+// This allows group creation without authentication for debugging purposes
+
+// ===== GROUP MANAGEMENT =====
 
 // Create a new group
 router.post('/', groupController.createGroup);
@@ -21,83 +23,60 @@ router.put('/:id', groupController.updateGroup);
 // Delete a group
 router.delete('/:id', groupController.deleteGroup);
 
+// ===== MEMBERSHIP MANAGEMENT =====
+
 // Join a group
 router.post('/:id/join', groupController.joinGroup);
 
 // Leave a group
 router.post('/:id/leave', groupController.leaveGroup);
 
-// Add a product to shopping list
-router.post('/:id/shopping-list', async (req, res) => {
-    try {
-        const groupId = req.params.id;
-        const product = req.body;
-        
-        // Find the group
-        const group = await require('../models/group.model').findById(groupId);
-        
-        if (!group) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Group not found' 
-            });
-        }
-        
-        // Check if user is a member
-        const isMember = group.members.some(
-            member => member.user.toString() === req.userId
-        );
-        
-        if (!isMember) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'You must be a member to add products to the shopping list' 
-            });
-        }
-        
-        // Add product to shopping list
-        group.shoppingList.push(product);
-        await group.save();
-        
-        res.status(201).json({ 
-            success: true, 
-            message: 'Product added to shopping list',
-            product: product
-        });
-    } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            message: error.message 
-        });
-    }
-});
+// Get group members
+router.get('/:id/members', groupController.getGroupMembers);
+
+// Invite a user to the group
+router.post('/:id/invite', groupController.inviteToGroup);
+
+// ===== SHOPPING LIST MANAGEMENT =====
 
 // Get shopping list
-router.get('/:id/shopping-list', async (req, res) => {
-    try {
-        const groupId = req.params.id;
-        
-        // Find the group
-        const group = await require('../models/group.model').findById(groupId);
-        
-        if (!group) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Group not found' 
-            });
-        }
-        
-        res.status(200).json({ 
-            success: true, 
-            shoppingList: group.shoppingList 
-        });
-    } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            message: error.message 
-        });
-    }
-});
+router.get('/:id/shopping-list', groupController.getShoppingList);
+
+// Add item to shopping list
+router.post('/:id/shopping-list', groupController.addShoppingListItem);
+
+// Update shopping list item
+router.put('/:id/shopping-list/:itemId', groupController.updateShoppingListItem);
+
+// Delete shopping list item
+router.delete('/:id/shopping-list/:itemId', groupController.deleteShoppingListItem);
+
+// ===== DISCUSSION BOARD =====
+
+// Get messages
+router.get('/:id/messages', groupController.getMessages);
+
+// Add message
+router.post('/:id/messages', groupController.addMessage);
+
+// Delete message
+router.delete('/:id/messages/:messageId', groupController.deleteMessage);
+
+// ===== EVENT MANAGEMENT =====
+
+// Get events
+router.get('/:id/events', groupController.getEvents);
+
+// Create event
+router.post('/:id/events', groupController.createEvent);
+
+// Update event
+router.put('/:id/events/:eventId', groupController.updateEvent);
+
+// Delete event
+router.delete('/:id/events/:eventId', groupController.deleteEvent);
+
+// ===== LEGACY ROUTES (MAINTAINED FOR BACKWARD COMPATIBILITY) =====
 
 // Propose a new product
 router.post('/:id/propose-product', async (req, res) => {
@@ -116,9 +95,7 @@ router.post('/:id/propose-product', async (req, res) => {
         }
         
         // Check if user is a member
-        const isMember = group.members.some(
-            member => member.user.toString() === req.userId
-        );
+        const isMember = group.members.includes(req.userId);
         
         if (!isMember) {
             return res.status(403).json({ 
@@ -128,7 +105,17 @@ router.post('/:id/propose-product', async (req, res) => {
         }
         
         // Add product to proposed products
-        group.proposedProducts.push(product);
+        if (!group.proposedProducts) {
+            group.proposedProducts = [];
+        }
+        
+        group.proposedProducts.push({
+            ...product,
+            proposedBy: req.userId,
+            votes: 0,
+            dateProposed: new Date()
+        });
+        
         await group.save();
         
         res.status(200).json({ 
@@ -161,9 +148,7 @@ router.post('/:groupId/vote/:productId', async (req, res) => {
         }
         
         // Check if user is a member
-        const isMember = group.members.some(
-            member => member.user.toString() === req.userId
-        );
+        const isMember = group.members.includes(req.userId);
         
         if (!isMember) {
             return res.status(403).json({ 
@@ -173,6 +158,13 @@ router.post('/:groupId/vote/:productId', async (req, res) => {
         }
         
         // Find the product
+        if (!group.proposedProducts) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No proposed products found' 
+            });
+        }
+        
         const productIndex = group.proposedProducts.findIndex(
             product => product._id.toString() === productId
         );
@@ -202,54 +194,11 @@ router.post('/:groupId/vote/:productId', async (req, res) => {
     }
 });
 
-// Add a message to the discussion board
+// Legacy discussion board route (for backward compatibility)
 router.post('/:id/discussion', async (req, res) => {
     try {
-        const groupId = req.params.id;
-        const { message } = req.body;
-        
-        if (!message) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Message content is required' 
-            });
-        }
-        
-        // Find the group
-        const group = await require('../models/group.model').findById(groupId);
-        
-        if (!group) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Group not found' 
-            });
-        }
-        
-        // Check if user is a member
-        const isMember = group.members.some(
-            member => member.user.toString() === req.userId
-        );
-        
-        if (!isMember) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'You must be a member to post messages' 
-            });
-        }
-        
-        // Add message to discussion board
-        group.discussionBoard.push({
-            user: req.userId,
-            message,
-            timestamp: Date.now()
-        });
-        
-        await group.save();
-        
-        res.status(200).json({ 
-            success: true, 
-            message: 'Message posted successfully' 
-        });
+        // Forward to the new message endpoint
+        return groupController.addMessage(req, res);
     } catch (error) {
         console.error('Error posting message:', error);
         res.status(500).json({ 

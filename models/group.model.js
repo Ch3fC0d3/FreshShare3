@@ -46,10 +46,45 @@ const groupSchema = new mongoose.Schema({
     }
   },
   rules: {
-    type: String,
-    trim: true,
-    default: '',
-    maxlength: [1000, 'Rules cannot exceed 1000 characters']
+    textDescription: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: [1000, 'Rules description cannot exceed 1000 characters']
+    },
+    maxMembers: {
+      type: Number,
+      default: 50,
+      min: [2, 'Group must allow at least 2 members'],
+      max: [500, 'Group cannot exceed 500 members']
+    },
+    allowGuests: {
+      type: Boolean,
+      default: false
+    },
+    autoApproveMembers: {
+      type: Boolean,
+      default: false
+    },
+    autoApproveListings: {
+      type: Boolean,
+      default: false
+    },
+    membershipFee: {
+      amount: {
+        type: Number,
+        default: 0
+      },
+      frequency: {
+        type: String,
+        enum: ['one-time', 'monthly', 'quarterly', 'yearly'],
+        default: 'one-time'
+      },
+      required: {
+        type: Boolean,
+        default: false
+      }
+    }
   },
   deliveryDays: {
     type: [{

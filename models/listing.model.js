@@ -45,8 +45,15 @@ const ListingSchema = new mongoose.Schema({
     state: String,
     zipCode: String,
     coordinates: {
-      lat: Number,
-      lng: Number
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true
+      }
     }
   },
   seller: {
@@ -62,6 +69,42 @@ const ListingSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  expiryDate: {
+    type: Date,
+    default: function() {
+      // Default expiry date is 30 days from creation
+      const date = new Date();
+      date.setDate(date.getDate() + 30);
+      return date;
+    }
+  },
+  autoArchiveAfter: {
+    type: Number,
+    default: 30, // Days
+    min: 1,
+    max: 90
+  },
+  versionHistory: [{
+    title: String,
+    description: String,
+    price: Number,
+    priceUnit: String,
+    quantity: Number,
+    images: [String],
+    modifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    modifiedAt: {
+      type: Date,
+      default: Date.now
+    },
+    reason: String
+  }],
   quantity: {
     type: Number,
     default: 1,
@@ -71,6 +114,25 @@ const ListingSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  upcCode: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  nutritionalInfo: {
+    fdcId: String,
+    brandName: String,
+    ingredients: String,
+    servingSize: String,
+    servingSizeUnit: String,
+    foodNutrients: [{
+      nutrientId: Number,
+      nutrientName: String,
+      nutrientNumber: String,
+      unitName: String,
+      value: Number
+    }]
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -88,8 +150,14 @@ ListingSchema.index({
   title: 'text', 
   description: 'text', 
   tags: 'text',
-  category: 'text'
+  category: 'text',
+  upcCode: 'text',
+  'nutritionalInfo.brandName': 'text',
+  'nutritionalInfo.ingredients': 'text'
 });
+
+// Create geospatial index for location-based queries
+ListingSchema.index({ 'location.coordinates': '2dsphere' });
 
 const Listing = mongoose.model('Listing', ListingSchema);
 

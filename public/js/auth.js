@@ -1,7 +1,47 @@
+// Synchronize token between cookies and localStorage
+function synchronizeToken() {
+    // Check if token exists in cookies but not in localStorage
+    if (document.cookie.includes('token') && !localStorage.getItem('token')) {
+        // Extract token from cookies
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith('token=')) {
+                const token = cookie.substring('token='.length);
+                // Store in localStorage
+                localStorage.setItem('token', token);
+                console.log('Token synchronized from cookies to localStorage');
+                break;
+            }
+        }
+    }
+    // Check if token exists in localStorage but not in cookies
+    else if (!document.cookie.includes('token') && localStorage.getItem('token')) {
+        // We can't set httpOnly cookies from JavaScript, but we can redirect to a server endpoint
+        // that would set the cookie. For now, we'll just log this situation.
+        console.log('Token exists in localStorage but not in cookies');
+    }
+}
+
 // Check if user is authenticated
 function isAuthenticated() {
-    // Check for token in cookies
-    return document.cookie.includes('token');
+    // Synchronize token first
+    synchronizeToken();
+    
+    // Check for token in cookies or localStorage
+    const hasTokenInCookie = document.cookie.includes('token');
+    const hasTokenInLocalStorage = !!localStorage.getItem('token');
+    
+    // If we have no token in either place, user is definitely not authenticated
+    if (!hasTokenInCookie && !hasTokenInLocalStorage) {
+        console.log('No authentication token found');
+        return false;
+    }
+    
+    // If we have a token, we'll consider the user authenticated for client-side purposes
+    // The server will validate the token properly and redirect if needed
+    console.log('Authentication token found, considering user authenticated');
+    return true;
 }
 
 // Redirect to login if not authenticated
@@ -17,8 +57,13 @@ function requireAuth(redirectUrl) {
 
 // Redirect to dashboard if already authenticated
 function redirectIfAuthenticated() {
+    // Only redirect if we're confident the user is authenticated
     if (isAuthenticated()) {
-        window.location.href = '/dashboard';
+        // Add a timestamp to prevent infinite redirects
+        const timestamp = new Date().getTime();
+        const redirectUrl = `/dashboard?t=${timestamp}`;
+        console.log('User authenticated, redirecting to dashboard');
+        window.location.href = redirectUrl;
         return true;
     }
     return false;
