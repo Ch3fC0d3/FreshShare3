@@ -1,0 +1,51 @@
+---
+deployment:
+  tasks:
+    # Set up deployment paths
+    - export DEPLOYPATH=/home/myfrovov/public_html/
+    - export FASTIFYPATH=/home/myfrovov/fastify-backend/
+    - export ROOTPATH=/home/myfrovov/
+    
+    # Deploy Express frontend files
+    - /bin/cp -R config $DEPLOYPATH
+    - /bin/cp -R controllers $DEPLOYPATH
+    - /bin/cp -R middleware $DEPLOYPATH
+    - /bin/cp -R models $DEPLOYPATH
+    - /bin/cp -R public/* $DEPLOYPATH
+    - /bin/cp -R routes $DEPLOYPATH
+    - /bin/cp -R views $DEPLOYPATH
+    - /bin/cp server.js $DEPLOYPATH
+    - /bin/cp package.json $DEPLOYPATH
+    - /bin/cp package-lock.json $DEPLOYPATH
+    - /bin/cp proxy-server.js $DEPLOYPATH
+    - /bin/cp .htaccess $DEPLOYPATH
+    - /bin/cp start-express.sh $DEPLOYPATH
+    
+    # Deploy environment files
+    - /bin/cp .env.production $DEPLOYPATH.env
+    
+    # Deploy Fastify backend
+    - /bin/mkdir -p $FASTIFYPATH
+    - /bin/cp -R fastify-backend/* $FASTIFYPATH
+    - /bin/cp fastify-backend/.env.production $FASTIFYPATH.env
+    - /bin/cp fastify-backend/start-fastify.sh $FASTIFYPATH
+    
+    # Copy documentation
+    - /bin/cp DEPLOYMENT_STEPS.md $ROOTPATH
+    - /bin/cp mongodb-atlas-setup.md $ROOTPATH
+    
+    # Set proper permissions
+    - /bin/chmod 755 $DEPLOYPATH
+    - /bin/chmod 755 $FASTIFYPATH
+    - /bin/chmod 600 $DEPLOYPATH.env
+    - /bin/chmod 600 $FASTIFYPATH.env
+    - /bin/chmod +x $DEPLOYPATH/start-express.sh
+    - /bin/chmod +x $FASTIFYPATH/start-fastify.sh
+    
+    # Install dependencies for both services
+    - cd $DEPLOYPATH && npm install --production
+    - cd $FASTIFYPATH && npm install --production
+    
+    # Restart services
+    - cd $FASTIFYPATH && ./start-fastify.sh > fastify.log 2>&1 &
+    - cd $DEPLOYPATH && ./start-express.sh > express.log 2>&1 &
