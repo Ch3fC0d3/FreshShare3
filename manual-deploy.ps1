@@ -1,11 +1,15 @@
 # FreshShare Manual Deployment Script
 # This script deploys the FreshShare application directly to a cPanel server via SSH
-# Requires: sshpass (for password-based authentication)
+# PowerShell native implementation (no sshpass required)
 
 # Server credentials - replace these with your actual values
 $SERVER_HOST = "your-cpanel-server.com"  # Replace with your server hostname or IP
 $SERVER_USER = "your-cpanel-username"    # Replace with your cPanel username
 $SERVER_PASS = "your-cpanel-password"    # Replace with your cPanel password
+
+# Create credential object for secure SSH authentication
+$SecurePassword = ConvertTo-SecureString $SERVER_PASS -AsPlainText -Force
+$Credential = New-Object System.Management.Automation.PSCredential ($SERVER_USER, $SecurePassword)
 
 # Server paths
 $REMOTE_PATH = "public_html/freshshare"
@@ -54,9 +58,9 @@ $DEPLOY_ZIP = "$TEMP_DIR\freshshare-deploy.zip"
 Write-Host "Creating deployment zip archive..." -ForegroundColor Yellow
 Compress-Archive -Path "$TEMP_DIR\*" -DestinationPath $DEPLOY_ZIP -Force
 
-# Upload to server via SCP (requires sshpass for password authentication)
+# Upload to server via SCP (using PowerShell native SSH)
 Write-Host "Uploading deployment package to server..." -ForegroundColor Yellow
-Write-Host "This requires installing 'sshpass' and 'scp' if not already installed" -ForegroundColor Yellow
+Write-Host "This requires OpenSSH to be installed on Windows (available in Settings > Apps > Optional Features)" -ForegroundColor Yellow
 
 # Generate deployment script to run on the server
 $REMOTE_SCRIPT = "$TEMP_DIR\deploy.sh"
@@ -108,17 +112,17 @@ Since GitHub Actions is having issues with secrets, follow these steps to deploy
    - SERVER_USER
    - SERVER_PASS
 
-2. Install required tools if you don't have them:
-   - Install sshpass: chocolatey install sshpass or scoop install sshpass
-   - Ensure you have SSH/SCP installed
+2. Ensure you have OpenSSH installed:
+   - Go to Settings > Apps > Optional features
+   - Search for "OpenSSH Client" and install if not present
 
-3. Run commands manually (or complete this script):
+3. Run the script to deploy automatically, or run these commands manually:
    - Use SCP to upload the zip file:
-     sshpass -p "$SERVER_PASS" scp $DEPLOY_ZIP $SERVER_USER@$SERVER_HOST:~/freshshare-deploy.zip
+     scp -o StrictHostKeyChecking=no $DEPLOY_ZIP "${SERVER_USER}@${SERVER_HOST}:~/freshshare-deploy.zip"
 
    - Upload and execute the deployment script:
-     sshpass -p "$SERVER_PASS" scp $REMOTE_SCRIPT $SERVER_USER@$SERVER_HOST:~/deploy.sh
-     sshpass -p "$SERVER_PASS" ssh $SERVER_USER@$SERVER_HOST "chmod +x ~/deploy.sh && ~/deploy.sh"
+     scp -o StrictHostKeyChecking=no $REMOTE_SCRIPT "${SERVER_USER}@${SERVER_HOST}:~/deploy.sh"
+     ssh -o StrictHostKeyChecking=no "${SERVER_USER}@${SERVER_HOST}" "chmod +x ~/deploy.sh && ~/deploy.sh"
 
 4. Clean up temporary files
    Remove-Item -Path $TEMP_DIR -Recurse -Force
@@ -126,5 +130,45 @@ Since GitHub Actions is having issues with secrets, follow these steps to deploy
 This will deploy your application directly to the cPanel server without relying on GitHub Actions.
 "@ -ForegroundColor Green
 
-# Clean up (uncomment once you've reviewed and tested this script)
-# Remove-Item -Path $TEMP_DIR -Recurse -Force
+# Automated deployment function - uncomment to run fully automated deployment
+<#
+function Deploy-FreshShare {
+    # Check if we have valid credentials
+    if ($SERVER_HOST -eq "your-cpanel-server.com" -or 
+        $SERVER_USER -eq "your-cpanel-username" -or
+        $SERVER_PASS -eq "your-cpanel-password") {
+        Write-Host "Please edit the script to set your actual server credentials first." -ForegroundColor Red
+        return
+    }
+
+    try {
+        # Upload files via SCP
+        Write-Host "Uploading deployment package..." -ForegroundColor Yellow
+        scp -o StrictHostKeyChecking=no $DEPLOY_ZIP "${SERVER_USER}@${SERVER_HOST}:~/freshshare-deploy.zip"
+        if ($LASTEXITCODE -ne 0) { throw "Failed to upload deployment package" }
+
+        # Upload deployment script
+        Write-Host "Uploading deployment script..." -ForegroundColor Yellow
+        scp -o StrictHostKeyChecking=no $REMOTE_SCRIPT "${SERVER_USER}@${SERVER_HOST}:~/deploy.sh"
+        if ($LASTEXITCODE -ne 0) { throw "Failed to upload deployment script" }
+
+        # Execute deployment script
+        Write-Host "Executing deployment on server..." -ForegroundColor Yellow
+        ssh -o StrictHostKeyChecking=no "${SERVER_USER}@${SERVER_HOST}" "chmod +x ~/deploy.sh && ~/deploy.sh"
+        if ($LASTEXITCODE -ne 0) { throw "Deployment script execution failed" }
+
+        Write-Host "Deployment completed successfully!" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "Deployment error: $_" -ForegroundColor Red
+    }
+    finally {
+        # Clean up temporary files
+        Write-Host "Cleaning up temporary files..." -ForegroundColor Yellow
+        Remove-Item -Path $TEMP_DIR -Recurse -Force
+    }
+}
+
+# Uncomment the following line to run automated deployment
+# Deploy-FreshShare
+#>
