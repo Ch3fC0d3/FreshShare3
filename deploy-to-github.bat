@@ -17,6 +17,10 @@ if not exist .git (
 REM Create and switch to main branch
 git checkout -b main 2>nul || git checkout main
 
+REM Pull the latest changes first
+echo Pulling latest changes from remote...
+git pull origin main
+
 echo Adding all project files...
 git add .
 
