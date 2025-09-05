@@ -249,40 +249,7 @@
         </div>
     </div>
 
-    <script>
-        // Calendar functionality
-        document.addEventListener('DOMContentLoaded', () => {
-            // Mark today's date
-            const today = new Date();
-            const currentDay = 28; // Just for demo purposes
-            
-            // Calendar navigation
-            const prevMonthBtn = document.querySelector('.calendar-nav-btn:first-child');
-            const nextMonthBtn = document.querySelector('.calendar-nav-btn:last-child');
-            const calendarTitle = document.querySelector('.calendar-title');
-            
-            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-            let currentMonthIndex = 1; // February
-            let currentYear = 2025;
-            
-            prevMonthBtn.addEventListener('click', () => {
-                currentMonthIndex--;
-                if (currentMonthIndex < 0) {
-                    currentMonthIndex = 11;
-                    currentYear--;
-                }
-                calendarTitle.textContent = `${months[currentMonthIndex]} ${currentYear}`;
-            });
-            
-            nextMonthBtn.addEventListener('click', () => {
-                currentMonthIndex++;
-                if (currentMonthIndex > 11) {
-                    currentMonthIndex = 0;
-                    currentYear++;
-                }
-                calendarTitle.textContent = `${months[currentMonthIndex]} ${currentYear}`;
-            });
-        });
-    </script>
+    <!-- Dashboard JavaScript -->
+    <script src="/js/dashboard.js"></script>
 </body>
 </html>

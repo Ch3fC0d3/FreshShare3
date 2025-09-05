@@ -12,16 +12,38 @@
                 <a href="/marketplace">Marketplace</a>
                 <a href="/groups">Groups</a>
                 <a href="/forum">Forum</a>
-                <a href="/dashboard">Dashboard</a>
-                <a href="/profile">Profile</a>
-                <a href="https://ksea-3zqiu.ondigitalocean.app/" target="_blank"><i class="fa-solid fa-wallet"></i> Wallet</a>
+                <% if (locals.user) { %>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/profile">
+                        <i class="fa-solid fa-user"></i>
+                        <%= locals.user.username %>
+                    </a>
+                <% } %>
+                <% if (locals.user && locals.user.roles && locals.user.roles.includes('admin')) { %>
+                    <a href="/admin" class="admin-link"><i class="fa-solid fa-lock"></i> Admin</a>
+                <% } %>
             </div>
         </nav>
         
         <div class="fs-auth-buttons">
             <% if (locals.user) { %>
-                <a href="/dashboard" class="fs-btn fs-btn-primary">Dashboard</a>
-                <a href="/logout" class="fs-btn fs-btn-secondary">Logout</a>
+                <!-- Verification status notification -->
+                <% if (typeof locals.user.emailVerified !== 'undefined' && !locals.user.emailVerified) { %>
+                    <a href="#" id="verifyEmailBtn" class="fs-btn fs-btn-warning" title="Click to resend verification email">
+                        <i class="fa-solid fa-exclamation-circle"></i> Verify Email
+                    </a>
+                <% } %>
+                <div class="dropdown">
+                    <button class="fs-btn fs-btn-primary dropdown-toggle" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-user-circle"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                        <li><a class="dropdown-item" href="/profile">My Profile</a></li>
+                        <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                    </ul>
+                </div>
             <% } else { %>
                 <a href="/login" class="fs-btn fs-btn-primary">Login</a>
                 <a href="/signup" class="fs-btn fs-btn-secondary">Sign Up</a>
@@ -34,4 +56,87 @@
             <span></span>
         </button>
     </div>
+    
+    <!-- Verification email modal -->
+    <% if (locals.user && typeof locals.user.emailVerified !== 'undefined' && !locals.user.emailVerified) { %>
+    <div class="modal fade" id="verifyEmailModal" tabindex="-1" aria-labelledby="verifyEmailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="verifyEmailModalLabel">Verify Your Email</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Your email address (<strong><%= locals.user.email %></strong>) has not been verified yet.</p>
+                    <p>Would you like us to send a new verification email?</p>
+                    <div class="alert alert-success d-none" id="verifySuccessAlert">
+                        Verification email sent successfully! Please check your inbox.
+                    </div>
+                    <div class="alert alert-danger d-none" id="verifyErrorAlert">
+                        Failed to send verification email. Please try again.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="sendVerificationBtn">Send Verification Email</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <% } %>
 </header>
+
+<% if (locals.user && typeof locals.user.emailVerified !== 'undefined' && !locals.user.emailVerified) { %>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle verify email button click
+        const verifyEmailBtn = document.getElementById('verifyEmailBtn');
+        const sendVerificationBtn = document.getElementById('sendVerificationBtn');
+        const verifySuccessAlert = document.getElementById('verifySuccessAlert');
+        const verifyErrorAlert = document.getElementById('verifyErrorAlert');
+        
+        if (verifyEmailBtn) {
+            verifyEmailBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const verifyEmailModal = new bootstrap.Modal(document.getElementById('verifyEmailModal'));
+                verifyEmailModal.show();
+            });
+        }
+        
+        if (sendVerificationBtn) {
+            sendVerificationBtn.addEventListener('click', async function() {
+                try {
+                    verifySuccessAlert.classList.add('d-none');
+                    verifyErrorAlert.classList.add('d-none');
+                    sendVerificationBtn.disabled = true;
+                    sendVerificationBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+                    
+                    const response = await fetch('/api/email/resend-verification', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        verifySuccessAlert.classList.remove('d-none');
+                    } else {
+                        verifyErrorAlert.textContent = data.message || 'Failed to send verification email. Please try again.';
+                        verifyErrorAlert.classList.remove('d-none');
+                    }
+                } catch (error) {
+                    verifyErrorAlert.textContent = 'An error occurred. Please try again later.';
+                    verifyErrorAlert.classList.remove('d-none');
+                    console.error('Error:', error);
+                } finally {
+                    sendVerificationBtn.disabled = false;
+                    sendVerificationBtn.innerHTML = 'Send Verification Email';
+                }
+            });
+        }
+    });
+</script>
+<% } %>

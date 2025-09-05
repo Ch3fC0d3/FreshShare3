@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDA API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #results {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        pre {
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .api-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>USDA API Test Tool</h1>
+    
+    <div class="api-info">
+        <h2>API Information</h2>
+        <p>This tool tests the FreshShare USDA Food Search API integration.</p>
+    </div>
+
+    <div class="form-group">
+        <label for="query">Search Query:</label>
+        <input type="text" id="query" placeholder="Enter food item (e.g., apple, banana)" value="apple">
+    </div>
+    
+    <div class="form-group">
+        <button onclick="testAPI()">Test API</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results">
+        <p>Results will appear here...</p>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            const query = document.getElementById('query').value.trim();
+            
+            if (!query) {
+                resultsDiv.innerHTML = '<p class="error">Please enter a search query.</p>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<p>Sending request...</p>';
+            
+            try {
+                // Log the start time
+                const startTime = performance.now();
+                
+                // Call the API
+                const response = await fetch(`/api/marketplace/food-search?query=${encodeURIComponent(query)}`);
+                
+                // Calculate response time
+                const responseTime = Math.round(performance.now() - startTime);
+                
+                // Get the response data
+                const data = await response.json();
+                
+                // Build the HTML for displaying results
+                let html = `
+                    <h3>API Test Results</h3>
+                    <p><strong>Query:</strong> ${query}</p>
+                    <p><strong>Response time:</strong> ${responseTime}ms</p>
+                    <p><strong>Status:</strong> ${response.status} ${response.ok ? '<span class="success">OK</span>' : '<span class="error">Error</span>'}</p>
+                    <p><strong>Success:</strong> ${data.success ? '<span class="success">Yes</span>' : '<span class="error">No</span>'}</p>
+                    <p><strong>Using mock data:</strong> ${data.isMockData ? '<span class="error">Yes (API might not be working)</span>' : '<span class="success">No (Real API data)</span>'}</p>
+                `;
+                
+                if (data.data && Array.isArray(data.data)) {
+                    html += `
+                        <p><strong>Results count:</strong> ${data.data.length}</p>
+                        <h4>Results:</h4>
+                        <table>
+                            <tr>
+                                <th>#</th>
+                                <th>Description</th>
+                                <th>Brand</th>
+                                <th>Category</th>
+                                <th>ID</th>
+                            </tr>
+                    `;
+                    
+                    data.data.forEach((item, index) => {
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${item.description || 'N/A'}</td>
+                                <td>${item.brandName || 'N/A'}</td>
+                                <td>${item.category || 'N/A'}</td>
+                                <td>${item.fdcId || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</table>';
+                } else {
+                    html += '<p class="error">No results found.</p>';
+                }
+                
+                html += `
+                    <h4>Raw Response:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <p class="error">Error: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<p>Results cleared.</p>';
+        }
+        
+        // Auto-test on page load
+        window.onload = function() {
+            testAPI();
+        };
+    </script>
+</body>
+</html>

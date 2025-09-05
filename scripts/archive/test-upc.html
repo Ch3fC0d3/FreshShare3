@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPC Lookup Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input {
+            padding: 8px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        .status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>UPC Lookup API Test</h1>
+    
+    <div class="container">
+        <h2>Test UPC Lookup</h2>
+        <div>
+            <input type="text" id="upcInput" placeholder="Enter UPC code" value="044000032029">
+            <button onclick="testUpcLookup()">Test UPC Lookup</button>
+            <button onclick="testServerStatus()">Test Server Status</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="result" id="result">Results will appear here...</div>
+    </div>
+
+    <div class="container">
+        <h2>Sample UPC Codes</h2>
+        <ul>
+            <li><strong>044000032029</strong> - Kraft Macaroni & Cheese</li>
+            <li><strong>021130126026</strong> - Coca-Cola</li>
+            <li><strong>040980317</strong> - Organic Bananas (mock)</li>
+            <li><strong>12345678901</strong> - Test Product (mock)</li>
+        </ul>
+    </div>
+
+    <script>
+        async function testUpcLookup() {
+            const upcCode = document.getElementById('upcInput').value.trim();
+            const resultElement = document.getElementById('result');
+            const statusElement = document.getElementById('status');
+            
+            if (!upcCode) {
+                statusElement.className = 'status error';
+                statusElement.textContent = 'Please enter a UPC code';
+                return;
+            }
+
+            statusElement.className = 'status';
+            statusElement.textContent = 'Testing...';
+            resultElement.textContent = 'Fetching results...';
+            
+            try {
+                const response = await fetch(`/api/marketplace/upc/${upcCode}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusElement.className = 'status success';
+                    statusElement.textContent = 'Success! API endpoint is working correctly.';
+                } else {
+                    statusElement.className = 'status error';
+                    statusElement.textContent = `Error: ${response.status} ${response.statusText}`;
+                }
+                
+                resultElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = `Error: ${error.message}`;
+                resultElement.textContent = `Failed to fetch data: ${error.message}\n\nThis could indicate that the server is not running or the API endpoint is not available.`;
+            }
+        }
+
+        async function testServerStatus() {
+            const statusElement = document.getElementById('status');
+            const resultElement = document.getElementById('result');
+            
+            statusElement.className = 'status';
+            statusElement.textContent = 'Testing server status...';
+            resultElement.textContent = 'Checking if server is running...';
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('/');
+                const endTime = Date.now();
+                
+                if (response.ok) {
+                    statusElement.className = 'status success';
+                    statusElement.textContent = `Success! Server is running. Response time: ${endTime - startTime}ms`;
+                    resultElement.textContent = 'Server is up and running correctly.';
+                } else {
+                    statusElement.className = 'status error';
+                    statusElement.textContent = `Error: ${response.status} ${response.statusText}`;
+                    resultElement.textContent = 'Server returned an error response.';
+                }
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = `Error: ${error.message}`;
+                resultElement.textContent = `Failed to connect to server: ${error.message}\n\nThis indicates that the server is not running.`;
+            }
+        }
+    </script>
+</body>
+</html>

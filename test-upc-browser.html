@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPC Lookup Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 8px 12px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>UPC Lookup API Test</h1>
+    
+    <div class="test-buttons">
+        <button class="test-button" onclick="testServerConnection()">Test Server Connection</button>
+        <button class="test-button" onclick="testUpcTestEndpoint()">Test UPC Test Endpoint</button>
+    </div>
+    
+    <div class="input-group">
+        <input type="text" id="upcInput" placeholder="Enter UPC code" value="044000032029">
+        <button onclick="lookupUpc()">Lookup UPC</button>
+    </div>
+    
+    <h2>Sample UPC Codes:</h2>
+    <ul>
+        <li><strong>044000032029</strong> - Kraft Macaroni & Cheese</li>
+        <li><strong>021130126026</strong> - Coca-Cola</li>
+        <li><strong>040980317</strong> - Organic Bananas (mock)</li>
+        <li><strong>12345678901</strong> - Test Product (mock)</li>
+    </ul>
+    
+    <h2>Result:</h2>
+    <div id="result">Results will appear here...</div>
+    
+    <script>
+        // Test server connection
+        async function testServerConnection() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = "Testing server connection...";
+            
+            try {
+                const response = await fetch('http://localhost:3002/', {
+                    method: 'GET'
+                });
+                
+                const text = await response.text();
+                resultDiv.innerHTML = `<span class="success">✅ Server is running!</span>\nStatus: ${response.status}\nResponse: ${text}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Server connection failed!</span>\nError: ${error.message}`;
+            }
+        }
+        
+        // Test UPC test endpoint
+        async function testUpcTestEndpoint() {
+            const upc = document.getElementById('upcInput').value || '044000032029';
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `Testing UPC test endpoint with UPC: ${upc}...`;
+            
+            try {
+                const response = await fetch(`http://localhost:3002/api/marketplace/upc-test/${upc}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `<span class="success">✅ UPC test endpoint working!</span>\nStatus: ${response.status}\nResponse:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ UPC test endpoint failed!</span>\nError: ${error.message}`;
+            }
+        }
+        
+        // Lookup UPC
+        async function lookupUpc() {
+            const upc = document.getElementById('upcInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!upc) {
+                resultDiv.innerHTML = '<span class="error">Please enter a UPC code</span>';
+                return;
+            }
+            
+            resultDiv.innerHTML = `Looking up UPC: ${upc}...`;
+            
+            try {
+                const response = await fetch(`http://localhost:3002/api/marketplace/upc/${upc}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `<span class="success">✅ UPC lookup successful!</span>\n\nStatus: ${response.status}\n\nProduct: ${data.data?.description || 'N/A'}\nBrand: ${data.data?.brandName || 'N/A'}\nUsing mock data: ${data.isMockData ? 'Yes' : 'No'}\n\nFull Response:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">⚠️ UPC lookup returned error!</span>\n\nStatus: ${response.status}\nMessage: ${data.message || 'Unknown error'}\n\nFull Response:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ UPC lookup failed!</span>\n\nError: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

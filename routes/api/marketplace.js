@@ -45,12 +45,32 @@ router.get('/', marketplaceController.getListings);
 router.get('/search', marketplaceController.searchListings);
 
 // Look up product information by UPC code
-router.get('/upc/:upc', marketplaceController.lookupUpc);
+router.get('/upc/:upc', (req, res, next) => {
+  console.log('UPC LOOKUP ROUTE ACCESSED with UPC:', req.params.upc);
+  console.log('Request path:', req.path);
+  console.log('Full URL:', req.originalUrl);
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Add error handling wrapper
+  try {
+    // Call the controller with error handling
+    marketplaceController.lookupUpc(req, res, next);
+  } catch (error) {
+    console.error('Error in UPC lookup route handler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error in UPC lookup route',
+      error: error.message
+    });
+  }
+});
 
 // Test endpoint for UPC lookup
 router.get('/upc-test/:upc', (req, res) => {
   const { upc } = req.params;
   console.log('UPC test endpoint called with UPC:', upc);
+  console.log('Request path:', req.path);
+  console.log('Full URL:', req.originalUrl);
   res.status(200).json({
     success: true,
     message: 'UPC test endpoint working',

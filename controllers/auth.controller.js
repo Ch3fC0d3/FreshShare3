@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../models');
 const User = db.user;
+const crypto = require('crypto');
+const emailController = require('./email.controller');
 
 // Retrieve JWT secret from environment or use a default (in production, always use environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || "bezkoder-secret-key";
@@ -78,15 +80,54 @@ exports.signup = async (req, res) => {
       }
     });
 
+    // Generate verification token
+    const token = crypto.randomBytes(32).toString('hex');
+    user.emailVerificationToken = token;
+    user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
     // Save user to database
     console.log('Attempting to save user to database...');
     await user.save();
     console.log('User saved successfully with ID:', user._id);
 
+    // Try to send verification email
+    try {
+      // Create verification URL
+      const APP_URL = process.env.APP_URL || 'http://localhost:3001';
+      const verificationUrl = `${APP_URL}/verify-email?token=${token}`;
+      
+      // Create email options object for email controller
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || 'FreshShare <noreply@freshshare.com>',
+        to: user.email,
+        subject: 'FreshShare - Verify Your Email',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4CAF50;">Verify Your FreshShare Email</h2>
+            <p>Hello ${user.username},</p>
+            <p>Thank you for signing up for FreshShare! Please verify your email address by clicking the button below:</p>
+            <a href="${verificationUrl}" style="display: inline-block; background-color: #4CAF50; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; margin: 15px 0;">Verify Email</a>
+            <p>If the button doesn't work, you can copy and paste this link in your browser:</p>
+            <p>${verificationUrl}</p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you didn't sign up for FreshShare, please ignore this email.</p>
+            <p>Best regards,<br>The FreshShare Team</p>
+          </div>
+        `
+      };
+
+      // Send email using the transporter from email controller
+      await emailController.sendVerificationEmailDirectly(user.email, token, user.username);
+      console.log('Verification email sent successfully to:', user.email);
+    } catch (emailError) {
+      // Log the error but don't fail the registration
+      console.error('Failed to send verification email:', emailError);
+    }
+
     // Return success response
     return res.status(201).json({
       success: true,
-      message: "User registered successfully!"
+      message: "User registered successfully! Please check your email to verify your account."
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -108,7 +149,7 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     // Validate request body
-    const { username, password } = req.body;
+    const { username, password, rememberMe } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ 
@@ -116,6 +157,10 @@ exports.login = async (req, res) => {
         message: "Username and password are required!" 
       });
     }
+    
+    // Set expiration based on rememberMe option
+    const tokenExpiration = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 30 days or 7 days
+    const cookieExpiration = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000; // in milliseconds
 
     // Find user by username
     const user = await User.findOne({ username: username });
@@ -137,16 +182,16 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Generate JWT token (expires in 7 days)
+    // Generate JWT token with expiration based on rememberMe
     const token = jwt.sign({ id: user._id }, JWT_SECRET, {
-      expiresIn: 7 * 24 * 60 * 60 // 7 days
+      expiresIn: tokenExpiration // either 30 or 7 days depending on rememberMe
     });
 
-    // Set token as cookie with longer expiration (7 days)
+    // Set token as cookie with expiration based on rememberMe
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      maxAge: cookieExpiration, // either 30 or 7 days in milliseconds
       sameSite: 'lax', // Changed from 'strict' to 'lax' to work better across pages
       path: '/' // Ensure cookie is available on all paths
     });

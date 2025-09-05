@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDA API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .log-area {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .warning {
+            color: orange;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 70%;
+            margin-right: 10px;
+        }
+        .result-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .mock-badge, .real-badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .mock-badge {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .real-badge {
+            background-color: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <h1>USDA API Test Tool</h1>
+    
+    <div class="card">
+        <h2>Test Local API Endpoint</h2>
+        <p>Tests the local server endpoint that should proxy to the USDA API</p>
+        <input type="text" id="localQuery" value="apple" placeholder="Enter food to search for...">
+        <button id="testLocalApi">Test Local API Endpoint</button>
+    </div>
+    
+    <div class="card">
+        <h2>Test Direct USDA API</h2>
+        <p>Tests the USDA API directly (bypassing the local server)</p>
+        <input type="text" id="directQuery" value="apple" placeholder="Enter food to search for...">
+        <button id="testDirectApi">Test Direct USDA API</button>
+    </div>
+    
+    <div class="card">
+        <h2>Test Results</h2>
+        <div id="resultsSummary"></div>
+        <div id="results"></div>
+    </div>
+    
+    <h3>Log Output</h3>
+    <div class="log-area" id="logOutput"></div>
+
+    <script>
+        // Utility functions for logging
+        const log = {
+            element: document.getElementById('logOutput'),
+            info: function(msg) {
+                this.write(`[INFO] ${msg}`);
+            },
+            success: function(msg) {
+                this.write(`[SUCCESS] ${msg}`, 'success');
+            },
+            error: function(msg) {
+                this.write(`[ERROR] ${msg}`, 'error');
+            },
+            warning: function(msg) {
+                this.write(`[WARNING] ${msg}`, 'warning');
+            },
+            write: function(msg, className = '') {
+                const line = document.createElement('div');
+                line.textContent = msg;
+                if (className) line.className = className;
+                this.element.appendChild(line);
+                this.element.scrollTop = this.element.scrollHeight;
+            },
+            clear: function() {
+                this.element.innerHTML = '';
+            }
+        };
+
+        // Function to display results
+        function displayResults(data, source) {
+            const resultsDiv = document.getElementById('results');
+            const resultsSummary = document.getElementById('resultsSummary');
+            
+            resultsSummary.innerHTML = `
+                <h3>${source} Results</h3>
+                <p>
+                    <strong>Total items:</strong> ${data.items?.length || 0}
+                    ${data.isMockData ? 
+                        '<span class="mock-badge">MOCK DATA</span>' : 
+                        '<span class="real-badge">REAL USDA DATA</span>'}
+                </p>
+            `;
+            
+            resultsDiv.innerHTML = '';
+            
+            if (data.items && data.items.length > 0) {
+                data.items.slice(0, 10).forEach((item, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'result-item';
+                    itemDiv.innerHTML = `
+                        <p><strong>${index + 1}. ${item.name || item.description || 'Unnamed Item'}</strong></p>
+                        <p>ID: ${item.id || 'N/A'}</p>
+                        <p>${item.brand || item.brandOwner || ''}</p>
+                    `;
+                    resultsDiv.appendChild(itemDiv);
+                });
+            } else {
+                resultsDiv.innerHTML = '<p>No items found</p>';
+            }
+        }
+
+        // Test the local API endpoint
+        document.getElementById('testLocalApi').addEventListener('click', async () => {
+            const query = document.getElementById('localQuery').value.trim() || 'apple';
+            log.info(`Testing local API endpoint with query: ${query}`);
+            
+            try {
+                log.info(`Sending request to: /api/marketplace/food-search?query=${encodeURIComponent(query)}`);
+                const response = await fetch(`/api/marketplace/food-search?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                log.info(`Received response with status: ${response.status}`);
+                log.info(`Total items: ${data.items?.length || 0}`);
+                
+                if (data.isMockData) {
+                    log.warning('Response contains MOCK data - not from USDA API');
+                } else {
+                    log.success('Response contains REAL data from USDA API');
+                }
+                
+                displayResults(data, 'Local API');
+            } catch (error) {
+                log.error(`Failed to fetch from local API: ${error.message}`);
+            }
+        });
+
+        // Test the direct USDA API
+        document.getElementById('testDirectApi').addEventListener('click', async () => {
+            const query = document.getElementById('directQuery').value.trim() || 'apple';
+            const API_KEY = 'DEMO_KEY'; // Using DEMO_KEY as fallback
+            
+            log.info(`Testing direct USDA API with query: ${query}`);
+            log.info('This test bypasses the local server and accesses the USDA API directly');
+            
+            try {
+                const apiUrl = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&dataType=Foundation,Survey%20%28FNDDS%29,SR%20Legacy&pageSize=25&api_key=${API_KEY}`;
+                log.info(`Sending request to USDA API directly (with DEMO_KEY)`);
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                log.info(`Received response with status: ${response.status}`);
+                log.info(`Total foods: ${data.foods?.length || 0}`);
+                log.info(`Total hits: ${data.totalHits || 0}`);
+                
+                // Convert USDA format to our local format for consistent display
+                const formattedData = {
+                    items: (data.foods || []).map(food => ({
+                        id: food.fdcId,
+                        name: food.description,
+                        description: food.description,
+                        brand: food.brandOwner || '',
+                        brandOwner: food.brandOwner || '',
+                        ingredients: food.ingredients || ''
+                    })),
+                    isMockData: false
+                };
+                
+                log.success('Successfully retrieved data from direct USDA API');
+                displayResults(formattedData, 'Direct USDA API');
+            } catch (error) {
+                log.error(`Failed to fetch from USDA API directly: ${error.message}`);
+            }
+        });
+
+        // Initialize with info
+        log.info('USDA API Test Tool loaded');
+        log.info('Click one of the test buttons to begin testing');
+    </script>
+</body>
+</html>

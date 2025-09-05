@@ -180,7 +180,16 @@ const UpcLookup = {
       if (data.success) {
         // Populate form fields with product info
         this.populateProductInfo(data.data || data.product);
+        
+        // Check if this is fallback data and show a notification
+        const productData = data.data || data.product;
+        if (productData && productData.isGenericFallback) {
+          console.log('Received generic fallback data for UPC:', upcCode);
+          // Show a notification that this is generic data
+          this.displayNotification('Product not found in database. Using generic information that you can edit.');
+        }
       } else {
+        // This should rarely happen now with our fallback mechanism
         this.displayError(data.message || 'Product not found');
       }
     } catch (error) {
@@ -207,10 +216,22 @@ const UpcLookup = {
     const productData = product.product || product;
     console.log('Processed product data:', productData);
     
+    // Check if this is fallback data
+    const isFallback = productData.isGenericFallback === true;
+    console.log('Is fallback data:', isFallback);
+    
     // Populate fields if they exist
     if (titleField && productData.description) {
       titleField.value = productData.description;
       console.log('Set title to:', productData.description);
+      
+      // If this is fallback data, select the text so user can easily replace it
+      if (isFallback) {
+        setTimeout(() => {
+          titleField.select();
+          titleField.focus();
+        }, 500);
+      }
     }
     
     if (descriptionField) {
@@ -223,6 +244,11 @@ const UpcLookup = {
       }
       if (productData.description && !titleField) {
         description += `Product: ${productData.description}\n`;
+      }
+      
+      // If this is fallback data, add a note
+      if (isFallback) {
+        description += '\n(This is generic information. Please edit with actual product details)\n';
       }
       
       descriptionField.value = description.trim() || 'No product details available';
@@ -238,6 +264,13 @@ const UpcLookup = {
     const resultsEl = document.getElementById('upc-results');
     if (resultsEl) {
       resultsEl.dataset.productInfo = JSON.stringify(productData);
+      
+      // Add a visual indicator if this is fallback data
+      if (isFallback) {
+        resultsEl.classList.add('fallback-data');
+      } else {
+        resultsEl.classList.remove('fallback-data');
+      }
     }
     
     // Show success message
@@ -302,6 +335,46 @@ const UpcLookup = {
     const resultsEl = document.getElementById('upc-results');
     if (resultsEl) {
       resultsEl.style.display = 'none';
+    }
+  },
+  
+  /**
+   * Display notification message
+   * @param {String} message - Notification message to display
+   */
+  displayNotification(message) {
+    // First check if we have a dedicated notification element
+    const notificationEl = document.getElementById('upc-notification');
+    
+    if (notificationEl) {
+      // Use the dedicated notification element
+      notificationEl.textContent = message;
+      notificationEl.style.display = 'block';
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        notificationEl.style.display = 'none';
+      }, 5000);
+    } else {
+      // Fallback to using the error element with a different style
+      const errorEl = document.getElementById('upc-error');
+      if (errorEl) {
+        // Save the original background color
+        const originalBackground = errorEl.style.backgroundColor;
+        
+        // Change to a notification style (yellow background)
+        errorEl.style.backgroundColor = '#fff3cd';
+        errorEl.style.color = '#856404';
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        
+        // Auto-hide after 5 seconds and restore original style
+        setTimeout(() => {
+          errorEl.style.display = 'none';
+          errorEl.style.backgroundColor = originalBackground;
+          errorEl.style.color = '';
+        }, 5000);
+      }
     }
   },
 

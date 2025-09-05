@@ -1,0 +1,121 @@
+<!-- views/pages/verify-email.ejs -->
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow">
+        <div class="card-body p-5">
+          <% if (typeof success !== 'undefined' && success) { %>
+            <!-- Success message -->
+            <div class="text-center mb-4">
+              <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+              <h2 class="mt-3">Email Verified Successfully!</h2>
+              <p class="lead"><%= message %></p>
+              <div class="mt-4">
+                <a href="/login" class="btn btn-success btn-lg">Log In</a>
+                <a href="/" class="btn btn-outline-secondary btn-lg ms-2">Go Home</a>
+              </div>
+            </div>
+          <% } else { %>
+            <!-- Error message -->
+            <div class="text-center mb-4">
+              <i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem;"></i>
+              <h2 class="mt-3">Verification Failed</h2>
+              <p class="lead"><%= typeof message !== 'undefined' ? message : 'There was a problem verifying your email.' %></p>
+              <div class="mt-4">
+                <p>You can try the following:</p>
+                <ul class="list-unstyled text-start">
+                  <li><i class="bi bi-arrow-right-short"></i> Check if you clicked the correct link</li>
+                  <li><i class="bi bi-arrow-right-short"></i> Request a new verification email</li>
+                  <li><i class="bi bi-arrow-right-short"></i> Contact support if the problem persists</li>
+                </ul>
+                <div class="d-grid gap-2 mt-3">
+                  <a href="/login" class="btn btn-primary">Go to Login</a>
+                  <button class="btn btn-outline-secondary" id="resendEmailBtn" data-bs-toggle="modal" data-bs-target="#resendEmailModal">
+                    Resend Verification Email
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resend Email Modal -->
+<div class="modal fade" id="resendEmailModal" tabindex="-1" aria-labelledby="resendEmailModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="resendEmailModalLabel">Resend Verification Email</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Please enter your email address to resend the verification email.</p>
+        <form id="resendEmailForm">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="email" required>
+          </div>
+        </form>
+        <div class="alert alert-success d-none" id="resendSuccessAlert">
+          Verification email sent successfully! Please check your inbox.
+        </div>
+        <div class="alert alert-danger d-none" id="resendErrorAlert">
+          Failed to send verification email. Please try again.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="submitResendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const resendEmailForm = document.getElementById('resendEmailForm');
+    const submitResendBtn = document.getElementById('submitResendBtn');
+    const resendSuccessAlert = document.getElementById('resendSuccessAlert');
+    const resendErrorAlert = document.getElementById('resendErrorAlert');
+    
+    submitResendBtn.addEventListener('click', async function() {
+      const email = document.getElementById('email').value;
+      if (!email) return;
+      
+      try {
+        resendSuccessAlert.classList.add('d-none');
+        resendErrorAlert.classList.add('d-none');
+        submitResendBtn.disabled = true;
+        submitResendBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+        
+        const response = await fetch('/api/email/send-verification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          resendSuccessAlert.classList.remove('d-none');
+          document.getElementById('email').value = '';
+        } else {
+          resendErrorAlert.textContent = data.message || 'Failed to send verification email. Please try again.';
+          resendErrorAlert.classList.remove('d-none');
+        }
+      } catch (error) {
+        resendErrorAlert.textContent = 'An error occurred. Please try again later.';
+        resendErrorAlert.classList.remove('d-none');
+        console.error('Error:', error);
+      } finally {
+        submitResendBtn.disabled = false;
+        submitResendBtn.innerHTML = 'Send';
+      }
+    });
+  });
+</script>

@@ -343,9 +343,14 @@ exports.searchListings = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.lookupUpc = async (req, res) => {
+  console.log('\n==== UPC LOOKUP CONTROLLER CALLED ====');
+  console.log('Timestamp:', new Date().toISOString());
+  
   try {
     const { upc } = req.params;
     console.log('Server: Received UPC lookup request for:', upc);
+    console.log('Request IP:', req.ip);
+    console.log('Request method:', req.method);
     
     if (!upc) {
       console.log('Server: UPC code is missing');
@@ -355,52 +360,134 @@ exports.lookupUpc = async (req, res) => {
       });
     }
     
-    // Call USDA API to get product information
-    console.log('Server: Calling USDA API for UPC:', upc);
-    const productInfo = await usdaApi.getProductByUpc(upc);
-    console.log('Server: USDA API response:', JSON.stringify(productInfo, null, 2));
-    
-    if (!productInfo.success) {
-      console.log('Server: USDA API returned no results');
-      return res.status(404).json({
+    // Validate UPC code format
+    if (!/^\d+$/.test(upc)) {
+      console.log('Server: Invalid UPC code format:', upc);
+      return res.status(400).json({
         success: false,
-        message: productInfo.message || "Product not found"
+        message: "Invalid UPC code format. UPC must contain only digits."
       });
     }
     
-    console.log('Server: Sending successful response');
-    res.status(200).json(productInfo);
+    // Call USDA API to get product information
+    console.log('Server: Calling USDA API for UPC:', upc);
+    console.log('USDA API key exists:', !!process.env.USDA_API_KEY);
+    
+    try {
+      const productInfo = await usdaApi.getProductByUpc(upc);
+      console.log('Server: USDA API response received');
+      console.log('Response success:', productInfo.success);
+      console.log('Response data:', JSON.stringify(productInfo, null, 2));
+      
+      // Always return a 200 status code since our API now always returns success=true
+      // with either real data or fallback data
+      console.log('Server: Sending response');
+      
+      // Check if this is fallback data and log it
+      if (productInfo.data && productInfo.data.isGenericFallback) {
+        console.log('Server: Returning generic fallback data for UPC:', upc);
+      }
+      
+      res.status(200).json(productInfo);
+    } catch (apiError) {
+      console.error('USDA API error:', apiError);
+      // Return a fallback response with generic product data
+      return res.status(200).json({
+        success: true,
+        message: "Created generic product info due to API error",
+        data: {
+          description: `Product (UPC: ${upc})`,
+          brandName: 'Unknown Brand',
+          ingredients: 'No ingredients information available',
+          upc: upc,
+          isGenericFallback: true
+        }
+      });
+    }
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to look up UPC code",
-      error: error.message
+    console.error('UPC lookup controller error:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Even on controller error, return a successful response with generic data
+    res.status(200).json({
+      success: true,
+      message: "Created generic product info due to server error",
+      data: {
+        description: `Product (UPC code: ${req.params.upc || 'unknown'})`,
+        brandName: 'Unknown Brand',
+        ingredients: 'No ingredients information available',
+        upc: req.params.upc || 'unknown',
+        isGenericFallback: true
+      }
     });
+  } finally {
+    console.log('==== UPC LOOKUP CONTROLLER FINISHED ====\n');
   }
 };
 
 /**
- * Search for food items for autocomplete
+ * Search for food items by name using USDA API
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 exports.searchFoodItems = async (req, res) => {
+  console.log(' API ENDPOINT CALLED: /api/marketplace/food-search');
   try {
+    // Log request details
+    console.log('Request query parameters:', req.query);
     const { query } = req.query;
+    console.log('Search query:', query);
     
-    if (!query) {
+    // Check if environment variables are properly loaded
+    console.log('USDA_API_KEY exists:', !!process.env.USDA_API_KEY);
+    if (process.env.USDA_API_KEY) {
+      const keyLength = process.env.USDA_API_KEY.length;
+      console.log('API Key Length:', keyLength);
+      console.log('API Key Preview:', `${process.env.USDA_API_KEY.substring(0, 3)}...${process.env.USDA_API_KEY.substring(keyLength - 3)}`);
+    }
+    
+    // Validate query
+    if (!query || query.trim().length < 2) {
+      console.log('Invalid query - too short');
       return res.status(400).json({
         success: false,
-        message: 'Search query is required'
+        message: 'Search query must be at least 2 characters'
       });
     }
     
+    console.log('Calling USDA API service...');
     // Call USDA API to search for food items
     const result = await usdaApi.searchFoodItems(query);
+    console.log('USDA API service returned with success:', result.success);
+    console.log('Result contains mock data:', !!result.isMockData);
+    console.log('Number of results:', result.data ? result.data.length : 0);
     
-    res.status(200).json(result);
+    // Log a sample of the results
+    if (result.data && result.data.length > 0) {
+      console.log('Sample result:', JSON.stringify(result.data[0], null, 2));
+    }
+    
+    // Format response to match what the frontend expects
+    const responseData = {
+      success: result.success,
+      data: result.data || [],
+      // Pass through the isMockData flag from the API result
+      // Only set it to true if explicitly set in the result
+      isMockData: result.isMockData || false,
+      items: result.data || [] // Adding this for compatibility with the test-usda-api.html page
+    };
+    
+    // Add detailed logging about the response we're sending
+    console.log('Sending response to client with format:', Object.keys(responseData));
+    console.log('Response contains mock data flag:', responseData.isMockData);
+    console.log('Response data length:', responseData.data.length);
+    
+    res.status(200).json(responseData);
   } catch (error) {
-    console.error('Error searching food items:', error);
+    console.error(' ERROR searching food items:', error);
+    console.error('Error details:', error.message);
+    console.error('Stack trace:', error.stack);
+    
     res.status(500).json({
       success: false,
       message: 'Failed to search food items',

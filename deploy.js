@@ -8,8 +8,9 @@ async function deploy() {
     
     try {
         await client.access({
-            host: "ftp.butterandbytes.com",
-            user: "bread1@butterandbytes.com",
+            host: "ftp.myfreshsh.com",
+            user: "bread1@nyfreshshare.com",
+            
             password: "jNp.EtmQG=0Q",
             port: 21,
             secure: true, // Using FTPS

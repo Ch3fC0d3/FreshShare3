@@ -203,12 +203,46 @@
   text-align: center;
 }
 
+/* Notification Message */
+.notification-message {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-align: center;
+  border-left: 4px solid #ffc107;
+  animation: fadeInOut 5s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Results Container */
 .results-container {
   background-color: #f5f5f5;
   border-radius: 4px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+/* Fallback Data Indicator */
+.results-container.fallback-data {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffc107;
+}
+
+.results-container.fallback-data::before {
+  content: 'Generic Product Information';
+  display: block;
+  font-size: 12px;
+  color: #856404;
+  margin-bottom: 8px;
+  font-style: italic;
 }
 
 .results-container h3 {

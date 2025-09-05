@@ -46,9 +46,18 @@
                             localStorage.setItem('token', data.token);
                             console.log('Token stored in localStorage');
                             
+                            // Check if "Remember me" is checked
+                            const rememberMe = document.getElementById('rememberMe').checked;
+                            
+                            // Set token expiration based on "Remember me" option
+                            const maxAge = rememberMe ? (30 * 24 * 60 * 60) : (7 * 24 * 60 * 60); // 30 days : 7 days
+                            
                             // Also set as a cookie (as a fallback, the server should already set it)
-                            document.cookie = `token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-                            console.log('Token also stored as a cookie');
+                            document.cookie = `token=${data.token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+                            console.log(`Token stored as a cookie with ${rememberMe ? '30-day' : '7-day'} expiration`);
+                            
+                            // Store the remember me preference
+                            localStorage.setItem('rememberMe', rememberMe);
                         }
                         
                         // Show success message

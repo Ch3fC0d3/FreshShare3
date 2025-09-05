@@ -24,7 +24,6 @@ class FoodAutocomplete {
   init() {
     // Create results container
     this.createResultsContainer();
-    
     // Set up event listeners
     this.setupEventListeners();
   }
@@ -107,22 +106,106 @@ class FoodAutocomplete {
   async fetchResults(query) {
     // Show loading indicator
     this.showLoading();
+    console.log('🔍 FoodAutocomplete: Searching for:', query);
     
     try {
-      // Fetch results from API
-      const response = await fetch(`/api/marketplace/food-search?query=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      const apiUrl = `/api/marketplace/food-search?query=${encodeURIComponent(query)}`;
+      console.log('🌐 Calling API endpoint:', apiUrl);
       
-      if (data.success && data.data && data.data.length > 0) {
-        this.results = data.data.slice(0, this.options.maxResults);
-        this.renderResults();
-      } else {
-        this.showNoResults();
+      // Add timestamp to track how long the request takes
+      const startTime = performance.now();
+      const response = await fetch(apiUrl);
+      const endTime = performance.now();
+      console.log(`⏱️ API response time: ${Math.round(endTime - startTime)}ms`);
+      
+      // Log response status
+      console.log('📊 API response status:', response.status);
+      
+      if (!response.ok) {
+        console.error(`❌ API returned error status: ${response.status}`);
+        throw new Error(`API returned status ${response.status}`);
       }
-    } catch (error) {
-      console.error('Error fetching autocomplete results:', error);
+      
+      // Parse the JSON response
+      const data = await response.json();
+      console.log('📋 API response data:', data);
+      console.log('📋 Data keys available:', Object.keys(data));
+      
+      // Check if we have items (from test page format) or data (from regular API)
+      const resultsArray = data.items || data.data || [];
+      
+      // Check if the API call was successful
+      if (!data.success) {
+        console.error('❌ API returned success: false');
+        throw new Error('API returned success: false');
+      }
+      
+      // Log if we're using mock data
+      if (data.isMockData) {
+        console.warn('⚠️ API returned mock data instead of real data');
+      } else {
+        console.log('✅ Using real API data');
+      }
+      
+      // Check if we have any results
+      if (resultsArray.length > 0) {
+        console.log(`✅ Found ${resultsArray.length} results from API`);
+        
+        // Process results through onResults callback if provided
+        if (this.options.onResults && typeof this.options.onResults === 'function') {
+          console.log('📋 Calling onResults callback with data');
+          const processedResults = this.options.onResults(resultsArray, data.isMockData);
+          
+          // Use processed results if returned, otherwise use original results
+          if (processedResults && Array.isArray(processedResults)) {
+            this.results = processedResults.slice(0, this.options.maxResults);
+            console.log('📋 Using processed results from callback:', this.results);
+          } else {
+            this.results = resultsArray.slice(0, this.options.maxResults);
+            console.log('📋 Using original results (callback returned nothing):', this.results);
+          }
+        } else {
+          // No callback, use results directly
+          this.results = resultsArray.slice(0, this.options.maxResults);
+        }
+        
+        console.log('📊 Final results to display:', this.results);
+        this.renderResults();
+        return; // Exit early after successful rendering
+      }
+      
+      // If we get here, the API returned success but no results
+      console.warn('⚠️ API returned success but no results');
       this.showNoResults();
+    } catch (error) {
+      console.error('❌ Error fetching autocomplete results:', error);
+      console.error('Error details:', error.message);
+      // API call failed, use client-side fallback
+      console.warn('⚠️ API call failed, using client-side fallback');
+      this.useFallbackResults(query);
     }
+  }
+  
+  useFallbackResults(query) {
+    // Client-side fallback results
+    const fallbackResults = [
+      { description: 'Apple', category: 'Fruit' },
+      { description: 'Banana', category: 'Fruit' },
+      { description: 'Carrot', category: 'Vegetable' },
+      { description: 'Broccoli', category: 'Vegetable' },
+      { description: 'Chicken', category: 'Meat' },
+      { description: 'Beef', category: 'Meat' },
+      { description: 'Pork', category: 'Meat' },
+      { description: 'Fish', category: 'Seafood' },
+      { description: 'Shrimp', category: 'Seafood' },
+      { description: 'Lobster', category: 'Seafood' },
+    ];
+    
+    // Filter fallback results by query
+    const filteredResults = fallbackResults.filter(result => result.description.toLowerCase().includes(query.toLowerCase()));
+    
+    this.results = filteredResults.slice(0, this.options.maxResults);
+    this.renderResults();
   }
   
   renderResults() {

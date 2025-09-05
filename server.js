@@ -1,3 +1,18 @@
+// Global error handlers to catch any uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error('Error details:', err.name, err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error('Error details:', err.name, err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
 const express = require('express');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
@@ -18,6 +33,17 @@ if (fs.existsSync(envPath)) {
     console.error('Error loading .env file:', result.error);
   } else {
     console.log('Successfully loaded environment variables');
+    // Log environment variables for debugging
+    console.log('Environment variables loaded:');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('USDA_API_KEY present:', process.env.USDA_API_KEY ? 'Yes' : 'No');
+    if (process.env.USDA_API_KEY) {
+      const keyLength = process.env.USDA_API_KEY.length;
+      console.log('USDA_API_KEY length:', keyLength);
+      console.log('USDA_API_KEY preview:', `${process.env.USDA_API_KEY.substring(0, 3)}...${process.env.USDA_API_KEY.substring(keyLength - 3)}`);
+    } else {
+      console.log('WARNING: USDA_API_KEY is not set!');
+    }
   }
 } else {
   console.error('.env file not found at path:', envPath);
@@ -25,104 +51,16 @@ if (fs.existsSync(envPath)) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+// Use port 3002 to ensure consistency with frontend JS in local-auth.js
+const PORT = 3002;
 
 // Database configuration
 const dbConfig = require('./config/db.config.js');
 
-// Connect to MongoDB with retry logic
-console.log('Connecting to MongoDB...');
-    
-const connectWithRetry = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    
-    console.log('Successfully connected to MongoDB!');
-    console.log('Connection details:', {
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      name: mongoose.connection.name
-    });
-    
-    // Initialize database and start server
-    initializeDatabase();
-    startServer();
-  } catch (err) {
-    console.error('MongoDB connection error:', err.message);
-    console.error('Connection details:', {
-      code: err.code,
-      name: err.name,
-      message: err.message
-    });
-    
-    // Retry connection after 5 seconds
-    console.log('Retrying connection in 5 seconds...');
-    setTimeout(connectWithRetry, 5000);
-  }
-};
+// Initialize all routes and middleware first, then start the server
+console.log('Initializing routes and middleware first...');
 
-connectWithRetry();
-
-// Start server function
-function startServer() {
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
-}
-
-// Add event listeners for MongoDB connection events
-mongoose.connection.on('connected', () => {
-  console.log('MongoDB connection established successfully');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-  console.error('Error details:', {
-    name: err.name,
-    message: err.message,
-    code: err.code,
-    stack: err.stack
-  });
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB connection disconnected');
-});
-
-// Add a process exit handler to close MongoDB connection
-process.on('SIGINT', async () => {
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error while closing MongoDB connection:', err);
-    process.exit(1);
-  }
-});
-
-// Initialize database with roles if needed
-async function initializeDatabase() {
-  try {
-    const db = require('./models');
-    const Role = db.role;
-    
-    const count = await Role.estimatedDocumentCount();
-    
-    if (count === 0) {
-      await Promise.all([
-        new Role({ name: "user" }).save(),
-        new Role({ name: "moderator" }).save(),
-        new Role({ name: "admin" }).save()
-      ]);
-      console.log('Added roles to database');
-    }
-  } catch (err) {
-    console.error('Error initializing database:', err);
-  }
-}
-
-// Middleware
+// Middleware - only initialize once
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -277,22 +215,7 @@ app.use(async (req, res, next) => {
   }
 });
 
-// API Routes with error handling
-const wrapAsync = fn => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
-
-// Auth routes (both pages and API)
-const authRoutes = require('./routes/auth.routes');
-
-// Marketplace API routes
-const marketplaceApiRoutes = require('./routes/api/marketplace');
-app.use('/', authRoutes); // Mount at root for pages
-
-// Other API routes
-app.use('/api/marketplace', marketplaceApiRoutes);
-app.use('/api/groups', require('./routes/groups.routes'));
-app.use('/api/orders', require('./routes/orders.routes'));
+// Page Routes - register these AFTER API routes
 
 // Page Routes
 app.get('/', (req, res) => {
@@ -543,3 +466,140 @@ app.get('/logout', (req, res) => {
   res.clearCookie('token');
   res.redirect('/');
 });
+
+console.log('All routes initialized successfully');
+
+// Register API routes
+const marketplaceApiRoutes = require('./routes/api/marketplace');
+app.use('/api/marketplace', marketplaceApiRoutes);
+
+console.log('API routes available:');
+console.log('- /api/marketplace/upc/:upc - UPC lookup endpoint');
+console.log('- /api/marketplace/upc-test/:upc - UPC test endpoint');
+
+// Now start the server
+const server = startServer();
+
+// Connect to MongoDB with retry logic
+console.log('Connecting to MongoDB...');
+    
+const connectWithRetry = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    
+    console.log('Successfully connected to MongoDB!');
+    console.log('Connection details:', {
+      host: mongoose.connection.host,
+      port: mongoose.connection.port,
+      name: mongoose.connection.name
+    });
+    
+    // Initialize database after successful connection
+    initializeDatabase();
+    console.log('Database initialized successfully');
+  } catch (err) {
+    console.error('MongoDB connection error:', err.message);
+    console.error('Connection details:', {
+      code: err.code,
+      name: err.name,
+      message: err.message
+    });
+    
+    // Retry connection after 5 seconds
+    console.log('Retrying connection in 5 seconds...');
+    console.log('Note: Server is still running and API endpoints that do not require database access will work');
+    setTimeout(connectWithRetry, 5000);
+  }
+};
+
+connectWithRetry();
+
+// Note: The server is now running even if MongoDB connection fails
+// This allows API endpoints that don't require database access to work
+
+// Start server function
+// Simplified and reliable startServer function
+function startServer() {
+  console.log(`Attempting to start server on port ${PORT}...`);
+  
+  try {
+    const server = app.listen(PORT, () => {
+      console.log(`✅ SUCCESS: Server is running on port ${PORT}`);
+      console.log(`API endpoints available at http://localhost:${PORT}/api/`);
+      console.log(`UPC lookup endpoint: http://localhost:${PORT}/api/marketplace/upc/:upc`);
+      console.log(`✅ Dashboard available at http://localhost:3002/dashboard`);
+      console.log('=========================================');
+    });
+    
+    // Add error handler for server
+    server.on('error', (error) => {
+      console.error(`❌ SERVER ERROR: ${error.message}`);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Please close other applications using this port or change the port number.`);
+        console.log(`Port ${PORT} is already in use. Try running these commands:`);
+        console.log('1. taskkill /F /IM node.exe');
+        console.log(`2. node server.js`);
+      }
+    });
+    
+    return server;
+  } catch (error) {
+    console.error(`❌ CRITICAL ERROR STARTING SERVER: ${error.message}`);
+    console.error(error.stack);
+    process.exit(1); // Exit with error code
+  }
+}
+
+// Add event listeners for MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connection established successfully');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+  console.error('Error details:', {
+    name: err.name,
+    message: err.message,
+    code: err.code,
+    stack: err.stack
+  });
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB connection disconnected');
+});
+
+// Add a process exit handler to close MongoDB connection
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed through app termination');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error while closing MongoDB connection:', err);
+    process.exit(1);
+  }
+});
+
+// Initialize database with roles if needed
+async function initializeDatabase() {
+  try {
+    const db = require('./models');
+    const Role = db.role;
+    
+    const count = await Role.estimatedDocumentCount();
+    
+    if (count === 0) {
+      await Promise.all([
+        new Role({ name: "user" }).save(),
+        new Role({ name: "moderator" }).save(),
+        new Role({ name: "admin" }).save()
+      ]);
+      console.log('Added roles to database');
+    }
+  } catch (err) {
+    console.error('Error initializing database:', err);
+  }
+}
+
+// Middleware is now initialized before server startup

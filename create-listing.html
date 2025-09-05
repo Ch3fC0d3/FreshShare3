@@ -1,13 +1,82 @@
-<%- contentFor('style') %>
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshShare - Create Listing</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="/css/main.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        /* Global styles to ensure consistency */
+        body {
+            padding-top: 80px; /* Add space for fixed header */
+        }
+    </style>
+    
+    <!-- Page-specific styles -->
+    <style>
   /* Styles moved to main.css */
 </style>
 <link rel="stylesheet" href="/css/main.css">
 <link rel="stylesheet" href="/css/upc-scanner.css">
 <link rel="stylesheet" href="/css/autocomplete.css">
 
-<%- contentFor('body') %>
-<div class="main-content">
+</head>
+<body>
+    <!-- Header -->
+    <header class="fs-header">
+    <div class="fs-header-container">
+        <div class="fs-logo">
+            <a href="/">
+                <i class="fa-solid fa-seedling"></i>
+                <span class="fs-logo-text">Fresh<span class="fs-logo-highlight">Share</span></span>
+            </a>
+        </div>
+        
+        <nav class="fs-nav">
+            <div class="fs-nav-links">
+                <a href="/marketplace">Marketplace</a>
+                <a href="/groups">Groups</a>
+                <a href="/forum">Forum</a>
+                
+                
+            </div>
+        </nav>
+        
+        <div class="fs-auth-buttons">
+            
+                <a href="/login" class="fs-btn fs-btn-primary">Login</a>
+                <a href="/signup" class="fs-btn fs-btn-secondary">Sign Up</a>
+            
+        </div>
+        
+        <button class="fs-mobile-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+    
+    <!-- Verification email modal -->
+    
+</header>
+
+
+
+    <!-- Main Content -->
+    <div class="main-content">
   <div class="container py-4">
     <div class="create-listing-container">
       <h1 class="mb-4">Create New Listing</h1>
@@ -173,10 +242,147 @@
 </div>
 
 <!-- Include UPC Scanner Modal -->
-<%- include('../partials/upc-scanner-modal') %>
+<!-- UPC Scanner Modal -->
+<div id="upc-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Scan Product Barcode</h2>
+      <span id="close-upc-modal" class="close">&times;</span>
+    </div>
+    <div class="modal-body">
+      <!-- Scanner Container -->
+      <div id="scanner-container" class="scanner-container">
+        <div class="scanner-overlay">
+          <div class="scanner-guide"></div>
+        </div>
+        <div id="camera-placeholder" class="camera-placeholder">
+          <i class="fas fa-camera"></i>
+          <p>Camera access required for scanning</p>
+          <button id="start-camera-btn" class="btn btn-primary">Start Camera</button>
+        </div>
+      </div>
 
-<%- contentFor('script') %>
-<!-- Include QuaggaJS for barcode scanning -->
+      <!-- Manual Entry Container -->
+      <div id="manual-entry-container" class="manual-entry-container" style="display: none;">
+        <form id="upc-lookup-form">
+          <div class="form-group">
+            <label for="upc-input">Enter UPC Code:</label>
+            <input type="text" id="upc-input" class="form-control" placeholder="Enter 12-digit UPC code" pattern="\d+" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Look Up</button>
+        </form>
+      </div>
+
+      <!-- Scanner Controls -->
+      <div class="scanner-controls">
+        <button id="manual-upc-btn" class="btn btn-secondary">Enter UPC Manually</button>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div id="upc-loader" class="loader" style="display: none;">
+        <div class="spinner"></div>
+        <p>Looking up product information...</p>
+      </div>
+
+      <!-- Error Message -->
+      <div id="upc-error" class="error-message" style="display: none;"></div>
+
+      <!-- Results Container -->
+      <div id="upc-results" class="results-container" style="display: none;">
+        <h3>Product Information</h3>
+        <div class="product-info">
+          <div class="info-row">
+            <span class="info-label">Product Name:</span>
+            <span id="product-name" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Brand:</span>
+            <span id="product-brand" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Ingredients:</span>
+            <span id="product-ingredients" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nutrition:</span>
+            <div id="product-nutrients" class="info-value"></div>
+          </div>
+        </div>
+        <button id="use-upc-data" class="btn btn-primary">Use This Information</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+    <!-- Footer -->
+    <!-- FreshShare Footer Component - Start -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-section brand">
+                <div class="logo">
+                    <i class="bi bi-flower1 fs-logo-icon"></i>
+                    <h3>Fresh<span class="fs-logo-highlight">Share</span></h3>
+                </div>
+                <p>Share fresh, affordable food with your community. Buy in bulk, save with wholesale prices, and share the abundance with your neighbors.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                </div>
+            </div>
+
+            <div class="footer-section links">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/marketplace">Marketplace</a></li>
+                    <li><a href="/groups">Groups</a></li>
+                    <li><a href="/forum">Forum</a></li>
+                    <li><a href="/about">About Us</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section contact">
+                <h3>Contact Us</h3>
+                <div class="contact-info">
+                    <span><i class="fas fa-map-marker-alt"></i> 123 Green Street, Portland, OR</span>
+                    <span><i class="fas fa-envelope"></i> hello@freshshare.com</span>
+                    <span><i class="fas fa-phone"></i> (555) 123-4567</span>
+                </div>
+            </div>
+
+            <div class="footer-section newsletter">
+                <h3>Stay Updated</h3>
+                <p>Subscribe to our newsletter for tips and news about local food sharing.</p>
+                <form action="#" class="newsletter-form">
+                    <input type="email" placeholder="Enter your email" required>
+                    <button type="submit" class="btn-subscribe">Subscribe</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2025 FreshShare. All rights reserved.</p>
+            <div class="footer-bottom-links">
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+    </div>
+</footer>
+<!-- FreshShare Footer Component - End -->
+
+
+    <!-- Common Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/js/header.js"></script>
+    
+    <!-- Page-specific scripts -->
+    <!-- Include QuaggaJS for barcode scanning -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.2/dist/quagga.min.js"></script>
 <!-- Include UPC Lookup Script -->
 <script src="/js/upc-lookup.js"></script>
@@ -405,38 +611,11 @@
       const titleInput = document.getElementById('title');
       if (titleInput) {
         console.log('🍎 Found title input element, setting up food autocomplete');
-        // Initialize the food autocomplete on the title field with proper result handling
+        // Initialize the food autocomplete on the title field
         const foodAutocomplete = new FoodAutocomplete(titleInput, {
           maxResults: 10,
           minLength: 2,
-          debounceTime: 300,
-          onSelect: (item) => {
-            // Optionally update other fields based on the selected item
-            const descriptionInput = document.getElementById('description');
-            if (descriptionInput && item.category) {
-              // If description is empty, add the category
-              if (!descriptionInput.value.trim()) {
-                descriptionInput.value = `Category: ${item.category}\n\nAdd more details about your ${item.description} here.`;
-              }
-            }
-          },
-          // Add onResults callback to properly handle API responses
-          onResults: (results, isMockData) => {
-            console.log('🍎 Received results:', results.length, 'items');
-            console.log('🍎 Using mock data:', isMockData ? 'Yes' : 'No');
-            
-            // Log the first few results for debugging
-            if (results.length > 0) {
-              console.log('🍎 First result:', JSON.stringify(results[0]));
-            }
-            
-            // This callback ensures the component knows we've received valid results
-            // and properly formats them for display
-            return results.map(item => ({
-              description: item.description || item.name || '',
-              category: item.category || item.foodCategory || ''
-            }));
-          }
+          delay: 300
         });
         console.log('🍎 Food autocomplete initialized successfully');
         
@@ -476,3 +655,6 @@
     }
   });
 </script>
+
+</body>
+</html>

@@ -13,7 +13,7 @@ window.fetch = function(url, options) {
     // If the URL is absolute (starts with http or https), replace the domain with localhost
     if (url.startsWith('http')) {
       const urlObj = new URL(url);
-      urlObj.host = 'localhost:3001';
+      urlObj.host = 'localhost:3002';
       urlObj.protocol = 'http:';
       url = urlObj.toString();
     } else {

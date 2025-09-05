@@ -1,0 +1,517 @@
+/**
+ * FreshShare Dashboard JavaScript
+ * Manages dashboard data fetching and UI updates
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if user is authenticated
+  const token = localStorage.getItem('token') || getCookie('token');
+  if (!token) {
+    console.error('No authentication token found');
+    window.location.href = '/login?redirect=/dashboard';
+    return;
+  }
+
+  // Initialize dashboard
+  initDashboard();
+
+  // Set up calendar navigation
+  initCalendarNavigation();
+});
+
+/**
+ * Initialize the dashboard and fetch data
+ */
+async function initDashboard() {
+  try {
+    showLoadingState(true);
+    const dashboardData = await fetchDashboardData();
+    
+    if (!dashboardData.success) {
+      showError('Failed to load dashboard data');
+      return;
+    }
+    
+    // Update dashboard sections with real data
+    updateOrdersSection(dashboardData.data.recentOrders);
+    updateDeliveriesSection(dashboardData.data.upcomingDeliveries);
+    updateEventsSection(dashboardData.data.events);
+    updateMessagesSection(dashboardData.data.messages);
+    
+    // Load calendar data for current month
+    const today = new Date();
+    loadCalendarEvents(today.getMonth(), today.getFullYear());
+    
+    showLoadingState(false);
+  } catch (error) {
+    console.error('Dashboard initialization error:', error);
+    showError('Error loading dashboard: ' + error.message);
+    showLoadingState(false);
+  }
+}
+
+/**
+ * Fetch dashboard data from the API
+ * @returns {Promise<Object>} Dashboard data
+ */
+async function fetchDashboardData() {
+  try {
+    const token = localStorage.getItem('token') || getCookie('token');
+    
+    const response = await fetch('/api/dashboard', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Handle unauthorized access
+        window.location.href = '/login?redirect=/dashboard';
+        return { success: false };
+      }
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    return { 
+      success: false,
+      message: error.message
+    };
+  }
+}
+
+/**
+ * Load calendar events for a specific month
+ * @param {number} month - Month (0-11)
+ * @param {number} year - Year (e.g., 2025)
+ */
+async function loadCalendarEvents(month, year) {
+  try {
+    const token = localStorage.getItem('token') || getCookie('token');
+    
+    const response = await fetch(`/api/dashboard/calendar?month=${month}&year=${year}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    if (result.success) {
+      updateCalendar(month, year, result.data.events);
+    } else {
+      console.error('Failed to load calendar events:', result.message);
+    }
+  } catch (error) {
+    console.error('Error loading calendar events:', error);
+  }
+}
+
+/**
+ * Update the calendar UI with events
+ * @param {number} month - Month (0-11) 
+ * @param {number} year - Year (e.g., 2025)
+ * @param {Array} events - Calendar events
+ */
+function updateCalendar(month, year, events) {
+  // Update calendar title
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const calendarTitle = document.querySelector('.calendar-title');
+  if (calendarTitle) {
+    calendarTitle.textContent = `${months[month]} ${year}`;
+  }
+  
+  // Clear existing event markers
+  const calendarDays = document.querySelectorAll('.calendar-day');
+  calendarDays.forEach(day => {
+    day.classList.remove('has-delivery', 'has-event');
+    day.removeAttribute('data-event-count');
+  });
+  
+  // Group events by day
+  const eventsByDay = {};
+  events.forEach(event => {
+    const eventDate = new Date(event.date);
+    const dayOfMonth = eventDate.getDate();
+    
+    if (!eventsByDay[dayOfMonth]) {
+      eventsByDay[dayOfMonth] = [];
+    }
+    eventsByDay[dayOfMonth].push(event);
+  });
+  
+  // Mark calendar days with events
+  for (const [day, dayEvents] of Object.entries(eventsByDay)) {
+    const dayCell = findDayCell(parseInt(day));
+    if (dayCell) {
+      if (dayEvents.some(e => e.type === 'delivery')) {
+        dayCell.classList.add('has-delivery');
+      } else {
+        dayCell.classList.add('has-event');
+      }
+      
+      if (dayEvents.length > 1) {
+        dayCell.setAttribute('data-event-count', dayEvents.length);
+      }
+    }
+  }
+  
+  // Update today's schedule in the events panel
+  const today = new Date();
+  if (month === today.getMonth() && year === today.getFullYear()) {
+    const dayOfMonth = today.getDate();
+    const todaysEvents = eventsByDay[dayOfMonth] || [];
+    updateTodaysSchedule(todaysEvents);
+  }
+}
+
+/**
+ * Find the calendar cell for a specific day
+ * @param {number} day - Day of month
+ * @returns {HTMLElement} Calendar day cell
+ */
+function findDayCell(day) {
+  const cells = document.querySelectorAll('.calendar-day:not(.other-month)');
+  for (const cell of cells) {
+    if (parseInt(cell.textContent.trim()) === day) {
+      return cell;
+    }
+  }
+  return null;
+}
+
+/**
+ * Update today's schedule in the events panel
+ * @param {Array} events - Today's events
+ */
+function updateTodaysSchedule(events) {
+  const eventsContainer = document.querySelector('.upcoming-events');
+  if (!eventsContainer) return;
+  
+  // Clear existing events
+  const eventsList = eventsContainer.querySelector('div:not(h3)');
+  eventsList.innerHTML = '';
+  
+  if (events.length === 0) {
+    eventsList.innerHTML = '<div class="no-events">No events scheduled for today</div>';
+    return;
+  }
+  
+  // Sort events by time
+  events.sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  // Add events to the list
+  events.forEach(event => {
+    const eventDate = new Date(event.date);
+    const timeString = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const eventItem = document.createElement('div');
+    eventItem.className = 'event-item';
+    eventItem.innerHTML = `
+      <span class="event-date">${timeString}</span>
+      <div class="event-title">${event.title}</div>
+      <div class="event-desc">${event.description || event.location || ''}</div>
+    `;
+    
+    eventsList.appendChild(eventItem);
+  });
+}
+
+/**
+ * Update the orders section with actual data
+ * @param {Array} orders - Recent orders data
+ */
+function updateOrdersSection(orders) {
+  const orderList = document.querySelector('.order-list');
+  if (!orderList) return;
+  
+  orderList.innerHTML = '';
+  
+  if (!orders || orders.length === 0) {
+    orderList.innerHTML = '<li class="no-data">No recent orders found</li>';
+    return;
+  }
+  
+  orders.forEach(order => {
+    const orderDate = new Date(order.date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    
+    const orderItem = document.createElement('li');
+    orderItem.className = 'order-item';
+    orderItem.innerHTML = `
+      <div class="order-header">
+        <span class="order-id">Order #${order.orderNumber}</span>
+        <span class="order-date">${orderDate}</span>
+      </div>
+      <div class="order-items">
+        ${order.groupName} (${order.items} items)
+      </div>
+      <div class="order-footer">
+        <span class="order-total">$${order.total.toFixed(2)}</span>
+        <div class="order-actions">
+          <button class="btn btn-outline" onclick="viewOrderDetails('${order.id}')">View Details</button>
+          <button class="btn btn-primary">Reorder</button>
+        </div>
+      </div>
+    `;
+    
+    orderList.appendChild(orderItem);
+  });
+}
+
+/**
+ * Update the upcoming deliveries section
+ * @param {Array} deliveries - Upcoming deliveries data
+ */
+function updateDeliveriesSection(deliveries) {
+  const deliveryList = document.querySelector('.delivery-list');
+  if (!deliveryList) return;
+  
+  deliveryList.innerHTML = '';
+  
+  if (!deliveries || deliveries.length === 0) {
+    deliveryList.innerHTML = '<li class="no-data">No upcoming deliveries</li>';
+    return;
+  }
+  
+  deliveries.forEach(delivery => {
+    const deliveryDate = new Date(delivery.date);
+    const isToday = isDateToday(deliveryDate);
+    const isTomorrow = isDateTomorrow(deliveryDate);
+    
+    let dateDisplay = deliveryDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    if (isToday) dateDisplay = 'Today';
+    if (isTomorrow) dateDisplay = 'Tomorrow';
+    
+    const deliveryItem = document.createElement('li');
+    deliveryItem.className = 'delivery-item';
+    deliveryItem.innerHTML = `
+      <div>
+        <span>${delivery.groupName}</span>
+        <span>${dateDisplay}</span>
+      </div>
+      <div>
+        Order #${delivery.orderNumber}
+      </div>
+      <div>
+        <span>${delivery.status}</span>
+        <span>$${delivery.total.toFixed(2)}</span>
+      </div>
+    `;
+    
+    deliveryList.appendChild(deliveryItem);
+  });
+}
+
+/**
+ * Update the messages section
+ * @param {Array} messages - Messages data
+ */
+function updateMessagesSection(messages) {
+  const messageList = document.querySelector('.message-list');
+  if (!messageList) return;
+  
+  messageList.innerHTML = '';
+  
+  if (!messages || messages.length === 0) {
+    messageList.innerHTML = '<li class="no-data">No messages</li>';
+    return;
+  }
+  
+  messages.forEach(message => {
+    const messageTime = getRelativeTimeString(new Date(message.timestamp));
+    
+    const messageItem = document.createElement('li');
+    messageItem.className = 'message-item';
+    if (!message.read) messageItem.classList.add('unread');
+    
+    messageItem.innerHTML = `
+      <div>
+        <div>
+          <i class="fas fa-user"></i>
+        </div>
+        <div>
+          <div>${message.sender.username}</div>
+          <div>${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}</div>
+        </div>
+      </div>
+      <div>
+        ${messageTime}
+      </div>
+    `;
+    
+    messageList.appendChild(messageItem);
+  });
+}
+
+/**
+ * Update events section
+ * @param {Array} events - Events data
+ */
+function updateEventsSection(events) {
+  // This could update a dedicated events section if present in the UI
+  console.log('Events data loaded:', events);
+}
+
+/**
+ * Initialize calendar navigation
+ */
+function initCalendarNavigation() {
+  const prevMonthBtn = document.querySelector('.calendar-nav-btn:first-child');
+  const nextMonthBtn = document.querySelector('.calendar-nav-btn:last-child');
+  
+  if (!prevMonthBtn || !nextMonthBtn) return;
+  
+  let currentDate = new Date();
+  let currentMonth = currentDate.getMonth();
+  let currentYear = currentDate.getFullYear();
+  
+  prevMonthBtn.addEventListener('click', () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    loadCalendarEvents(currentMonth, currentYear);
+  });
+  
+  nextMonthBtn.addEventListener('click', () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    loadCalendarEvents(currentMonth, currentYear);
+  });
+}
+
+/**
+ * View order details
+ * @param {string} orderId - Order ID
+ */
+function viewOrderDetails(orderId) {
+  window.location.href = `/orders/${orderId}`;
+}
+
+/**
+ * Helper to check if a date is today
+ * @param {Date} date - Date to check
+ * @returns {boolean} True if date is today
+ */
+function isDateToday(date) {
+  const today = new Date();
+  return date.getDate() === today.getDate() &&
+         date.getMonth() === today.getMonth() &&
+         date.getFullYear() === today.getFullYear();
+}
+
+/**
+ * Helper to check if a date is tomorrow
+ * @param {Date} date - Date to check
+ * @returns {boolean} True if date is tomorrow
+ */
+function isDateTomorrow(date) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return date.getDate() === tomorrow.getDate() &&
+         date.getMonth() === tomorrow.getMonth() &&
+         date.getFullYear() === tomorrow.getFullYear();
+}
+
+/**
+ * Get a relative time string
+ * @param {Date} date - Date to format
+ * @returns {string} Relative time string
+ */
+function getRelativeTimeString(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffSecs < 60) {
+    return 'Just now';
+  } else if (diffMins < 60) {
+    return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  } else if (diffDays < 7) {
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  } else {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}
+
+/**
+ * Show loading state on the dashboard
+ * @param {boolean} isLoading - Whether the dashboard is loading
+ */
+function showLoadingState(isLoading) {
+  const dashboard = document.querySelector('.dashboard-grid');
+  
+  if (isLoading) {
+    if (dashboard) {
+      dashboard.classList.add('loading');
+    }
+    // Could add a loading spinner here
+  } else {
+    if (dashboard) {
+      dashboard.classList.remove('loading');
+    }
+  }
+}
+
+/**
+ * Show an error message on the dashboard
+ * @param {string} message - Error message
+ */
+function showError(message) {
+  // Create an error alert if it doesn't exist
+  let errorAlert = document.querySelector('.dashboard-error');
+  
+  if (!errorAlert) {
+    errorAlert = document.createElement('div');
+    errorAlert.className = 'dashboard-error alert alert-danger';
+    
+    const dashboardContainer = document.querySelector('.main-container');
+    if (dashboardContainer) {
+      dashboardContainer.prepend(errorAlert);
+    }
+  }
+  
+  errorAlert.textContent = message;
+  errorAlert.style.display = 'block';
+  
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    errorAlert.style.display = 'none';
+  }, 5000);
+}
+
+/**
+ * Get cookie value by name
+ * @param {string} name - Cookie name
+ * @returns {string} Cookie value
+ */
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
