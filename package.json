@@ -25,6 +25,7 @@
     "snyk": "^1.1295.4"
   },
   "devDependencies": {
+    "mongodb-memory-server": "^10.2.0",
     "nodemon": "^3.0.1"
   }
 }
