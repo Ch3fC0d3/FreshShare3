@@ -18,6 +18,7 @@ const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const config = require('./config/auth.config');
@@ -477,129 +478,134 @@ console.log('API routes available:');
 console.log('- /api/marketplace/upc/:upc - UPC lookup endpoint');
 console.log('- /api/marketplace/upc-test/:upc - UPC test endpoint');
 
-// Now start the server
-const server = startServer();
+// #############################################################################
+// DATABASE & SERVER STARTUP
+// #############################################################################
 
-// Connect to MongoDB with retry logic
-console.log('Connecting to MongoDB...');
-    
-const connectWithRetry = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    
-    console.log('Successfully connected to MongoDB!');
-    console.log('Connection details:', {
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      name: mongoose.connection.name
-    });
-    
-    // Initialize database after successful connection
-    initializeDatabase();
-    console.log('Database initialized successfully');
-  } catch (err) {
-    console.error('MongoDB connection error:', err.message);
-    console.error('Connection details:', {
-      code: err.code,
-      name: err.name,
-      message: err.message
-    });
-    
-    // Retry connection after 5 seconds
-    console.log('Retrying connection in 5 seconds...');
-    console.log('Note: Server is still running and API endpoints that do not require database access will work');
-    setTimeout(connectWithRetry, 5000);
-  }
-};
+let mongod = null; // To hold the in-memory server instance
 
-connectWithRetry();
-
-// Note: The server is now running even if MongoDB connection fails
-// This allows API endpoints that don't require database access to work
-
-// Start server function
-// Simplified and reliable startServer function
-function startServer() {
-  console.log(`Attempting to start server on port ${PORT}...`);
-  
-  try {
-    const server = app.listen(PORT, () => {
-      console.log(`✅ SUCCESS: Server is running on port ${PORT}`);
-      console.log(`API endpoints available at http://localhost:${PORT}/api/`);
-      console.log(`UPC lookup endpoint: http://localhost:${PORT}/api/marketplace/upc/:upc`);
-      console.log(`✅ Dashboard available at http://localhost:3002/dashboard`);
-      console.log('=========================================');
-    });
-    
-    // Add error handler for server
-    server.on('error', (error) => {
-      console.error(`❌ SERVER ERROR: ${error.message}`);
-      if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please close other applications using this port or change the port number.`);
-        console.log(`Port ${PORT} is already in use. Try running these commands:`);
-        console.log('1. taskkill /F /IM node.exe');
-        console.log(`2. node server.js`);
-      }
-    });
-    
-    return server;
-  } catch (error) {
-    console.error(`❌ CRITICAL ERROR STARTING SERVER: ${error.message}`);
-    console.error(error.stack);
-    process.exit(1); // Exit with error code
+/**
+ * Initializes the database with default roles if they don't exist.
+ */
+async function initializeDatabase() {
+  const db = require('./models');
+  const Role = db.role;
+  const count = await Role.estimatedDocumentCount();
+  if (count === 0) {
+    await Promise.all([
+      new Role({ name: 'user' }).save(),
+      new Role({ name: 'moderator' }).save(),
+      new Role({ name: 'admin' }).save(),
+    ]);
+    console.log('✅ Added roles to database');
   }
 }
 
-// Add event listeners for MongoDB connection events
-mongoose.connection.on('connected', () => {
-  console.log('MongoDB connection established successfully');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-  console.error('Error details:', {
-    name: err.name,
-    message: err.message,
-    code: err.code,
-    stack: err.stack
+/**
+ * Starts the Express server on the configured port.
+ */
+function startServer() {
+  const server = app.listen(PORT, () => {
+    console.log(`✅ SUCCESS: Server is running on port ${PORT}`);
+    console.log(`API endpoints available at http://localhost:${PORT}/api/`);
+    console.log(`✅ Dashboard available at http://localhost:${PORT}/dashboard`);
+    console.log('=========================================');
   });
-});
 
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB connection disconnected');
-});
+  server.on('error', (error) => {
+    console.error(`❌ SERVER ERROR: ${error.message}`);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use.`);
+    }
+    // In the new flow, a server error should cause a shutdown
+    shutdown('SERVER_ERROR');
+  });
+}
 
-// Add a process exit handler to close MongoDB connection
-process.on('SIGINT', async () => {
+/**
+ * Connects to the MongoDB database with retry logic for production.
+ * @param {string} mongoUri - The URI for the MongoDB connection.
+ */
+async function connectToDatabase(mongoUri) {
+  try {
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Short timeout for faster feedback
+    });
+
+    console.log('✅ Successfully connected to MongoDB!');
+    
+    // Initialize database roles and start the server
+    await initializeDatabase();
+    startServer();
+
+  } catch (err) {
+    console.error(`❌ MongoDB connection error: ${err.message}`);
+    
+    // For development with an in-memory server, failure is fatal.
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Could not connect to in-memory database. Exiting.');
+      await shutdown('DB_CONN_FAIL');
+    } else {
+      // For other environments, retry the connection.
+      console.log('Retrying connection in 5 seconds...');
+      setTimeout(() => connectToDatabase(mongoUri), 5000);
+    }
+  }
+}
+
+/**
+ * Main function to orchestrate application startup.
+ */
+async function main() {
+  let mongoUri;
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🚀 Starting in-memory MongoDB for development...');
+    try {
+      mongod = await MongoMemoryServer.create();
+      mongoUri = mongod.getUri();
+      console.log(`✅ In-memory DB is ready.`);
+    } catch (err) {
+      console.error('❌ Failed to start in-memory MongoDB:', err.message);
+      process.exit(1);
+    }
+  } else {
+    mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      console.error('❌ FATAL: MONGODB_URI must be set in non-development environments.');
+      process.exit(1);
+    }
+    console.log('🚀 Preparing to connect to external MongoDB...');
+  }
+
+  // Start the connection process
+  await connectToDatabase(mongoUri);
+}
+
+/**
+ * Gracefully shuts down the application.
+ * @param {string} signal - The signal or reason for the shutdown.
+ */
+async function shutdown(signal) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
   try {
     await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
+    console.log('MongoDB connection closed.');
+    if (mongod) {
+      await mongod.stop();
+      console.log('In-memory MongoDB server stopped.');
+    }
     process.exit(0);
   } catch (err) {
-    console.error('Error while closing MongoDB connection:', err);
+    console.error('Error during shutdown:', err);
     process.exit(1);
-  }
-});
-
-// Initialize database with roles if needed
-async function initializeDatabase() {
-  try {
-    const db = require('./models');
-    const Role = db.role;
-    
-    const count = await Role.estimatedDocumentCount();
-    
-    if (count === 0) {
-      await Promise.all([
-        new Role({ name: "user" }).save(),
-        new Role({ name: "moderator" }).save(),
-        new Role({ name: "admin" }).save()
-      ]);
-      console.log('Added roles to database');
-    }
-  } catch (err) {
-    console.error('Error initializing database:', err);
   }
 }
 
-// Middleware is now initialized before server startup
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+// Start the application
+main();
