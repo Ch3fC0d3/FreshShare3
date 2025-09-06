@@ -208,7 +208,7 @@ const UpcLookup = {
     console.log('Populating product info:', product);
     
     // Get form fields using both possible IDs
-    const titleField = document.getElementById('listing-title') || document.getElementById('name');
+    const titleField = document.getElementById('listing-title') || document.getElementById('title') || document.getElementById('name');
     const descriptionField = document.getElementById('listing-description') || document.getElementById('description');
     const upcField = document.getElementById('listing-upc') || document.getElementById('upc');
     
@@ -292,18 +292,23 @@ const UpcLookup = {
     if (productBrandEl) productBrandEl.textContent = productInfo.brandName || 'N/A';
     if (productIngredientsEl) productIngredientsEl.textContent = productInfo.ingredients || 'Not available';
     
-    // Display nutrients if available
-    if (productNutrientsEl && productInfo.foodNutrients) {
+    // Display nutrients if available (support both foodNutrients and nutrients formats)
+    if (productNutrientsEl) {
       productNutrientsEl.innerHTML = '';
+      const rawNutrients = Array.isArray(productInfo.foodNutrients)
+        ? productInfo.foodNutrients
+        : (Array.isArray(productInfo.nutrients) ? productInfo.nutrients : []);
       
-      // Display the first 5 nutrients
-      const nutrientsToShow = productInfo.foodNutrients.slice(0, 5);
+      const nutrientsToShow = rawNutrients.slice(0, 5);
       
       if (nutrientsToShow.length > 0) {
         const nutrientsList = document.createElement('ul');
         nutrientsToShow.forEach(nutrient => {
+          const name = nutrient.nutrientName || nutrient.name || 'Nutrient';
+          const value = (nutrient.value !== undefined ? nutrient.value : nutrient.amount) ?? '';
+          const unit = nutrient.unitName || nutrient.unit || '';
           const listItem = document.createElement('li');
-          listItem.textContent = `${nutrient.nutrientName}: ${nutrient.value} ${nutrient.unitName}`;
+          listItem.textContent = `${name}: ${value} ${unit}`.trim();
           nutrientsList.appendChild(listItem);
         });
         productNutrientsEl.appendChild(nutrientsList);
@@ -465,8 +470,8 @@ const UpcLookup = {
       const productInfo = JSON.parse(resultsEl.dataset.productInfo);
       
       // Fill in the listing form with product information
-      const titleInput = document.getElementById('listing-title');
-      const descriptionInput = document.getElementById('listing-description');
+      const titleInput = document.getElementById('listing-title') || document.getElementById('title');
+      const descriptionInput = document.getElementById('listing-description') || document.getElementById('description');
       const upcInput = document.getElementById('listing-upc');
       
       if (titleInput && productInfo.description) {
