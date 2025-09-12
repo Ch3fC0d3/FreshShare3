@@ -338,6 +338,31 @@ app.get('/groups/:id/orders', (req, res) => {
   });
 });
 
+// Edit Listing page with ownership check
+app.get('/listings/:id/edit', async (req, res) => {
+  try {
+    if (!res.locals.user) {
+      return res.redirect('/login?redirect=' + encodeURIComponent(`/listings/${req.params.id}/edit`));
+    }
+    const db = require('./models');
+    const Listing = db.listing;
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).render('error', { title: 'Not Found', message: 'Listing not found' });
+    }
+    if (String(listing.seller) !== String(res.locals.user._id)) {
+      return res.status(403).render('error', { title: 'Forbidden', message: 'You are not authorized to edit this listing' });
+    }
+    return res.render('pages/edit-listing', {
+      title: 'FreshShare - Edit Listing',
+      listingId: req.params.id
+    });
+  } catch (err) {
+    console.error('Edit listing page error:', err);
+    return res.status(500).render('error', { title: 'Error', message: 'Failed to load edit listing page' });
+  }
+});
+
 app.get('/orders/:id', (req, res) => {
   res.render('pages/order_details', { 
     title: 'FreshShare - Order Details',
@@ -443,6 +468,16 @@ app.get('/dashboard', (req, res) => {
   });
 });
 
+// Manage Vendors page
+app.get('/vendors', (req, res) => {
+  if (!res.locals.user) {
+    return res.redirect('/login?redirect=/vendors');
+  }
+  res.render('pages/vendors', {
+    title: 'FreshShare - Vendors'
+  });
+});
+
 app.get('/login', (req, res) => {
   // COMPLETELY DISABLE REDIRECTS to break the infinite loop
   console.log('Rendering login page without any redirects');
@@ -476,6 +511,32 @@ app.use('/api/marketplace', marketplaceApiRoutes);
 console.log('API routes available:');
 console.log('- /api/marketplace/upc/:upc - UPC lookup endpoint');
 console.log('- /api/marketplace/upc-test/:upc - UPC test endpoint');
+
+// Simple health endpoint for MongoDB connection status
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const state = mongoose.connection.readyState; // 0=disconnected,1=connected,2=connecting,3=disconnecting
+    const stateMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+    let pingOk = false;
+    try {
+      // If connected, try a quick ping using admin command
+      if (state === 1) {
+        await mongoose.connection.db.admin().ping();
+        pingOk = true;
+      }
+    } catch (e) {
+      pingOk = false;
+    }
+    res.status(200).json({
+      success: true,
+      connected: state === 1,
+      state: stateMap[state] || String(state),
+      ping: pingOk
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Health check failed', error: err.message });
+  }
+});
 
 // Now start the server
 const server = startServer();
