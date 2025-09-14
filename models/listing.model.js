@@ -23,12 +23,19 @@ const ListingSchema = new mongoose.Schema({
   priceUnit: {
     type: String,
     default: 'each',
-    enum: ['each', 'lb', 'kg', 'oz', 'bunch', 'hour']
+    enum: ['each', 'lb', 'kg', 'oz', 'bunch', 'hour', 'case']
   },
   category: {
     type: String,
     required: true,
-    enum: ['vegetables', 'fruits', 'herbs', 'seeds', 'tools', 'services', 'other']
+    lowercase: true,
+    enum: [
+      // Food-focused categories used in UI
+      'produce', 'dairy', 'meat', 'seafood', 'bakery', 'pantry', 'beverages', 'frozen', 'prepared',
+      'grains', 'baked_goods', 'prepared_foods',
+      // Backward-compatible catch-alls
+      'vegetables', 'fruits', 'herbs', 'seeds', 'tools', 'services', 'other'
+    ]
   },
   condition: {
     type: String,
@@ -47,12 +54,11 @@ const ListingSchema = new mongoose.Schema({
     coordinates: {
       type: {
         type: String,
-        enum: ['Point'],
-        default: 'Point'
+        enum: ['Point']
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        required: true
+        required: false
       }
     }
   },
@@ -110,10 +116,26 @@ const ListingSchema = new mongoose.Schema({
     default: 1,
     min: 0
   },
+  caseSize: {
+    type: Number,
+    min: 1,
+    default: 1
+  },
   tags: [{
     type: String,
     trim: true
   }],
+  vendor: {
+    name: { type: String, trim: true },
+    contactEmail: { type: String, trim: true },
+    contactPhone: { type: String, trim: true },
+    website: { type: String, trim: true },
+    notes: { type: String, trim: true }
+  },
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
+  },
   upcCode: {
     type: String,
     trim: true,

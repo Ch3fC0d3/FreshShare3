@@ -18,7 +18,6 @@ const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const config = require('./config/auth.config');
@@ -71,6 +70,24 @@ app.use(cookieParser());
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
+
+// Ensure 'user' is always defined for views (null by default)
+app.use((req, res, next) => {
+  if (typeof res.locals.user === 'undefined') {
+    res.locals.user = null;
+  }
+  next();
+});
+
+// Feature flags middleware (expose to views)
+app.use((req, res, next) => {
+  const val = (process.env.UPC_SCANNER_AUTOSTART || '').toLowerCase();
+  const enabled = val === '' || val === undefined || ['1', 'true', 'yes', 'on'].includes(val);
+  res.locals.featureFlags = {
+    scannerAutoStart: enabled
+  };
   next();
 });
 
@@ -339,6 +356,31 @@ app.get('/groups/:id/orders', (req, res) => {
   });
 });
 
+// Edit Listing page with ownership check
+app.get('/listings/:id/edit', async (req, res) => {
+  try {
+    if (!res.locals.user) {
+      return res.redirect('/login?redirect=' + encodeURIComponent(`/listings/${req.params.id}/edit`));
+    }
+    const db = require('./models');
+    const Listing = db.listing;
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).render('error', { title: 'Not Found', message: 'Listing not found' });
+    }
+    if (String(listing.seller) !== String(res.locals.user._id)) {
+      return res.status(403).render('error', { title: 'Forbidden', message: 'You are not authorized to edit this listing' });
+    }
+    return res.render('pages/edit-listing', {
+      title: 'FreshShare - Edit Listing',
+      listingId: req.params.id
+    });
+  } catch (err) {
+    console.error('Edit listing page error:', err);
+    return res.status(500).render('error', { title: 'Error', message: 'Failed to load edit listing page' });
+  }
+});
+
 app.get('/orders/:id', (req, res) => {
   res.render('pages/order_details', { 
     title: 'FreshShare - Order Details',
@@ -444,6 +486,16 @@ app.get('/dashboard', (req, res) => {
   });
 });
 
+// Manage Vendors page
+app.get('/vendors', (req, res) => {
+  if (!res.locals.user) {
+    return res.redirect('/login?redirect=/vendors');
+  }
+  res.render('pages/vendors', {
+    title: 'FreshShare - Vendors'
+  });
+});
+
 app.get('/login', (req, res) => {
   // COMPLETELY DISABLE REDIRECTS to break the infinite loop
   console.log('Rendering login page without any redirects');
@@ -474,15 +526,52 @@ console.log('All routes initialized successfully');
 const marketplaceApiRoutes = require('./routes/api/marketplace');
 app.use('/api/marketplace', marketplaceApiRoutes);
 
+// Auth routes (pages + API)
+const authRoutes = require('./routes/auth.routes');
+app.use('/', authRoutes);
+
+// Fallback: ensure critical auth API routes are available
+try {
+  const authController = require('./controllers/auth.controller');
+  app.post('/api/auth/login', authController.login);
+  app.post('/api/auth/signup', authController.signup);
+} catch (e) {
+  console.error('Failed to wire fallback auth routes:', e && e.message);
+}
+
 console.log('API routes available:');
 console.log('- /api/marketplace/upc/:upc - UPC lookup endpoint');
 console.log('- /api/marketplace/upc-test/:upc - UPC test endpoint');
+console.log('- /api/auth/login - Login endpoint');
+console.log('- /api/auth/signup - Signup endpoint');
 
-// #############################################################################
-// DATABASE & SERVER STARTUP
-// #############################################################################
+// Simple health endpoint for MongoDB connection status
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const state = mongoose.connection.readyState; // 0=disconnected,1=connected,2=connecting,3=disconnecting
+    const stateMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+    let pingOk = false;
+    try {
+      // If connected, try a quick ping using admin command
+      if (state === 1) {
+        await mongoose.connection.db.admin().ping();
+        pingOk = true;
+      }
+    } catch (e) {
+      pingOk = false;
+    }
+    res.status(200).json({
+      success: true,
+      connected: state === 1,
+      state: stateMap[state] || String(state),
+      ping: pingOk
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Health check failed', error: err.message });
+  }
+});
 
-let mongod = null; // To hold the in-memory server instance
+let mongod = null; // Reserved for potential in-memory usage (not used by default)
 
 /**
  * Initializes the database with default roles if they don't exist.
@@ -559,25 +648,19 @@ async function connectToDatabase(mongoUri) {
  * Main function to orchestrate application startup.
  */
 async function main() {
-  let mongoUri;
+  // Choose Mongo URI
+  const envUri = process.env.MONGODB_URI && process.env.MONGODB_URI.trim();
+  let mongoUri = envUri;
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🚀 Starting in-memory MongoDB for development...');
-    try {
-      mongod = await MongoMemoryServer.create();
-      mongoUri = mongod.getUri();
-      console.log(`✅ In-memory DB is ready.`);
-    } catch (err) {
-      console.error('❌ Failed to start in-memory MongoDB:', err.message);
-      process.exit(1);
-    }
+  if (!mongoUri) {
+    // Build local Mongo URI from db.config.js
+    const host = dbConfig.HOST || '127.0.0.1';
+    const port = dbConfig.PORT || 27017;
+    const dbName = dbConfig.DB || 'freshshare_db';
+    mongoUri = `mongodb://${host}:${port}/${dbName}`;
+    console.log(`Using local MongoDB at ${mongoUri}`);
   } else {
-    mongoUri = process.env.MONGODB_URI;
-    if (!mongoUri) {
-      console.error('❌ FATAL: MONGODB_URI must be set in non-development environments.');
-      process.exit(1);
-    }
-    console.log('🚀 Preparing to connect to external MongoDB...');
+    console.log('Using MongoDB URI from environment.');
   }
 
   // Start the connection process
@@ -607,5 +690,11 @@ async function shutdown(signal) {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-// Start the application
-main();
+// Start the application only when executed directly, and not during tests
+if (require.main === module) {
+  if (process.env.NODE_ENV !== 'test') {
+    main();
+  }
+} else {
+  module.exports = app;
+}

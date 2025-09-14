@@ -13,6 +13,7 @@ db.listing = require("./listing.model");
 db.order = require("./order.model");
 db.conversation = require("./conversation.model");
 db.review = require("./review.model");
+db.vendor = require("./vendor.model");
 
 db.ROLES = ["user", "admin", "moderator"];
 

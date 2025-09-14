@@ -10,12 +10,39 @@
 <div class="main-content">
   <div class="container py-4">
     <div class="create-listing-container">
-      <h1 class="mb-4">Create New Listing</h1>
+      <h1 class="mb-1">Create New Listing</h1>
+      <% if (user) { %>
+      <div class="d-flex justify-content-end mb-3">
+        <span class="badge bg-success">
+          <i class="fas fa-user me-1"></i>
+          Logged in as <strong><%= user.username %></strong>
+        </span>
+      </div>
+      <% } %>
+      <% if (!user) { %>
+      <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <div>
+          Please log in to create a listing. <a href="/login?redirect=/create-listing" class="alert-link">Log in</a>
+        </div>
+      </div>
+      <% } %>
       
-      <form id="createListingForm" enctype="multipart/form-data">
+      <form id="createListingForm" data-auth="<%= !!user %>" enctype="multipart/form-data">
         <!-- Basic Information -->
         <div class="form-section">
           <h3>Basic Information</h3>
+          <% if (user) { %>
+          <div class="mb-3">
+            <label for="saved-template" class="form-label">Use previous listing</label>
+            <select class="form-select" id="saved-template">
+              <option value="">Select a previous listing to prefill...</option>
+            </select>
+            <div class="form-text">Selecting a previous listing will pre-fill this form. Review and adjust before submitting.</div>
+            <div id="templatesFetchStatus" class="form-text text-muted" style="display:none"></div>
+            <a href="#" id="templatesRetry" class="small" style="display:none">Retry</a>
+          </div>
+          <% } %>
           <div class="mb-3">
             <label for="title" class="form-label">Item*</label>
             <input type="text" class="form-control" id="title" name="title" required placeholder="Start typing to search for food items...">
@@ -25,7 +52,7 @@
           <div class="mb-3">
             <label for="description" class="form-label">Description*</label>
             <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
-            <div class="form-text">Describe your item in detail. Include condition, features, and any other relevant information.</div>
+            <div class="form-text">Describe your item in detail. Include features, packaging, and any other relevant information.</div>
           </div>
           
           <div class="row">
@@ -58,23 +85,23 @@
                 <option value="vegetables">Vegetables</option>
                 <option value="fruits">Fruits</option>
                 <option value="herbs">Herbs & Spices</option>
+                <option value="grains">Grains</option>
+                <option value="dairy">Dairy</option>
+                <option value="meat">Meat</option>
+                <option value="seafood">Seafood</option>
+                <option value="pantry">Pantry</option>
+                <option value="beverages">Beverages</option>
+                <option value="baked_goods">Baked Goods</option>
+                <option value="prepared_foods">Prepared Foods</option>
                 <option value="seeds">Seeds & Seedlings</option>
-                <option value="tools">Tools & Equipment</option>
-                <option value="services">Services</option>
                 <option value="other">Other</option>
               </select>
             </div>
             
             <div class="col-md-6 mb-3">
-              <label for="condition" class="form-label">Condition</label>
-              <select class="form-select" id="condition" name="condition">
-                <option value="not-applicable">Not Applicable</option>
-                <option value="new">New</option>
-                <option value="like-new">Like New</option>
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-                <option value="poor">Poor</option>
-              </select>
+              <label for="caseSize" class="form-label">Case Size</label>
+              <input type="number" class="form-control" id="caseSize" name="caseSize" min="1" value="1" placeholder="Number of units per case">
+              <div class="form-text">Enter the number of units in one wholesale case.</div>
             </div>
           </div>
           
@@ -148,6 +175,55 @@
           </div>
         </div>
         
+        <!-- Vendor Information (optional) -->
+        <div class="form-section">
+          <h3>Vendor Information <small class="text-muted">(optional)</small></h3>
+          <% if (user) { %>
+          <div class="row align-items-end">
+            <div class="col-md-8 mb-3">
+              <label for="saved-vendor" class="form-label">Saved Vendor</label>
+              <select class="form-select" id="saved-vendor">
+                <option value="">Select a saved vendor</option>
+              </select>
+              <div class="form-text">Choose a saved vendor to auto-fill the fields.</div>
+              <div id="vendorsFetchStatus" class="form-text text-muted" style="display:none"></div>
+              <a href="#" id="vendorsRetry" class="small" style="display:none">Retry</a>
+            </div>
+            <div class="col-md-4 mb-3">
+              <div class="form-check mt-4">
+                <input type="checkbox" class="form-check-input" id="save-vendor">
+                <label class="form-check-label" for="save-vendor">Save vendor info for future use</label>
+              </div>
+            </div>
+          </div>
+          <% } %>
+          <input type="hidden" id="vendorId" name="vendorId" />
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="vendor-name" class="form-label">Vendor Name</label>
+              <input type="text" class="form-control" id="vendor-name" name="vendor[name]" placeholder="e.g., Local Farm Co.">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="vendor-website" class="form-label">Website</label>
+              <input type="text" inputmode="url" class="form-control" id="vendor-website" name="vendor[website]" placeholder="https://example.com">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="vendor-email" class="form-label">Contact Email</label>
+              <input type="email" class="form-control" id="vendor-email" name="vendor[contactEmail]" placeholder="vendor@example.com">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="vendor-phone" class="form-label">Contact Phone</label>
+              <input type="tel" class="form-control" id="vendor-phone" name="vendor[contactPhone]" placeholder="(555) 123-4567">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="vendor-notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="vendor-notes" name="vendor[notes]" rows="3" placeholder="Additional vendor details, terms, or sourcing notes"></textarea>
+          </div>
+        </div>
+
         <!-- Tags -->
         <div class="form-section">
           <h3>Tags</h3>
@@ -165,7 +241,7 @@
         
         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
           <button type="button" class="btn btn-outline-secondary me-md-2" id="cancelButton">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create Listing</button>
+          <button type="submit" class="btn btn-primary" id="submitButton" <%= user ? '' : 'disabled' %>>Create Listing</button>
         </div>
       </form>
     </div>
@@ -178,6 +254,16 @@
 <%- contentFor('script') %>
 <!-- Include QuaggaJS for barcode scanning -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.2/dist/quagga.min.js"></script>
+<!-- Expose feature flags to the client -->
+<script>
+  window.FeatureFlags = Object.freeze({
+    scannerAutoStart: <%= (typeof featureFlags !== 'undefined' && featureFlags && featureFlags.scannerAutoStart) ? true : false %>
+  });
+  console.log('FeatureFlags:', window.FeatureFlags);
+  if (!window.FeatureFlags.scannerAutoStart) {
+    console.log('Scanner auto-start disabled by UPC_SCANNER_AUTOSTART flag');
+  }
+  </script>
 <!-- Include UPC Lookup Script -->
 <script src="/js/upc-lookup.js"></script>
 <script src="/js/food-autocomplete.js"></script>
@@ -195,6 +281,15 @@
   const tagContainer = document.getElementById('tagContainer');
   const createListingForm = document.getElementById('createListingForm');
   const cancelButton = document.getElementById('cancelButton');
+  const savedVendorSelect = document.getElementById('saved-vendor');
+  const vendorIdInput = document.getElementById('vendorId');
+  const saveVendorCheckbox = document.getElementById('save-vendor');
+  const savedTemplateSelect = document.getElementById('saved-template');
+
+  // Auth flag (read from data attribute to avoid EJS inside JS)
+  const IS_AUTH = (document.getElementById('createListingForm').dataset.auth === 'true');
+  let SAVED_VENDORS = [];
+  let SAVED_TEMPLATES = [];
   
   // Handle image upload
   imageUploadContainer.addEventListener('click', () => {
@@ -218,6 +313,163 @@
       handleFiles(e.dataTransfer.files);
     }
   });
+
+  // -------- Saved Vendors & Templates Logic --------
+  async function loadVendors() {
+    const statusEl = document.getElementById('vendorsFetchStatus');
+    const retryEl = document.getElementById('vendorsRetry');
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Loading saved vendors...'; }
+    if (retryEl) retryEl.style.display = 'none';
+    try {
+      const res = await fetch('/api/marketplace/vendors');
+      if (!res.ok) {
+        if (statusEl) {
+          if (res.status === 401) statusEl.textContent = 'Please log in to load saved vendors.';
+          else statusEl.textContent = `Failed to load vendors (HTTP ${res.status}).`;
+        }
+        if (retryEl) retryEl.style.display = 'inline';
+        return;
+      }
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        SAVED_VENDORS = json.data;
+        populateVendorSelect();
+        if (statusEl) {
+          if (SAVED_VENDORS.length === 0) { statusEl.textContent = 'No saved vendors yet.'; statusEl.style.display = 'block'; }
+          else { statusEl.textContent = ''; statusEl.style.display = 'none'; }
+        }
+        if (retryEl) retryEl.style.display = 'none';
+      } else if (statusEl) {
+        statusEl.textContent = 'Failed to load vendors.';
+        if (retryEl) retryEl.style.display = 'inline';
+      }
+    } catch (err) {
+      console.warn('Failed to load vendors:', err);
+      if (statusEl) statusEl.textContent = 'Network error loading vendors.';
+      const retryEl = document.getElementById('vendorsRetry');
+      if (retryEl) retryEl.style.display = 'inline';
+    }
+  }
+  function populateVendorSelect() {
+    if (!savedVendorSelect) return;
+    savedVendorSelect.innerHTML = '<option value="">Select a saved vendor</option>';
+    SAVED_VENDORS.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v._id;
+      opt.textContent = v.name || '(Unnamed vendor)';
+      savedVendorSelect.appendChild(opt);
+    });
+  }
+  function onVendorSelect() {
+    const id = savedVendorSelect.value;
+    vendorIdInput.value = id || '';
+    const v = SAVED_VENDORS.find(x => x._id === id);
+    if (v) {
+      setValue('vendor-name', v.name || '');
+      setValue('vendor-email', v.contactEmail || '');
+      setValue('vendor-phone', v.contactPhone || '');
+      setValue('vendor-website', v.website || '');
+      setValue('vendor-notes', v.notes || '');
+    }
+  }
+  function setValue(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+  async function loadTemplates() {
+    const statusEl = document.getElementById('templatesFetchStatus');
+    const retryEl = document.getElementById('templatesRetry');
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Loading previous listings...'; }
+    if (retryEl) retryEl.style.display = 'none';
+    try {
+      const res = await fetch('/api/marketplace/my-templates');
+      if (!res.ok) {
+        if (statusEl) {
+          if (res.status === 401) statusEl.textContent = 'Please log in to load previous listings.';
+          else if (res.status === 404) statusEl.textContent = 'Previous listings feature is unavailable right now.';
+          else statusEl.textContent = `Failed to load previous listings (HTTP ${res.status}).`;
+        }
+        if (retryEl) retryEl.style.display = 'inline';
+        return;
+      }
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        SAVED_TEMPLATES = json.data;
+        populateTemplateSelect();
+        if (statusEl) {
+          if (SAVED_TEMPLATES.length === 0) { statusEl.textContent = 'No previous listings yet.'; statusEl.style.display = 'block'; }
+          else { statusEl.textContent = ''; statusEl.style.display = 'none'; }
+        }
+        if (retryEl) retryEl.style.display = 'none';
+      } else if (statusEl) {
+        statusEl.textContent = 'Failed to load previous listings.';
+        if (retryEl) retryEl.style.display = 'inline';
+      }
+    } catch (err) {
+      console.warn('Failed to load templates:', err);
+      if (statusEl) statusEl.textContent = 'Network error loading previous listings.';
+      if (retryEl) retryEl.style.display = 'inline';
+    }
+  }
+  function populateTemplateSelect() {
+    if (!savedTemplateSelect) return;
+    savedTemplateSelect.innerHTML = '<option value="">Select a previous listing to prefill...</option>';
+    SAVED_TEMPLATES.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t._id;
+      opt.textContent = t.title || '(Untitled listing)';
+      savedTemplateSelect.appendChild(opt);
+    });
+  }
+  function onTemplateSelect() {
+    const id = savedTemplateSelect.value;
+    const t = SAVED_TEMPLATES.find(x => x._id === id);
+    if (t) applyTemplateToForm(t);
+  }
+  function applyTemplateToForm(t) {
+    setValue('title', t.title || '');
+    const desc = document.getElementById('description');
+    if (desc) desc.value = t.description || '';
+    setValue('price', typeof t.price === 'number' ? t.price : (t.price || ''));
+    const priceUnit = document.getElementById('priceUnit');
+    if (priceUnit && t.priceUnit) priceUnit.value = t.priceUnit;
+    const category = document.getElementById('category');
+    if (category && t.category) category.value = t.category;
+    setValue('quantity', typeof t.quantity === 'number' ? t.quantity : (t.quantity || ''));
+    setValue('caseSize', typeof t.caseSize === 'number' ? t.caseSize : (t.caseSize || ''));
+    const isOrg = document.getElementById('isOrganic');
+    if (isOrg && typeof t.isOrganic === 'boolean') isOrg.checked = t.isOrganic;
+    setValue('listing-upc', t.upcCode || '');
+
+    // Vendor snapshot or vendorId
+    if (t.vendorId && savedVendorSelect) {
+      // Try to select the vendor; if not loaded yet, will be set when vendors load
+      vendorIdInput.value = t.vendorId;
+      // If vendors already loaded, set the select; otherwise leave it
+      const hasOption = Array.from(savedVendorSelect.options).some(o => o.value === t.vendorId);
+      if (hasOption) savedVendorSelect.value = t.vendorId;
+    }
+    if (t.vendor) {
+      setValue('vendor-name', t.vendor.name || '');
+      setValue('vendor-email', t.vendor.contactEmail || '');
+      setValue('vendor-phone', t.vendor.contactPhone || '');
+      setValue('vendor-website', t.vendor.website || '');
+      const notesEl = document.getElementById('vendor-notes');
+      if (notesEl) notesEl.value = t.vendor.notes || '';
+    }
+  }
+
+  // Attach listeners and load data if authenticated
+  if (IS_AUTH) {
+    if (savedVendorSelect) savedVendorSelect.addEventListener('change', onVendorSelect);
+    if (savedTemplateSelect) savedTemplateSelect.addEventListener('change', onTemplateSelect);
+    const vendorsRetry = document.getElementById('vendorsRetry');
+    if (vendorsRetry) vendorsRetry.addEventListener('click', (e) => { e.preventDefault(); loadVendors(); });
+    const templatesRetry = document.getElementById('templatesRetry');
+    if (templatesRetry) templatesRetry.addEventListener('click', (e) => { e.preventDefault(); loadTemplates(); });
+    loadVendors();
+    loadTemplates();
+  }
   
   imageUpload.addEventListener('change', () => {
     handleFiles(imageUpload.files);
@@ -347,6 +599,12 @@
   createListingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // Normalize vendor website to include scheme to avoid browser validation issues
+    const vendorWebsiteEl = document.getElementById('vendor-website');
+    if (vendorWebsiteEl && vendorWebsiteEl.value && vendorWebsiteEl.value.trim()) {
+      vendorWebsiteEl.value = normalizeUrl(vendorWebsiteEl.value.trim());
+    }
+
     // Create FormData object
     const formData = new FormData(createListingForm);
     
@@ -361,6 +619,11 @@
     tags.forEach(tag => {
       formData.append('tags', tag);
     });
+
+    // Add saveVendor flag
+    if (saveVendorCheckbox) {
+      formData.set('saveVendor', saveVendorCheckbox.checked ? 'true' : 'false');
+    }
     
     try {
       const response = await fetch('/api/marketplace', {
@@ -374,7 +637,9 @@
         alert('Listing created successfully!');
         window.location.href = '/marketplace';
       } else {
-        alert(`Failed to create listing: ${data.message}`);
+        const statusInfo = response && typeof response.status === 'number' ? ` (HTTP ${response.status})` : '';
+        const details = Array.isArray(data.errors) && data.errors.length ? `\n- ${data.errors.join('\n- ')}` : '';
+        alert(`Failed to create listing${statusInfo}: ${data.message || 'Unknown error'}${details}`);
       }
     } catch (error) {
       console.error('Error creating listing:', error);
@@ -393,6 +658,14 @@
   function initMap() {
     // This would be implemented with a mapping API like Google Maps or Leaflet
     console.log('Map initialization would happen here');
+  }
+  function normalizeUrl(url) {
+    try {
+      const s = (url || '').trim();
+      if (!s) return '';
+      if (/^https?:\/\//i.test(s)) return s;
+      return 'https://' + s;
+    } catch (e) { return url; }
   }
   
   // Initialize the page
@@ -471,6 +744,13 @@
         // Stop scanner if it's running
         if (typeof Quagga !== 'undefined' && Quagga.canvas && Quagga.canvas.ctx) {
           Quagga.stop();
+        }
+
+        // Auto-start the scanner on modal open if feature flag is enabled
+        if (window.FeatureFlags && window.FeatureFlags.scannerAutoStart) {
+          if (typeof UpcLookup !== 'undefined' && typeof UpcLookup.setupUpcScanner === 'function') {
+            UpcLookup.setupUpcScanner();
+          }
         }
       });
     }
