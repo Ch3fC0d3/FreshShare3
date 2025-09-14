@@ -1,0 +1,320 @@
+<%- contentFor('style') %>
+<link rel="stylesheet" href="/css/main.css">
+
+<%- contentFor('body') %>
+<div class="main-content" id="editListingPage" data-auth="<%= !!user %>" data-listing-id="<%= listingId %>">
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="mb-0">Edit Listing</h1>
+      <% if (user) { %>
+      <span class="badge bg-success">
+        <i class="fas fa-user me-1"></i>
+        Logged in as <strong><%= user.username %></strong>
+      </span>
+      <% } %>
+    </div>
+
+    <% if (!user) { %>
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <div>Please log in to edit listings. <a href="/login" class="alert-link">Log in</a></div>
+    </div>
+    <% } %>
+
+    <% if (user) { %>
+    <form id="editListingForm">
+      <!-- Basic Information -->
+      <div class="form-section">
+        <h3>Basic Information</h3>
+        <div class="mb-3">
+          <label for="title" class="form-label">Item*</label>
+          <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        <div class="mb-3">
+          <label for="description" class="form-label">Description*</label>
+          <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+        </div>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="price" class="form-label">Price*</label>
+            <input type="number" min="0" step="0.01" class="form-control" id="price" name="price" required>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="priceUnit" class="form-label">Price Unit</label>
+            <select class="form-select" id="priceUnit" name="priceUnit">
+              <option value="">Select unit</option>
+              <option value="lb">lb</option>
+              <option value="kg">kg</option>
+              <option value="case">case</option>
+              <option value="each">each</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="category" class="form-label">Category*</label>
+            <select class="form-select" id="category" name="category" required>
+              <option value="">Select category</option>
+              <option>Produce</option>
+              <option>Dairy</option>
+              <option>Meat</option>
+              <option>Seafood</option>
+              <option>Bakery</option>
+              <option>Pantry</option>
+              <option>Beverages</option>
+              <option>Frozen</option>
+              <option>Prepared</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="quantity" class="form-label">Quantity</label>
+            <input type="number" min="0" step="1" class="form-control" id="quantity" name="quantity">
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="caseSize" class="form-label">Case Size</label>
+            <input type="number" min="1" step="1" class="form-control" id="caseSize" name="caseSize">
+          </div>
+          <div class="col-md-4 mb-3 form-check mt-4">
+            <input type="checkbox" class="form-check-input" id="isOrganic" name="isOrganic">
+            <label class="form-check-label" for="isOrganic">Organic</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="upcCode" class="form-label">UPC Code</label>
+            <input type="text" class="form-control" id="upcCode" name="upcCode">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="tags" class="form-label">Tags (comma separated)</label>
+            <input type="text" class="form-control" id="tags" name="tags">
+          </div>
+        </div>
+      </div>
+
+      <!-- Vendor Information (optional) -->
+      <div class="form-section">
+        <h3>Vendor Information <small class="text-muted">(optional)</small></h3>
+        <div class="row align-items-end">
+          <div class="col-md-8 mb-3">
+            <label for="saved-vendor" class="form-label">Saved Vendor</label>
+            <select class="form-select" id="saved-vendor">
+              <option value="">Select a saved vendor</option>
+            </select>
+            <div class="form-text">Choose a saved vendor to auto-fill the fields.</div>
+            <div id="vendorsFetchStatus" class="form-text text-muted" style="display:none"></div>
+            <a href="#" id="vendorsRetry" class="small" style="display:none">Retry</a>
+          </div>
+          <div class="col-md-4 mb-3">
+            <div class="form-check mt-4">
+              <input type="checkbox" class="form-check-input" id="save-vendor">
+              <label class="form-check-label" for="save-vendor">Save vendor info for future use</label>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="vendorId" name="vendorId" />
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="vendor-name" class="form-label">Vendor Name</label>
+            <input type="text" class="form-control" id="vendor-name" name="vendor[name]" placeholder="e.g., Local Farm Co.">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="vendor-website" class="form-label">Website</label>
+            <input type="text" inputmode="url" class="form-control" id="vendor-website" name="vendor[website]" placeholder="https://example.com">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="vendor-email" class="form-label">Contact Email</label>
+            <input type="email" class="form-control" id="vendor-email" name="vendor[contactEmail]" placeholder="vendor@example.com">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="vendor-phone" class="form-label">Contact Phone</label>
+            <input type="tel" class="form-control" id="vendor-phone" name="vendor[contactPhone]" placeholder="(555) 123-4567">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="vendor-notes" class="form-label">Notes</label>
+          <textarea class="form-control" id="vendor-notes" name="vendor[notes]" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="/marketplace" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+    <% } %>
+  </div>
+</div>
+
+<%- contentFor('script') %>
+<script>
+  const pageEl = document.getElementById('editListingPage');
+  const IS_AUTH = (pageEl.dataset.auth === 'true');
+  const LISTING_ID = pageEl.dataset.listingId;
+  
+  if (IS_AUTH) {
+    // Elements
+    const form = document.getElementById('editListingForm');
+    const savedVendorSelect = document.getElementById('saved-vendor');
+    const vendorIdInput = document.getElementById('vendorId');
+    const saveVendorCheckbox = document.getElementById('save-vendor');
+
+    // Utility
+    function setValue(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.value = val ?? '';
+    }
+
+    // Load listing data and vendors
+    let SAVED_VENDORS = [];
+    let listing = null;
+
+    async function loadListing() {
+      const res = await fetch(`/api/marketplace/${LISTING_ID}`);
+      const json = await res.json();
+      if (!json.success) throw new Error('Failed to load listing');
+      listing = json.data;
+      populateFormFromListing();
+    }
+
+    async function loadVendors() {
+      const statusEl = document.getElementById('vendorsFetchStatus');
+      const retryEl = document.getElementById('vendorsRetry');
+      if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Loading saved vendors...'; }
+      if (retryEl) retryEl.style.display = 'none';
+      try {
+        const res = await fetch('/api/marketplace/vendors');
+        if (!res.ok) {
+          if (statusEl) {
+            if (res.status === 401) statusEl.textContent = 'Please log in to load saved vendors.';
+            else statusEl.textContent = `Failed to load vendors (HTTP ${res.status}).`;
+          }
+          if (retryEl) retryEl.style.display = 'inline';
+          return;
+        }
+        const json = await res.json();
+        if (json.success) {
+          SAVED_VENDORS = json.data || [];
+          populateVendorSelect();
+          if (statusEl) {
+            if (SAVED_VENDORS.length === 0) { statusEl.textContent = 'No saved vendors yet.'; statusEl.style.display = 'block'; }
+            else { statusEl.textContent = ''; statusEl.style.display = 'none'; }
+          }
+          if (retryEl) retryEl.style.display = 'none';
+          if (listing && listing.vendorId) {
+            const hasOption = SAVED_VENDORS.some(v => v._id === listing.vendorId);
+            if (hasOption) savedVendorSelect.value = listing.vendorId;
+          }
+        } else {
+          if (statusEl) statusEl.textContent = 'Failed to load vendors.';
+          if (retryEl) retryEl.style.display = 'inline';
+        }
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'Network error loading vendors.';
+        if (retryEl) retryEl.style.display = 'inline';
+      }
+    }
+
+    function populateVendorSelect() {
+      savedVendorSelect.innerHTML = '<option value="">Select a saved vendor</option>';
+      SAVED_VENDORS.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v._id;
+        opt.textContent = v.name || '(Unnamed vendor)';
+        savedVendorSelect.appendChild(opt);
+      });
+    }
+
+    function populateFormFromListing() {
+      setValue('title', listing.title);
+      const desc = document.getElementById('description'); if (desc) desc.value = listing.description || '';
+      setValue('price', listing.price);
+      const priceUnit = document.getElementById('priceUnit'); if (priceUnit) priceUnit.value = listing.priceUnit || '';
+      const category = document.getElementById('category'); if (category && listing.category) category.value = listing.category;
+      setValue('quantity', listing.quantity);
+      setValue('caseSize', listing.caseSize);
+      const isOrg = document.getElementById('isOrganic'); if (isOrg) isOrg.checked = !!listing.isOrganic;
+      setValue('upcCode', listing.upcCode);
+      const tagsInput = document.getElementById('tags');
+      if (Array.isArray(listing.tags)) tagsInput.value = listing.tags.join(', ');
+
+      // Vendor fields (use snapshot first)
+      if (listing.vendor) {
+        setValue('vendor-name', listing.vendor.name);
+        setValue('vendor-email', listing.vendor.contactEmail);
+        setValue('vendor-phone', listing.vendor.contactPhone);
+        setValue('vendor-website', listing.vendor.website);
+        const notesEl = document.getElementById('vendor-notes'); if (notesEl) notesEl.value = listing.vendor.notes || '';
+      }
+      if (listing.vendorId) {
+        vendorIdInput.value = listing.vendorId;
+      }
+    }
+
+    function onVendorSelect() {
+      const id = savedVendorSelect.value;
+      vendorIdInput.value = id || '';
+      const v = SAVED_VENDORS.find(x => x._id === id);
+      if (v) {
+        setValue('vendor-name', v.name || '');
+        setValue('vendor-email', v.contactEmail || '');
+        setValue('vendor-phone', v.contactPhone || '');
+        setValue('vendor-website', v.website || '');
+        const notesEl = document.getElementById('vendor-notes'); if (notesEl) notesEl.value = v.notes || '';
+      }
+    }
+
+    savedVendorSelect.addEventListener('change', onVendorSelect);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        title: document.getElementById('title').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        price: Number(document.getElementById('price').value),
+        priceUnit: document.getElementById('priceUnit').value,
+        category: document.getElementById('category').value,
+        quantity: document.getElementById('quantity').value ? Number(document.getElementById('quantity').value) : undefined,
+        caseSize: document.getElementById('caseSize').value ? Number(document.getElementById('caseSize').value) : undefined,
+        isOrganic: document.getElementById('isOrganic').checked,
+        upcCode: document.getElementById('upcCode').value.trim(),
+        tags: (document.getElementById('tags').value || '').split(',').map(t => t.trim()).filter(Boolean),
+        // vendor fields (bracketed for controller parsing)
+        'vendor[name]': document.getElementById('vendor-name').value.trim(),
+        'vendor[contactEmail]': document.getElementById('vendor-email').value.trim(),
+        'vendor[contactPhone]': document.getElementById('vendor-phone').value.trim(),
+        'vendor[website]': document.getElementById('vendor-website').value.trim(),
+        'vendor[notes]': document.getElementById('vendor-notes').value.trim(),
+        vendorId: document.getElementById('vendorId').value || undefined,
+        saveVendor: saveVendorCheckbox.checked ? 'true' : 'false'
+      };
+
+      try {
+        const res = await fetch(`/api/marketplace/${LISTING_ID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (json.success) {
+          window.location.href = '/marketplace';
+        } else {
+          alert('Failed to update listing: ' + (json.message || 'Error'));
+        }
+      } catch (err) {
+        alert('Failed to update listing');
+      }
+    });
+
+    // Initialize
+    const vendorsRetryLink = document.getElementById('vendorsRetry');
+    if (vendorsRetryLink) vendorsRetryLink.addEventListener('click', (e) => { e.preventDefault(); loadVendors(); });
+    Promise.all([loadListing(), loadVendors()]).catch(err => {
+      console.error(err);
+      alert('Failed to load edit page data');
+    });
+  }
+</script>

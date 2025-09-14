@@ -35,8 +35,16 @@ const upload = multer({
   }
 });
 
-// Create a new listing
-router.post('/', upload.array('images', 5), marketplaceController.createListing);
+// Create a new listing (wrap upload to handle errors as JSON)
+router.post('/', (req, res, next) => {
+  upload.array('images', 5)(req, res, (err) => {
+    if (err) {
+      const status = err.message && err.message.includes('Only image files are allowed') ? 400 : 500;
+      return res.status(status).json({ success: false, message: err.message || 'Upload error' });
+    }
+    next();
+  });
+}, marketplaceController.createListing);
 
 // Get all listings with optional filtering
 router.get('/', marketplaceController.getListings);
@@ -80,6 +88,15 @@ router.get('/upc-test/:upc', (req, res) => {
 
 // Search food items for autocomplete
 router.get('/food-search', marketplaceController.searchFoodItems);
+
+// Saved vendors for current user
+router.get('/vendors', marketplaceController.getMyVendors);
+router.post('/vendors', marketplaceController.createVendor);
+router.put('/vendors/:id', marketplaceController.updateVendor);
+router.delete('/vendors/:id', marketplaceController.deleteVendor);
+
+// Listing templates (previous listings) for prefill
+router.get('/my-templates', marketplaceController.getMyListingTemplates);
 
 // Get a single listing by ID
 router.get('/:id', marketplaceController.getListingById);

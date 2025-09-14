@@ -9,8 +9,16 @@ const UpcLookup = {
    */
   init() {
     this.setupEventListeners();
-    // We no longer auto-initialize the scanner
-    // It will be initialized when the user clicks the Start Camera button
+    // Auto-initialize the scanner on page load only if feature flag is enabled
+    try {
+      if (window.FeatureFlags && window.FeatureFlags.scannerAutoStart) {
+        this.setupUpcScanner();
+      } else {
+        console.log('Scanner auto-start on page load is disabled by feature flag');
+      }
+    } catch (e) {
+      console.warn('Scanner init on load failed:', e);
+    }
   },
 
   /**
@@ -105,7 +113,8 @@ const UpcLookup = {
       decoder: {
         readers: ['upc_reader', 'upc_e_reader', 'ean_reader', 'ean_8_reader']
       },
-      locate: false // Disable Quagga's built-in targeting box
+      // Enable locating to improve real-world detection stability
+      locate: true
     }, (err) => {
       if (err) {
         console.error('Failed to initialize barcode scanner:', err);
@@ -132,15 +141,85 @@ const UpcLookup = {
    */
   onBarcodeDetected(result) {
     if (result && result.codeResult) {
-      const upcCode = result.codeResult.code;
-      console.log('Barcode detected:', upcCode);
+      const rawCode = result.codeResult.code;
+      const format = result.codeResult.format || 'unknown';
+      console.log('Barcode detected:', rawCode, 'format:', format);
+
+      // Normalize code to the most likely UPC-A/EAN-13 form
+      const candidates = this.generateUpcVariants(rawCode);
+      // Prefer 12-digit UPC-A, else 13-digit EAN with leading 0, else longest candidate
+      let best = candidates.find(c => /^\d{12}$/.test(c))
+              || candidates.find(c => /^0\d{12}$/.test(c))
+              || candidates.sort((a,b)=>b.length-a.length)[0]
+              || rawCode;
+      console.log('Normalized UPC candidate selected:', best, 'from', candidates);
       
       // Stop scanner after successful detection
       Quagga.stop();
       
       // Look up the UPC code
-      this.lookupUpc(upcCode);
+      this.lookupUpc(best);
     }
+  },
+
+  // --- UPC normalization helpers (client-side) ---
+  generateUpcVariants(input) {
+    try {
+      const raw = String(input || '').replace(/\D/g, '');
+      const set = new Set();
+      if (!raw) return [];
+      set.add(raw);
+      if (raw.length === 11) set.add(raw + this.calculateUpcACheckDigit(raw));
+      if (raw.length === 8) {
+        const expanded = this.expandUpcEToUpcA(raw);
+        if (expanded) set.add(expanded);
+      }
+      if (raw.length === 12) set.add('0' + raw);
+      if (raw.length === 13 && raw.startsWith('0')) set.add(raw.substring(1));
+      if (raw.length < 12) set.add(raw.padStart(12, '0'));
+      if (raw.length < 13) set.add(raw.padStart(13, '0'));
+      return Array.from(set);
+    } catch (e) {
+      return [String(input || '')];
+    }
+  },
+  expandUpcEToUpcA(upcE) {
+    const s = String(upcE || '').replace(/\D/g, '');
+    if (s.length !== 8) return null;
+    const ns = s[0];
+    const x1 = s[1], x2 = s[2], x3 = s[3], x4 = s[4], x5 = s[5], x6 = s[6];
+    let manufacturer, product;
+    if (x6 >= '0' && x6 <= '2') {
+      manufacturer = `${x1}${x2}${x6}`;
+      product = `00000${x3}${x4}${x5}`;
+    } else if (x6 === '3') {
+      manufacturer = `${x1}${x2}${x3}`;
+      product = `00000${x4}${x5}`;
+      product = product.padStart(6, '0');
+    } else if (x6 === '4') {
+      manufacturer = `${x1}${x2}${x3}${x4}`;
+      product = `0000${x5}`;
+      product = product.padStart(6, '0');
+    } else {
+      manufacturer = `${x1}${x2}${x3}${x4}${x5}`;
+      product = `0000${x6}`;
+    }
+    const eleven = `${ns}${manufacturer}${product}`;
+    if (eleven.length !== 11) return null;
+    const check = this.calculateUpcACheckDigit(eleven);
+    return eleven + check;
+  },
+  calculateUpcACheckDigit(eleven) {
+    const s = String(eleven || '').replace(/\D/g, '');
+    if (s.length !== 11) return '';
+    let odd = 0, even = 0;
+    for (let i = 0; i < 11; i++) {
+      const d = parseInt(s[i], 10) || 0;
+      if ((i % 2) === 0) odd += d; else even += d;
+    }
+    const total = odd * 3 + even;
+    const mod = total % 10;
+    return String((10 - mod) % 10);
   },
 
   /**
@@ -208,7 +287,7 @@ const UpcLookup = {
     console.log('Populating product info:', product);
     
     // Get form fields using both possible IDs
-    const titleField = document.getElementById('listing-title') || document.getElementById('name');
+    const titleField = document.getElementById('listing-title') || document.getElementById('title') || document.getElementById('name');
     const descriptionField = document.getElementById('listing-description') || document.getElementById('description');
     const upcField = document.getElementById('listing-upc') || document.getElementById('upc');
     
@@ -292,18 +371,23 @@ const UpcLookup = {
     if (productBrandEl) productBrandEl.textContent = productInfo.brandName || 'N/A';
     if (productIngredientsEl) productIngredientsEl.textContent = productInfo.ingredients || 'Not available';
     
-    // Display nutrients if available
-    if (productNutrientsEl && productInfo.foodNutrients) {
+    // Display nutrients if available (support both foodNutrients and nutrients formats)
+    if (productNutrientsEl) {
       productNutrientsEl.innerHTML = '';
+      const rawNutrients = Array.isArray(productInfo.foodNutrients)
+        ? productInfo.foodNutrients
+        : (Array.isArray(productInfo.nutrients) ? productInfo.nutrients : []);
       
-      // Display the first 5 nutrients
-      const nutrientsToShow = productInfo.foodNutrients.slice(0, 5);
+      const nutrientsToShow = rawNutrients.slice(0, 5);
       
       if (nutrientsToShow.length > 0) {
         const nutrientsList = document.createElement('ul');
         nutrientsToShow.forEach(nutrient => {
+          const name = nutrient.nutrientName || nutrient.name || 'Nutrient';
+          const value = (nutrient.value !== undefined ? nutrient.value : nutrient.amount) ?? '';
+          const unit = nutrient.unitName || nutrient.unit || '';
           const listItem = document.createElement('li');
-          listItem.textContent = `${nutrient.nutrientName}: ${nutrient.value} ${nutrient.unitName}`;
+          listItem.textContent = `${name}: ${value} ${unit}`.trim();
           nutrientsList.appendChild(listItem);
         });
         productNutrientsEl.appendChild(nutrientsList);
@@ -465,8 +549,8 @@ const UpcLookup = {
       const productInfo = JSON.parse(resultsEl.dataset.productInfo);
       
       // Fill in the listing form with product information
-      const titleInput = document.getElementById('listing-title');
-      const descriptionInput = document.getElementById('listing-description');
+      const titleInput = document.getElementById('listing-title') || document.getElementById('title');
+      const descriptionInput = document.getElementById('listing-description') || document.getElementById('description');
       const upcInput = document.getElementById('listing-upc');
       
       if (titleInput && productInfo.description) {

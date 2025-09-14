@@ -8,11 +8,110 @@ const axios = require('axios');
 // Ensure we trim any whitespace from the API key
 const USDA_API_KEY = (process.env.USDA_API_KEY && process.env.USDA_API_KEY.trim()) || 'DEMO_KEY';
 
-// Debug log to check if API key is loaded
+// Debug log to check if API key is loaded (mask the key)
 console.log('USDA API Key:', USDA_API_KEY === 'DEMO_KEY' ? 'Using demo key' : 'Using configured key');
-// Don't log the full API key in production for security reasons
 if (process.env.NODE_ENV !== 'production') {
-  console.log('USDA API Key value:', USDA_API_KEY);
+  const preview = USDA_API_KEY && USDA_API_KEY !== 'DEMO_KEY'
+    ? `${USDA_API_KEY.substring(0, 3)}...${USDA_API_KEY.substring(USDA_API_KEY.length - 3)}`
+    : 'DEMO_KEY';
+  console.log('USDA API Key preview:', preview);
+}
+
+/**
+ * Generate likely UPC/EAN variants to improve match rates
+ * - Tries original, UPC-A (11->12 with check), UPC-E expansion, and EAN-13 variants
+ */
+function generateUpcVariants(input) {
+  const raw = String(input || '').replace(/\D/g, '');
+  const variants = new Set();
+  if (!raw) return [];
+  variants.add(raw);
+
+  // If 11 digits, compute UPC-A check digit
+  if (raw.length === 11) {
+    variants.add(raw + calculateUpcACheckDigit(raw));
+  }
+
+  // If 8 digits (possibly UPC-E), try expansion
+  if (raw.length === 8) {
+    const expanded = expandUpcEToUpcA(raw);
+    if (expanded) variants.add(expanded);
+  }
+
+  // If 12 digits (UPC-A), also try EAN-13 with leading 0
+  if (raw.length === 12) {
+    variants.add('0' + raw);
+  }
+
+  // If 13 digits (EAN-13) starting with 0, also try without it
+  if (raw.length === 13 && raw.startsWith('0')) {
+    variants.add(raw.substring(1));
+  }
+
+  // General padding fallbacks
+  if (raw.length < 12) {
+    variants.add(raw.padStart(12, '0'));
+  }
+  if (raw.length < 13) {
+    variants.add(raw.padStart(13, '0'));
+  }
+
+  return Array.from(variants);
+}
+
+/**
+ * Expand UPC-E (8-digit) to UPC-A (12-digit) per standard rules
+ * Returns 12-digit UPC-A or null if cannot expand
+ */
+function expandUpcEToUpcA(upcE) {
+  const s = String(upcE || '').replace(/\D/g, '');
+  if (s.length !== 8) return null;
+  const ns = s[0]; // number system
+  const x1 = s[1], x2 = s[2], x3 = s[3], x4 = s[4], x5 = s[5], x6 = s[6];
+  // check digit s[7] will be recomputed for UPC-A
+  let manufacturer, product;
+  if (x6 >= '0' && x6 <= '2') {
+    // NS x1 x2 x6 00000 x3 x4 x5
+    manufacturer = `${x1}${x2}${x6}`;
+    product = `00000${x3}${x4}${x5}`;
+  } else if (x6 === '3') {
+    // NS x1 x2 x3 00000 0 x4 x5
+    manufacturer = `${x1}${x2}${x3}`;
+    product = `00000${x4}${x5}`;
+    product = product.padStart(6, '0');
+  } else if (x6 === '4') {
+    // NS x1 x2 x3 x4 00000 0 x5
+    manufacturer = `${x1}${x2}${x3}${x4}`;
+    product = `0000${x5}`; // four zeros + x5
+    product = product.padStart(6, '0');
+  } else {
+    // x6 in 5-9: NS x1 x2 x3 x4 x5 0000 x6
+    manufacturer = `${x1}${x2}${x3}${x4}${x5}`;
+    product = `0000${x6}`;
+  }
+  // Build 11 digits without check digit: NS + manufacturer + product
+  const eleven = `${ns}${manufacturer}${product}`;
+  if (eleven.length !== 11) return null;
+  const check = calculateUpcACheckDigit(eleven);
+  return eleven + check;
+}
+
+/**
+ * Calculate UPC-A check digit for 11-digit string
+ */
+function calculateUpcACheckDigit(eleven) {
+  const s = String(eleven || '').replace(/\D/g, '');
+  if (s.length !== 11) return '';
+  let oddSum = 0, evenSum = 0;
+  for (let i = 0; i < 11; i++) {
+    const digit = parseInt(s[i], 10) || 0;
+    if ((i % 2) === 0) oddSum += digit; // positions 0,2,4.. are 1st,3rd.. (odd)
+    else evenSum += digit;              // positions 1,3,5.. are even
+  }
+  const total = oddSum * 3 + evenSum;
+  const mod = total % 10;
+  const check = (10 - mod) % 10;
+  return String(check);
 }
 
 /**
@@ -41,10 +140,14 @@ async function getProductByUpc(upcCode) {
       USDA_API_KEY_EXISTS: !!process.env.USDA_API_KEY
     });
     
-    // Now that we have a valid API key, let's use the real API
-    console.log('Using real USDA API for UPC lookup with key:', USDA_API_KEY);
+    // Now that we have a valid API key, let's use the real API (mask key)
+    const keyPreview = USDA_API_KEY && USDA_API_KEY !== 'DEMO_KEY'
+      ? `${USDA_API_KEY.substring(0, 3)}...${USDA_API_KEY.substring(USDA_API_KEY.length - 3)}`
+      : 'DEMO_KEY';
+    console.log('Using real USDA API for UPC lookup with key:', keyPreview);
     
-    // First try to find by UPC directly
+    // First try to find by UPC directly; track attempts for debug
+    const attempts = [];
     try {
       console.log('Making USDA API request with UPC:', upcCode);
       
@@ -64,6 +167,7 @@ async function getProductByUpc(upcCode) {
 
       console.log('USDA API response status:', upcResponse.status);
       console.log('USDA API response data foods count:', upcResponse.data.foods?.length || 0);
+      attempts.push({ query: String(upcCode), status: upcResponse.status, foodsCount: (upcResponse.data.foods?.length || 0) });
       
       // If we found an exact UPC match
       const exactMatch = upcResponse.data.foods?.find(f => 
@@ -74,13 +178,17 @@ async function getProductByUpc(upcCode) {
 
       if (exactMatch) {
         console.log('Found exact UPC match:', exactMatch.description);
-        return formatProductResponse(exactMatch, upcCode);
+        const out = formatProductResponse(exactMatch, upcCode);
+        out.debugDetails = { attempts };
+        return out;
       }
       
       // If we found any results, use the first one
       if (upcResponse.data.foods && upcResponse.data.foods.length > 0) {
         console.log('Using first result:', upcResponse.data.foods[0].description);
-        return formatProductResponse(upcResponse.data.foods[0], upcCode);
+        const out = formatProductResponse(upcResponse.data.foods[0], upcCode);
+        out.debugDetails = { attempts };
+        return out;
       }
     } catch (upcError) {
       console.error('Error in UPC-specific search:', upcError);
@@ -88,6 +196,27 @@ async function getProductByUpc(upcCode) {
       if (upcError.response) {
         console.error('Error response status:', upcError.response.status);
         console.error('Error response data:', JSON.stringify(upcError.response.data, null, 2));
+      }
+    }
+
+    // Try normalized UPC variants if no results yet
+    const variants = generateUpcVariants(upcCode);
+    for (const variant of variants) {
+      try {
+        console.log('Trying UPC variant:', variant);
+        const params2 = { api_key: USDA_API_KEY, query: variant, dataType: 'Branded', pageSize: 1 };
+        const resp2 = await axios.get(`https://api.nal.usda.gov/fdc/v1/foods/search`, { params: params2 });
+        const count2 = resp2.data.foods?.length || 0;
+        console.log('Variant foods count:', count2);
+        attempts.push({ query: String(variant), status: resp2.status, foodsCount: count2 });
+        if (count2 > 0) {
+          const exact2 = resp2.data.foods.find(f => f.gtinUpc === variant || f.gtin_upc === variant || f.upc === variant) || resp2.data.foods[0];
+          const out = formatProductResponse(exact2, upcCode);
+          out.debugDetails = { attempts };
+          return out;
+        }
+      } catch (e2) {
+        console.warn('Variant search error:', e2.message);
       }
     }
 
@@ -104,6 +233,7 @@ async function getProductByUpc(upcCode) {
         upc: upcCode,
         isGenericFallback: true // Flag to indicate this is fallback data
       },
+      debugDetails: { attempts },
       isMockData: false
     };
   } catch (error) {
