@@ -3,19 +3,21 @@ const router = express.Router();
 const { authJwt } = require('../middleware');
 const groupController = require('../controllers/group.controller');
 
-// Apply authentication middleware to specific routes instead of all routes
-// This allows group creation without authentication for debugging purposes
+// ===== PUBLIC GROUP DISCOVERY =====
+
+// Get all groups (public)
+router.get('/', groupController.getAllGroups);
+
+// Get a specific group (public)
+router.get('/:id', groupController.getGroupById);
+
+// Require authentication for all routes below this point
+router.use(authJwt.verifyToken);
 
 // ===== GROUP MANAGEMENT =====
 
 // Create a new group
 router.post('/', groupController.createGroup);
-
-// Get all groups
-router.get('/', groupController.getAllGroups);
-
-// Get a specific group
-router.get('/:id', groupController.getGroupById);
 
 // Update a group
 router.put('/:id', groupController.updateGroup);

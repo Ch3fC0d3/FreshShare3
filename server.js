@@ -26,28 +26,37 @@ const fs = require('fs');
 // Load environment variables from .env file
 const dotenv = require('dotenv');
 const envPath = path.resolve(__dirname, '.env');
-console.log('Loading environment variables from:', envPath);
+
 if (fs.existsSync(envPath)) {
   const result = dotenv.config({ path: envPath });
   if (result.error) {
     console.error('Error loading .env file:', result.error);
-  } else {
-    console.log('Successfully loaded environment variables');
-    // Log environment variables for debugging
-    console.log('Environment variables loaded:');
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('USDA_API_KEY present:', process.env.USDA_API_KEY ? 'Yes' : 'No');
-    if (process.env.USDA_API_KEY) {
-      const keyLength = process.env.USDA_API_KEY.length;
-      console.log('USDA_API_KEY length:', keyLength);
-      console.log('USDA_API_KEY preview:', `${process.env.USDA_API_KEY.substring(0, 3)}...${process.env.USDA_API_KEY.substring(keyLength - 3)}`);
-    } else {
-      console.log('WARNING: USDA_API_KEY is not set!');
-    }
   }
 } else {
-  console.error('.env file not found at path:', envPath);
   dotenv.config(); // Fallback to default dotenv behavior
+}
+
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_PRODUCTION = NODE_ENV === 'production';
+const DEBUG_LOGGING_ENABLED = !IS_PRODUCTION || process.env.DEBUG_LOGGING === 'true';
+const REQUEST_LOGGING_VERBOSE = process.env.REQUEST_LOGGING === 'verbose';
+const logDebug = (...args) => {
+  if (DEBUG_LOGGING_ENABLED) {
+    console.log(...args);
+  }
+};
+const logRequest = (...args) => {
+  if (DEBUG_LOGGING_ENABLED || REQUEST_LOGGING_VERBOSE) {
+    console.log(...args);
+  }
+};
+
+logDebug('Environment configuration loaded from:', envPath);
+logDebug('NODE_ENV:', NODE_ENV);
+logDebug('USDA_API_KEY present:', process.env.USDA_API_KEY ? 'Yes' : 'No');
+
+if (IS_PRODUCTION && !process.env.USDA_API_KEY) {
+  console.warn('USDA_API_KEY is not set; UPC-based lookups may be disabled.');
 }
 
 const app = express();
@@ -70,11 +79,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-  next();
-});
+// Request logging middleware (quieter in production)
+if (DEBUG_LOGGING_ENABLED || REQUEST_LOGGING_VERBOSE) {
+  app.use((req, res, next) => {
+    logRequest(`${new Date().toISOString()} ${req.method} ${req.url}`);
+    next();
+  });
+}
 
 // Security: Content Security Policy (CSP)
 // Allow our own scripts/styles/images/fonts and required CDNs. Do NOT allow 'unsafe-eval'.
@@ -132,10 +143,22 @@ app.use((req, res, next) => {
 
 // Feature flags middleware (expose to views)
 app.use((req, res, next) => {
-  const val = (process.env.UPC_SCANNER_AUTOSTART || '').toLowerCase();
-  const enabled = val === '' || val === undefined || ['1', 'true', 'yes', 'on'].includes(val);
+  const rawValue = process.env.UPC_SCANNER_AUTOSTART;
+  const normalized = typeof rawValue === 'string' ? rawValue.trim().toLowerCase() : '';
+  const truthyValues = ['1', 'true', 'yes', 'on'];
+  const falsyValues = ['0', 'false', 'no', 'off'];
+  let scannerAutoStart = true; // default-on for legacy behaviour
+  if (normalized) {
+    if (truthyValues.includes(normalized)) {
+      scannerAutoStart = true;
+    } else if (falsyValues.includes(normalized)) {
+      scannerAutoStart = false;
+    }
+  } else if (rawValue === '') {
+    scannerAutoStart = true;
+  }
   res.locals.featureFlags = {
-    scannerAutoStart: enabled
+    scannerAutoStart
   };
   next();
 });
@@ -751,7 +774,7 @@ app.use('/api/marketplace', marketplaceApiRoutes);
 // Groups API routes
 const groupApiRoutes = require('./routes/groups.routes');
 const authJwt = require('./middleware/authJwt');
-app.use('/api/groups', authJwt.verifyToken, groupApiRoutes);
+app.use('/api/groups', groupApiRoutes);
 
 // Dashboard API routes
 try {
