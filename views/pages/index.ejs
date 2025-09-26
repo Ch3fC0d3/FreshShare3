@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/image-optimization.css">
     <link rel="stylesheet" href="/css/step-card-fix.css">
-    <!-- Preload critical images -->
-    <link rel="preload" as="image" href="/uploads/marketplace/vegetables.jpg">
-    <link rel="preload" as="image" href="/uploads/marketplace/people.jpg">
+    <!-- Preload critical images (use existing assets) -->
+    <link rel="preload" as="image" href="/images/vegetables.jpg">
+    <link rel="preload" as="image" href="/images/people.jpg">
 </head>
 <body>
     <!-- Hero Section -->
@@ -70,8 +70,7 @@
                         <h3 class="sub-heading">How It Benefits You</h3>
                         <div class="benefits-grid">
                             <div class="video-container">
-                                <video class="feature-video" poster="/uploads/marketplace/vegetables.jpg" controls>
-                                    <source src="/uploads/marketplace/vwcc.mp4" type="video/mp4">
+                                <video class="feature-video" poster="/images/vegetables.jpg" controls>
                                     Your browser does not support the video tag.
                                 </video>
                                 <div class="video-caption">Watch how FreshShare benefits your community</div>
@@ -152,61 +151,6 @@
         </div>
     </section>
 
-    <script>
-        // Add animations on scroll
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('FreshShare landing page loaded');
-            
-            // Lazy loading for images
-            const lazyImages = document.querySelectorAll('img.lazy-load');
-            
-            // Add loading class to images initially
-            lazyImages.forEach(img => {
-                img.parentNode.classList.add('image-loading');
-            });
-            
-            // Create intersection observer for lazy loading
-            if ('IntersectionObserver' in window) {
-                const imageObserver = new IntersectionObserver((entries, observer) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            img.classList.add('loaded');
-                            img.parentNode.classList.remove('image-loading');
-                            imageObserver.unobserve(img);
-                        }
-                    });
-                });
-                
-                lazyImages.forEach(img => {
-                    imageObserver.observe(img);
-                });
-            } else {
-                // Fallback for browsers that don't support IntersectionObserver
-                lazyImages.forEach(img => {
-                    img.classList.add('loaded');
-                    img.parentNode.classList.remove('image-loading');
-                });
-            }
-            
-            // Animate elements on scroll
-            const animateOnScroll = function() {
-                const elements = document.querySelectorAll('.feature-card, .step-item');
-                elements.forEach(element => {
-                    const position = element.getBoundingClientRect();
-                    // If element is in viewport
-                    if(position.top < window.innerHeight && position.bottom >= 0) {
-                        element.style.opacity = '1';
-                    }
-                });
-            };
-            
-            // Initial check on load
-            animateOnScroll();
-            
-            // Check on scroll
-            window.addEventListener('scroll', animateOnScroll);
-        });
-    </script>
+    <script src="/js/index-page.js"></script>
 </body>
 </html>

@@ -139,4 +139,103 @@ class FreshShareHeader {
 // Initialize the header when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   new FreshShareHeader();
+  // Messages unread badge updater
+  try {
+    const getCookie = (name) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    };
+    const getToken = () => {
+      try { return localStorage.getItem('token') || getCookie('token'); } catch(_) { return getCookie('token'); }
+    };
+    const badge = document.getElementById('fsMsgBadge');
+    async function refreshHeaderUnread() {
+      if (!badge) return;
+      try {
+        const token = getToken();
+        const res = await fetch('/api/messages/unread-count', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        const count = (json && json.data && typeof json.data.count === 'number') ? json.data.count : 0;
+        if (count > 0) {
+          badge.style.display = 'inline-block';
+          badge.textContent = String(count);
+        } else {
+          badge.style.display = 'none';
+          badge.textContent = '0';
+        }
+      } catch(_) { /* silent */ }
+    }
+    // Initial fetch and polling
+    refreshHeaderUnread();
+    setInterval(refreshHeaderUnread, 60000);
+    // Listen for custom events from other pages to refresh quickly
+    window.addEventListener('messages:unread-updated', refreshHeaderUnread);
+  } catch(_) {}
+  // Verify Email modal logic (moved from header.ejs to comply with CSP)
+  try {
+    const verifyEmailBtn = document.getElementById('verifyEmailBtn');
+    const sendVerificationBtn = document.getElementById('sendVerificationBtn');
+    const verifySuccessAlert = document.getElementById('verifySuccessAlert');
+    const verifyErrorAlert = document.getElementById('verifyErrorAlert');
+    const verifyEmailModalEl = document.getElementById('verifyEmailModal');
+    let verifyEmailModal = null;
+    try { if (verifyEmailModalEl && window.bootstrap) verifyEmailModal = new bootstrap.Modal(verifyEmailModalEl); } catch(_) {}
+
+    if (verifyEmailBtn && verifyEmailModal) {
+      verifyEmailBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        try { verifyEmailModal.show(); } catch(_) {}
+      });
+    }
+
+    if (sendVerificationBtn) {
+      sendVerificationBtn.addEventListener('click', async function(){
+        try {
+          if (verifySuccessAlert) verifySuccessAlert.classList.add('d-none');
+          if (verifyErrorAlert) verifyErrorAlert.classList.add('d-none');
+          sendVerificationBtn.disabled = true;
+          sendVerificationBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+          const token = (function(){ try { return localStorage.getItem('token') || ''; } catch(_) { return ''; } })();
+          const response = await fetch('/api/email/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+          });
+          const data = await response.json().catch(() => ({}));
+          if (data && data.success) {
+            if (verifySuccessAlert) verifySuccessAlert.classList.remove('d-none');
+          } else {
+            if (verifyErrorAlert) {
+              verifyErrorAlert.textContent = (data && data.message) || 'Failed to send verification email. Please try again.';
+              verifyErrorAlert.classList.remove('d-none');
+            }
+          }
+        } catch (error) {
+          if (verifyErrorAlert) {
+            verifyErrorAlert.textContent = 'An error occurred. Please try again later.';
+            verifyErrorAlert.classList.remove('d-none');
+          }
+          try { console.error('Verify email error:', error); } catch(_) {}
+        } finally {
+          sendVerificationBtn.disabled = false;
+          sendVerificationBtn.innerHTML = 'Send Verification Email';
+        }
+      });
+    }
+  } catch(_) {}
+
+  // Navbar Cart button opens the global cart panel
+  try {
+    const fsCartBtn = document.getElementById('fsCartBtn');
+    if (fsCartBtn){
+      fsCartBtn.addEventListener('click', () => {
+        const panel = document.getElementById('myCartPanel');
+        if (panel){ panel.classList.add('open'); panel.setAttribute('aria-hidden','false'); }
+        const refresh = document.getElementById('myCartRefresh');
+        if (refresh){ try { refresh.click(); } catch(_) {} }
+      });
+    }
+  } catch(_) {}
 });

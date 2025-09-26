@@ -2,9 +2,9 @@
 <style>
   /* Styles moved to main.css */
 </style>
-<link rel="stylesheet" href="/css/main.css">
-<link rel="stylesheet" href="/css/upc-scanner.css">
-<link rel="stylesheet" href="/css/autocomplete.css">
+<link rel="stylesheet" href="/css/main.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
+<link rel="stylesheet" href="/css/upc-scanner.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
+<link rel="stylesheet" href="/css/autocomplete.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
 
 <%- contentFor('body') %>
 <div class="main-content">
@@ -28,7 +28,7 @@
       </div>
       <% } %>
       
-      <form id="createListingForm" data-auth="<%= !!user %>" enctype="multipart/form-data">
+      <form id="createListingForm" data-auth="<%= !!user %>" data-user-id="<%= user ? user._id : '' %>" data-scanner-autostart="<%= (featureFlags && featureFlags.scannerAutoStart) ? 'true' : 'false' %>" enctype="multipart/form-data">
         <!-- Basic Information -->
         <div class="form-section">
           <h3>Basic Information</h3>
@@ -41,6 +41,16 @@
             <div class="form-text">Selecting a previous listing will pre-fill this form. Review and adjust before submitting.</div>
             <div id="templatesFetchStatus" class="form-text text-muted" style="display:none"></div>
             <a href="#" id="templatesRetry" class="small" style="display:none">Retry</a>
+          </div>
+          <% } %>
+          <% if (user) { %>
+          <div class="mb-3">
+            <label for="groupId" class="form-label">Group*</label>
+            <select class="form-select" id="groupId" name="groupId">
+              <option value="">Loading your groups...</option>
+            </select>
+            <div id="groupHelp" class="form-text">Your listing will belong to this group.</div>
+            <div class="error-message" id="group-error" style="display:none"></div>
           </div>
           <% } %>
           <div class="mb-3">
@@ -62,6 +72,7 @@
                 <span class="input-group-text">$</span>
                 <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" required>
               </div>
+              <div class="form-text">If Unit is <strong>Case</strong>, this Price is treated as the <strong>Case Price</strong>.</div>
             </div>
             
             <div class="col-md-6 mb-3">
@@ -73,7 +84,20 @@
                 <option value="oz">Per ounce (oz)</option>
                 <option value="bunch">Per bunch</option>
                 <option value="hour">Per hour</option>
+                <option value="case">Case</option>
               </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="casePrice" class="form-label">Case Price</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" id="casePrice" name="casePrice" min="0" step="0.01" placeholder="Total price per case">
+              </div>
+              <div class="form-text">Total price for one wholesale case. Combine with Case Size below.</div>
+              <div class="form-text" id="priceBreakdown"></div>
             </div>
           </div>
           
@@ -104,10 +128,48 @@
               <div class="form-text">Enter the number of units in one wholesale case.</div>
             </div>
           </div>
+
+          <div class="mb-3">
+            <div class="form-check form-switch mb-2">
+              <input type="checkbox" class="form-check-input switch-lg" id="pieceOrdering-enabled" name="pieceOrdering[enabled]">
+              <label class="form-check-label fw-semibold" for="pieceOrdering-enabled">Enable per-piece ordering with rolling cases</label>
+            </div>
+            <div class="alert alert-info py-2 po-explainer" role="alert">
+              <i class="bi bi-info-circle me-1"></i>
+              <strong>Shoppers reserve individual pieces</strong> up to a case. When the case fills, it locks and a new case opens automatically.
+            </div>
+          </div>
           
           <div class="mb-3">
             <label for="quantity" class="form-label">Quantity Available</label>
             <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1">
+          </div>
+
+          <!-- Group Buy -->
+          <div class="form-section">
+            <h3>Group Buy</h3>
+            <div class="form-check form-switch mb-2">
+              <input type="checkbox" class="form-check-input switch-lg" id="groupBuy-enabled" name="groupBuy[enabled]">
+              <label class="form-check-label fw-semibold" for="groupBuy-enabled">Enable group buy</label>
+            </div>
+            <div class="alert alert-info py-2" role="alert">
+              <i class="bi bi-people me-1"></i>
+              Buyers can <strong>commit cases together</strong>. When the target is reached by the deadline, place the order.
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="groupBuy-minCases" class="form-label">Minimum Cases</label>
+                <input type="number" min="1" step="1" class="form-control" id="groupBuy-minCases" name="groupBuy[minCases]" placeholder="e.g., 2">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="groupBuy-targetCases" class="form-label">Target Cases</label>
+                <input type="number" min="1" step="1" class="form-control" id="groupBuy-targetCases" name="groupBuy[targetCases]" placeholder="e.g., 6">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="groupBuy-deadline" class="form-label">Deadline</label>
+                <input type="datetime-local" class="form-control" id="groupBuy-deadline" name="groupBuy[deadline]">
+              </div>
+            </div>
           </div>
           
           <div class="mb-3 form-check">
@@ -124,6 +186,8 @@
               </button>
             </div>
             <div class="form-text">Scan or enter a UPC code to automatically fetch product information</div>
+            <!-- Hidden field to capture a product image URL from UPC lookup (quick path) -->
+            <input type="hidden" id="imageUrl" name="imageUrl" />
           </div>
         </div>
         
@@ -175,9 +239,9 @@
           </div>
         </div>
         
-        <!-- Vendor Information (optional) -->
+        <!-- Vendor selection -->
         <div class="form-section">
-          <h3>Vendor Information <small class="text-muted">(optional)</small></h3>
+          <h3>Vendor <small class="text-muted">(optional)</small></h3>
           <% if (user) { %>
           <div class="row align-items-end">
             <div class="col-md-8 mb-3">
@@ -185,42 +249,38 @@
               <select class="form-select" id="saved-vendor">
                 <option value="">Select a saved vendor</option>
               </select>
-              <div class="form-text">Choose a saved vendor to auto-fill the fields.</div>
               <div id="vendorsFetchStatus" class="form-text text-muted" style="display:none"></div>
               <a href="#" id="vendorsRetry" class="small" style="display:none">Retry</a>
             </div>
             <div class="col-md-4 mb-3">
-              <div class="form-check mt-4">
-                <input type="checkbox" class="form-check-input" id="save-vendor">
-                <label class="form-check-label" for="save-vendor">Save vendor info for future use</label>
+              <label class="form-label d-block">&nbsp;</label>
+              <div class="d-grid gap-2">
+                <button type="button" id="vendorQuickPickBtn" class="btn btn-secondary w-100"><i class="fas fa-user-check me-1"></i> Quick Pick</button>
+                <a href="/vendors?return=/create-listing" class="btn btn-outline-secondary w-100"><i class="fas fa-plus me-1"></i> Add Vendor</a>
               </div>
             </div>
           </div>
           <% } %>
           <input type="hidden" id="vendorId" name="vendorId" />
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="vendor-name" class="form-label">Vendor Name</label>
-              <input type="text" class="form-control" id="vendor-name" name="vendor[name]" placeholder="e.g., Local Farm Co.">
+        </div>
+
+        <!-- Vendor Quick Pick Modal (Bootstrap) -->
+        <div class="modal fade" id="vendorQuickPickModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Select a Vendor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="vendorQuickPickClose"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <input id="vendorQuickPickSearch" type="text" class="form-control" placeholder="Search vendors by name or city..." autocomplete="off">
+                </div>
+                <div id="vendorQuickPickList" class="list-group">
+                  <div class="p-3 text-muted">Loading…</div>
+                </div>
+              </div>
             </div>
-            <div class="col-md-6 mb-3">
-              <label for="vendor-website" class="form-label">Website</label>
-              <input type="text" inputmode="url" class="form-control" id="vendor-website" name="vendor[website]" placeholder="https://example.com">
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="vendor-email" class="form-label">Contact Email</label>
-              <input type="email" class="form-control" id="vendor-email" name="vendor[contactEmail]" placeholder="vendor@example.com">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="vendor-phone" class="form-label">Contact Phone</label>
-              <input type="tel" class="form-control" id="vendor-phone" name="vendor[contactPhone]" placeholder="(555) 123-4567">
-            </div>
-          </div>
-          <div class="mb-3">
-            <label for="vendor-notes" class="form-label">Notes</label>
-            <textarea class="form-control" id="vendor-notes" name="vendor[notes]" rows="3" placeholder="Additional vendor details, terms, or sourcing notes"></textarea>
           </div>
         </div>
 
@@ -252,507 +312,12 @@
 <%- include('../partials/upc-scanner-modal') %>
 
 <%- contentFor('script') %>
+<!-- Polyfill to prevent Quagga from using Function(...) path under strict CSP -->
+<script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.13.11/runtime.min.js"></script>
 <!-- Include QuaggaJS for barcode scanning -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.2/dist/quagga.min.js"></script>
-<!-- Expose feature flags to the client -->
-<script>
-  window.FeatureFlags = Object.freeze({
-    scannerAutoStart: <%= (typeof featureFlags !== 'undefined' && featureFlags && featureFlags.scannerAutoStart) ? true : false %>
-  });
-  console.log('FeatureFlags:', window.FeatureFlags);
-  if (!window.FeatureFlags.scannerAutoStart) {
-    console.log('Scanner auto-start disabled by UPC_SCANNER_AUTOSTART flag');
-  }
-  </script>
 <!-- Include UPC Lookup Script -->
-<script src="/js/upc-lookup.js"></script>
-<script src="/js/food-autocomplete.js"></script>
+<script src="/js/upc-lookup.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+<script src="/js/food-autocomplete.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
 <!-- Food API script removed - functionality now integrated in main code -->
-<script>
-  // Global variables
-  let selectedFiles = [];
-  let tags = [];
-  
-  // DOM elements
-  const imageUploadContainer = document.getElementById('imageUploadContainer');
-  const imageUpload = document.getElementById('imageUpload');
-  const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-  const tagInput = document.getElementById('tagInput');
-  const tagContainer = document.getElementById('tagContainer');
-  const createListingForm = document.getElementById('createListingForm');
-  const cancelButton = document.getElementById('cancelButton');
-  const savedVendorSelect = document.getElementById('saved-vendor');
-  const vendorIdInput = document.getElementById('vendorId');
-  const saveVendorCheckbox = document.getElementById('save-vendor');
-  const savedTemplateSelect = document.getElementById('saved-template');
-
-  // Auth flag (read from data attribute to avoid EJS inside JS)
-  const IS_AUTH = (document.getElementById('createListingForm').dataset.auth === 'true');
-  let SAVED_VENDORS = [];
-  let SAVED_TEMPLATES = [];
-  
-  // Handle image upload
-  imageUploadContainer.addEventListener('click', () => {
-    imageUpload.click();
-  });
-  
-  imageUploadContainer.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    imageUploadContainer.classList.add('border-primary');
-  });
-  
-  imageUploadContainer.addEventListener('dragleave', () => {
-    imageUploadContainer.classList.remove('border-primary');
-  });
-  
-  imageUploadContainer.addEventListener('drop', (e) => {
-    e.preventDefault();
-    imageUploadContainer.classList.remove('border-primary');
-    
-    if (e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
-    }
-  });
-
-  // -------- Saved Vendors & Templates Logic --------
-  async function loadVendors() {
-    const statusEl = document.getElementById('vendorsFetchStatus');
-    const retryEl = document.getElementById('vendorsRetry');
-    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Loading saved vendors...'; }
-    if (retryEl) retryEl.style.display = 'none';
-    try {
-      const res = await fetch('/api/marketplace/vendors');
-      if (!res.ok) {
-        if (statusEl) {
-          if (res.status === 401) statusEl.textContent = 'Please log in to load saved vendors.';
-          else statusEl.textContent = `Failed to load vendors (HTTP ${res.status}).`;
-        }
-        if (retryEl) retryEl.style.display = 'inline';
-        return;
-      }
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        SAVED_VENDORS = json.data;
-        populateVendorSelect();
-        if (statusEl) {
-          if (SAVED_VENDORS.length === 0) { statusEl.textContent = 'No saved vendors yet.'; statusEl.style.display = 'block'; }
-          else { statusEl.textContent = ''; statusEl.style.display = 'none'; }
-        }
-        if (retryEl) retryEl.style.display = 'none';
-      } else if (statusEl) {
-        statusEl.textContent = 'Failed to load vendors.';
-        if (retryEl) retryEl.style.display = 'inline';
-      }
-    } catch (err) {
-      console.warn('Failed to load vendors:', err);
-      if (statusEl) statusEl.textContent = 'Network error loading vendors.';
-      const retryEl = document.getElementById('vendorsRetry');
-      if (retryEl) retryEl.style.display = 'inline';
-    }
-  }
-  function populateVendorSelect() {
-    if (!savedVendorSelect) return;
-    savedVendorSelect.innerHTML = '<option value="">Select a saved vendor</option>';
-    SAVED_VENDORS.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v._id;
-      opt.textContent = v.name || '(Unnamed vendor)';
-      savedVendorSelect.appendChild(opt);
-    });
-  }
-  function onVendorSelect() {
-    const id = savedVendorSelect.value;
-    vendorIdInput.value = id || '';
-    const v = SAVED_VENDORS.find(x => x._id === id);
-    if (v) {
-      setValue('vendor-name', v.name || '');
-      setValue('vendor-email', v.contactEmail || '');
-      setValue('vendor-phone', v.contactPhone || '');
-      setValue('vendor-website', v.website || '');
-      setValue('vendor-notes', v.notes || '');
-    }
-  }
-  function setValue(id, val) {
-    const el = document.getElementById(id);
-    if (el) el.value = val;
-  }
-  async function loadTemplates() {
-    const statusEl = document.getElementById('templatesFetchStatus');
-    const retryEl = document.getElementById('templatesRetry');
-    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Loading previous listings...'; }
-    if (retryEl) retryEl.style.display = 'none';
-    try {
-      const res = await fetch('/api/marketplace/my-templates');
-      if (!res.ok) {
-        if (statusEl) {
-          if (res.status === 401) statusEl.textContent = 'Please log in to load previous listings.';
-          else if (res.status === 404) statusEl.textContent = 'Previous listings feature is unavailable right now.';
-          else statusEl.textContent = `Failed to load previous listings (HTTP ${res.status}).`;
-        }
-        if (retryEl) retryEl.style.display = 'inline';
-        return;
-      }
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        SAVED_TEMPLATES = json.data;
-        populateTemplateSelect();
-        if (statusEl) {
-          if (SAVED_TEMPLATES.length === 0) { statusEl.textContent = 'No previous listings yet.'; statusEl.style.display = 'block'; }
-          else { statusEl.textContent = ''; statusEl.style.display = 'none'; }
-        }
-        if (retryEl) retryEl.style.display = 'none';
-      } else if (statusEl) {
-        statusEl.textContent = 'Failed to load previous listings.';
-        if (retryEl) retryEl.style.display = 'inline';
-      }
-    } catch (err) {
-      console.warn('Failed to load templates:', err);
-      if (statusEl) statusEl.textContent = 'Network error loading previous listings.';
-      if (retryEl) retryEl.style.display = 'inline';
-    }
-  }
-  function populateTemplateSelect() {
-    if (!savedTemplateSelect) return;
-    savedTemplateSelect.innerHTML = '<option value="">Select a previous listing to prefill...</option>';
-    SAVED_TEMPLATES.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t._id;
-      opt.textContent = t.title || '(Untitled listing)';
-      savedTemplateSelect.appendChild(opt);
-    });
-  }
-  function onTemplateSelect() {
-    const id = savedTemplateSelect.value;
-    const t = SAVED_TEMPLATES.find(x => x._id === id);
-    if (t) applyTemplateToForm(t);
-  }
-  function applyTemplateToForm(t) {
-    setValue('title', t.title || '');
-    const desc = document.getElementById('description');
-    if (desc) desc.value = t.description || '';
-    setValue('price', typeof t.price === 'number' ? t.price : (t.price || ''));
-    const priceUnit = document.getElementById('priceUnit');
-    if (priceUnit && t.priceUnit) priceUnit.value = t.priceUnit;
-    const category = document.getElementById('category');
-    if (category && t.category) category.value = t.category;
-    setValue('quantity', typeof t.quantity === 'number' ? t.quantity : (t.quantity || ''));
-    setValue('caseSize', typeof t.caseSize === 'number' ? t.caseSize : (t.caseSize || ''));
-    const isOrg = document.getElementById('isOrganic');
-    if (isOrg && typeof t.isOrganic === 'boolean') isOrg.checked = t.isOrganic;
-    setValue('listing-upc', t.upcCode || '');
-
-    // Vendor snapshot or vendorId
-    if (t.vendorId && savedVendorSelect) {
-      // Try to select the vendor; if not loaded yet, will be set when vendors load
-      vendorIdInput.value = t.vendorId;
-      // If vendors already loaded, set the select; otherwise leave it
-      const hasOption = Array.from(savedVendorSelect.options).some(o => o.value === t.vendorId);
-      if (hasOption) savedVendorSelect.value = t.vendorId;
-    }
-    if (t.vendor) {
-      setValue('vendor-name', t.vendor.name || '');
-      setValue('vendor-email', t.vendor.contactEmail || '');
-      setValue('vendor-phone', t.vendor.contactPhone || '');
-      setValue('vendor-website', t.vendor.website || '');
-      const notesEl = document.getElementById('vendor-notes');
-      if (notesEl) notesEl.value = t.vendor.notes || '';
-    }
-  }
-
-  // Attach listeners and load data if authenticated
-  if (IS_AUTH) {
-    if (savedVendorSelect) savedVendorSelect.addEventListener('change', onVendorSelect);
-    if (savedTemplateSelect) savedTemplateSelect.addEventListener('change', onTemplateSelect);
-    const vendorsRetry = document.getElementById('vendorsRetry');
-    if (vendorsRetry) vendorsRetry.addEventListener('click', (e) => { e.preventDefault(); loadVendors(); });
-    const templatesRetry = document.getElementById('templatesRetry');
-    if (templatesRetry) templatesRetry.addEventListener('click', (e) => { e.preventDefault(); loadTemplates(); });
-    loadVendors();
-    loadTemplates();
-  }
-  
-  imageUpload.addEventListener('change', () => {
-    handleFiles(imageUpload.files);
-  });
-  
-  function handleFiles(files) {
-    if (selectedFiles.length + files.length > 5) {
-      alert('You can upload a maximum of 5 images.');
-      return;
-    }
-    
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // Validate file type and size
-      if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
-        alert('Only JPG and PNG images are allowed.');
-        continue;
-      }
-      
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should not exceed 5MB.');
-        continue;
-      }
-      
-      selectedFiles.push(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const preview = document.createElement('div');
-        preview.className = 'image-preview';
-        preview.innerHTML = `
-          <img src="${e.target.result}" alt="Preview">
-          <div class="remove-image" data-index="${selectedFiles.length - 1}">
-            <i class="fas fa-times"></i>
-          </div>
-        `;
-        imagePreviewContainer.appendChild(preview);
-        
-        // Add event listener to remove button
-        preview.querySelector('.remove-image').addEventListener('click', function() {
-          const index = parseInt(this.dataset.index);
-          removeImage(index);
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-    
-    // Reset file input
-    imageUpload.value = '';
-  }
-  
-  function removeImage(index) {
-    selectedFiles.splice(index, 1);
-    updateImagePreviews();
-  }
-  
-  function updateImagePreviews() {
-    imagePreviewContainer.innerHTML = '';
-    
-    selectedFiles.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const preview = document.createElement('div');
-        preview.className = 'image-preview';
-        preview.innerHTML = `
-          <img src="${e.target.result}" alt="Preview">
-          <div class="remove-image" data-index="${index}">
-            <i class="fas fa-times"></i>
-          </div>
-        `;
-        imagePreviewContainer.appendChild(preview);
-        
-        // Add event listener to remove button
-        preview.querySelector('.remove-image').addEventListener('click', function() {
-          const index = parseInt(this.dataset.index);
-          removeImage(index);
-        });
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-  
-  // Handle tags
-  tagInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      
-      const tag = tagInput.value.trim();
-      
-      if (tag && !tags.includes(tag)) {
-        tags.push(tag);
-        updateTags();
-      }
-      
-      tagInput.value = '';
-    }
-  });
-  
-  function updateTags() {
-    tagContainer.innerHTML = '';
-    
-    tags.forEach((tag, index) => {
-      const tagElement = document.createElement('div');
-      tagElement.className = 'tag';
-      tagElement.innerHTML = `
-        <span>${tag}</span>
-        <i class="fas fa-times remove-tag" data-index="${index}"></i>
-      `;
-      tagContainer.appendChild(tagElement);
-      
-      // Add event listener to remove button
-      tagElement.querySelector('.remove-tag').addEventListener('click', function() {
-        const index = parseInt(this.dataset.index);
-        removeTag(index);
-      });
-    });
-  }
-  
-  function removeTag(index) {
-    tags.splice(index, 1);
-    updateTags();
-  }
-  
-  // Handle form submission
-  createListingForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // Normalize vendor website to include scheme to avoid browser validation issues
-    const vendorWebsiteEl = document.getElementById('vendor-website');
-    if (vendorWebsiteEl && vendorWebsiteEl.value && vendorWebsiteEl.value.trim()) {
-      vendorWebsiteEl.value = normalizeUrl(vendorWebsiteEl.value.trim());
-    }
-
-    // Create FormData object
-    const formData = new FormData(createListingForm);
-    
-    // Remove existing files and add selected files
-    formData.delete('images');
-    selectedFiles.forEach(file => {
-      formData.append('images', file);
-    });
-    
-    // Add tags
-    formData.delete('tags');
-    tags.forEach(tag => {
-      formData.append('tags', tag);
-    });
-
-    // Add saveVendor flag
-    if (saveVendorCheckbox) {
-      formData.set('saveVendor', saveVendorCheckbox.checked ? 'true' : 'false');
-    }
-    
-    try {
-      const response = await fetch('/api/marketplace', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert('Listing created successfully!');
-        window.location.href = '/marketplace';
-      } else {
-        const statusInfo = response && typeof response.status === 'number' ? ` (HTTP ${response.status})` : '';
-        const details = Array.isArray(data.errors) && data.errors.length ? `\n- ${data.errors.join('\n- ')}` : '';
-        alert(`Failed to create listing${statusInfo}: ${data.message || 'Unknown error'}${details}`);
-      }
-    } catch (error) {
-      console.error('Error creating listing:', error);
-      alert('An error occurred while creating the listing. Please try again.');
-    }
-  });
-  
-  // Handle cancel button
-  cancelButton.addEventListener('click', () => {
-    if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
-      window.location.href = '/marketplace';
-    }
-  });
-  
-  // Initialize map (placeholder for now)
-  function initMap() {
-    // This would be implemented with a mapping API like Google Maps or Leaflet
-    console.log('Map initialization would happen here');
-  }
-  function normalizeUrl(url) {
-    try {
-      const s = (url || '').trim();
-      if (!s) return '';
-      if (/^https?:\/\//i.test(s)) return s;
-      return 'https://' + s;
-    } catch (e) { return url; }
-  }
-  
-  // Initialize the page
-  document.addEventListener('DOMContentLoaded', function() {
-    initMap();
-    
-    // Initialize food autocomplete
-    console.log('🍎 Initializing food autocomplete...');
-    try {
-      const titleInput = document.getElementById('title');
-      if (titleInput) {
-        console.log('🍎 Found title input element, setting up food autocomplete');
-        // Initialize the food autocomplete on the title field with proper result handling
-        const foodAutocomplete = new FoodAutocomplete(titleInput, {
-          maxResults: 10,
-          minLength: 2,
-          debounceTime: 300,
-          onSelect: (item) => {
-            // Optionally update other fields based on the selected item
-            const descriptionInput = document.getElementById('description');
-            if (descriptionInput && item.category) {
-              // If description is empty, add the category
-              if (!descriptionInput.value.trim()) {
-                descriptionInput.value = `Category: ${item.category}\n\nAdd more details about your ${item.description} here.`;
-              }
-            }
-          },
-          // Add onResults callback to properly handle API responses
-          onResults: (results, isMockData) => {
-            console.log('🍎 Received results:', results.length, 'items');
-            console.log('🍎 Using mock data:', isMockData ? 'Yes' : 'No');
-            
-            // Log the first few results for debugging
-            if (results.length > 0) {
-              console.log('🍎 First result:', JSON.stringify(results[0]));
-            }
-            
-            // This callback ensures the component knows we've received valid results
-            // and properly formats them for display
-            return results.map(item => ({
-              description: item.description || item.name || '',
-              category: item.category || item.foodCategory || ''
-            }));
-          }
-        });
-        console.log('🍎 Food autocomplete initialized successfully');
-        
-        // Add event listener to see when searches are triggered
-        titleInput.addEventListener('input', function() {
-          console.log('🍎 Input detected in title field:', this.value);
-        });
-      } else {
-        console.error('🍎❌ Could not find title input element!');
-      }
-    } catch (error) {
-      console.error('🍎❌ Error initializing food autocomplete:', error);
-    }
-    
-    // Setup UPC scan button
-    const scanUpcBtn = document.getElementById('scan-upc-btn');
-    const upcModal = document.getElementById('upc-modal');
-    
-    if (scanUpcBtn && upcModal) {
-      scanUpcBtn.addEventListener('click', function() {
-        upcModal.style.display = 'block';
-        
-        // Reset scanner state
-        const scannerContainer = document.getElementById('scanner-container');
-        const manualEntryContainer = document.getElementById('manual-entry-container');
-        const cameraPlaceholder = document.getElementById('camera-placeholder');
-        
-        if (scannerContainer) scannerContainer.style.display = 'block';
-        if (manualEntryContainer) manualEntryContainer.style.display = 'none';
-        if (cameraPlaceholder) cameraPlaceholder.style.display = 'flex';
-        
-        // Stop scanner if it's running
-        if (typeof Quagga !== 'undefined' && Quagga.canvas && Quagga.canvas.ctx) {
-          Quagga.stop();
-        }
-
-        // Auto-start the scanner on modal open if feature flag is enabled
-        if (window.FeatureFlags && window.FeatureFlags.scannerAutoStart) {
-          if (typeof UpcLookup !== 'undefined' && typeof UpcLookup.setupUpcScanner === 'function') {
-            UpcLookup.setupUpcScanner();
-          }
-        }
-      });
-    }
-  });
-</script>
+<script src="/js/create-listing-page.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>

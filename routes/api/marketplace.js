@@ -91,12 +91,23 @@ router.get('/food-search', marketplaceController.searchFoodItems);
 
 // Saved vendors for current user
 router.get('/vendors', marketplaceController.getMyVendors);
-router.post('/vendors', marketplaceController.createVendor);
-router.put('/vendors/:id', marketplaceController.updateVendor);
+router.post('/vendors', express.json(), marketplaceController.createVendor);
+router.put('/vendors/:id', express.json(), marketplaceController.updateVendor);
 router.delete('/vendors/:id', marketplaceController.deleteVendor);
 
 // Listing templates (previous listings) for prefill
 router.get('/my-templates', marketplaceController.getMyListingTemplates);
+
+// Group buy endpoints
+router.get('/:id/groupbuy/status', marketplaceController.groupBuyStatus);
+router.post('/:id/groupbuy/commit', express.json(), marketplaceController.groupBuyCommit);
+router.delete('/:id/groupbuy/commit', marketplaceController.groupBuyCancel);
+
+// Per-piece ordering endpoints
+router.get('/:id/pieces/status', marketplaceController.pieceStatus);
+router.post('/:id/pieces', express.json(), marketplaceController.pieceSet);
+router.delete('/:id/pieces', marketplaceController.pieceCancel);
+router.get('/pieces/my', marketplaceController.myPieceReservations);
 
 // Get a single listing by ID
 router.get('/:id', marketplaceController.getListingById);
@@ -106,5 +117,10 @@ router.put('/:id', marketplaceController.updateListing);
 
 // Delete a listing
 router.delete('/:id', marketplaceController.deleteListing);
+
+// Fallback for unknown marketplace API routes: ensure JSON response (prevents HTML 404 pages)
+router.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Not found', path: req.originalUrl });
+});
 
 module.exports = router;

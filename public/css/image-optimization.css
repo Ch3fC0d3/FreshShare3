@@ -20,8 +20,8 @@ img.lazy-load.loaded {
 /* Optimize product images in marketplace */
 .product-image img {
   width: 100%;
-  height: 200px;
-  object-fit: cover; /* Maintains aspect ratio while filling container */
+  height: 100%;
+  object-fit: cover; /* Fill the container without distortion */
   border-radius: 8px 8px 0 0;
 }
 
@@ -62,10 +62,9 @@ video.feature-video {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .product-image img,
-  .step-image img {
-    height: 150px;
-  }
+  /* Increase the image container height slightly on small screens */
+  .product-image { height: 150px; }
+  .step-image img { height: 150px; }
   
   video.feature-video {
     max-height: 200px;

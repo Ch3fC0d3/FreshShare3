@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreshShare - Order Confirmation</title>
+  <link rel="stylesheet" href="/css/main.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
+  <style>
+    .confirm-wrap{max-width:960px;margin:24px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);margin-bottom:18px}
+    .card header{padding:14px 16px;border-bottom:1px solid #eef0f3;font-weight:600}
+    .card .body{padding:16px}
+    .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dotted #e5e7eb}
+    .row:last-child{border-bottom:none}
+    .muted{color:#6b7280;font-size:13px}
+    .btn{display:inline-block;margin-top:12px;padding:10px 14px;background:#0d6efd;color:#fff;border-radius:8px;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="confirm-wrap">
+    <div class="card">
+      <header>Order Confirmed</header>
+      <div class="body">
+        <p class="muted">Thank you! Your order has been submitted.</p>
+        <p><strong>Order ID:</strong> <%= order && order._id ? order._id : '' %></p>
+        <p><strong>Total:</strong> $<%= (order && order.total ? order.total.toFixed(2) : '0.00') %></p>
+        <a href="/orders/<%= order && order._id ? order._id : '' %>" class="btn">View Order</a>
+        <a href="#" id="printReceiptBtn" class="btn" style="background:#374151;margin-left:8px">Print Receipt</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>Items</header>
+      <div class="body">
+        <% if (order && order.items && order.items.length) { %>
+          <% order.items.forEach(function(it){ %>
+            <div class="row">
+              <div><%= it.title %> × <%= it.pieces %></div>
+              <div>$<%= (it.lineTotal || 0).toFixed(2) %></div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="muted">No items found.</div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>Contact</header>
+      <div class="body">
+        <div class="row"><div>Name</div><div><%= order && order.contact && order.contact.name %></div></div>
+        <div class="row"><div>Email</div><div><%= order && order.contact && order.contact.email %></div></div>
+        <% if (order && order.contact && order.contact.phone) { %>
+          <div class="row"><div>Phone</div><div><%= order.contact.phone %></div></div>
+        <% } %>
+        <% if (order && order.contact && (order.contact.street || order.contact.city)) { %>
+          <div class="row"><div>Address</div><div>
+            <%= order.contact.street || '' %>
+            <%= order.contact.city ? ', ' + order.contact.city : '' %>
+            <%= order.contact.state ? ', ' + order.contact.state : '' %>
+            <%= order.contact.zip ? ' ' + order.contact.zip : '' %>
+          </div></div>
+        <% } %>
+        <a href="/marketplace" class="btn">Back to Marketplace</a>
+      </div>
+    </div>
+
+    <% if (typeof sellers !== 'undefined' && sellers && sellers.length) { %>
+      <div class="card">
+        <header>Sellers</header>
+        <div class="body">
+          <% sellers.forEach(function(s){ %>
+            <div class="row"><div><%= s.name %></div><div>
+              <% if (s.email) { %><a href="mailto:<%= s.email %>"><%= s.email %></a><% } %>
+              <% if (s.phone) { %><span class="muted" style="margin-left:8px"><%= s.phone %></span><% } %>
+            </div></div>
+          <% }); %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+  <script src="/js/order-confirmation-page.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+</body>
+</html>

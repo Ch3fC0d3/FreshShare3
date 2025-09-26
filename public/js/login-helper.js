@@ -1,6 +1,6 @@
 /**
  * Login Helper Script
- * This script helps ensure proper authentication by setting both localStorage and cookies
+ * This script helps ensure proper authentication by updating localStorage after login.
  */
 
 (function() {
@@ -38,41 +38,43 @@
                     
                     console.log('Login response status:', response.status);
                     const data = await response.json();
-                    console.log('Login response data:', data);
+                    console.log('Login response data:', JSON.stringify(data, null, 2));
                     
                     if (response.ok) {
                         // Store token in localStorage
                         if (data.token) {
-                            localStorage.setItem('token', data.token);
-                            console.log('Token stored in localStorage');
+                            // Store the raw token exactly as the server returns it
+                            const rawToken = data.token.startsWith('Bearer ') ? data.token.substring(7) : data.token;
+                            localStorage.setItem('token', rawToken);
+                            console.log('Token stored in localStorage (raw token without Bearer prefix)');
                             
                             // Check if "Remember me" is checked
                             const rememberMe = document.getElementById('rememberMe').checked;
                             
-                            // Set token expiration based on "Remember me" option
-                            const maxAge = rememberMe ? (30 * 24 * 60 * 60) : (7 * 24 * 60 * 60); // 30 days : 7 days
-                            
-                            // Also set as a cookie (as a fallback, the server should already set it)
-                            document.cookie = `token=${data.token}; path=/; max-age=${maxAge}; SameSite=Lax`;
-                            console.log(`Token stored as a cookie with ${rememberMe ? '30-day' : '7-day'} expiration`);
-                            
                             // Store the remember me preference
                             localStorage.setItem('rememberMe', rememberMe);
+                            
+                            // Force reload cart data after successful login
+                            try {
+                                window.dispatchEvent(new CustomEvent('cart:refresh'));
+                                console.log('Triggered cart refresh event');
+                            } catch(e) {
+                                console.error('Failed to trigger cart refresh:', e);
+                            }
                         }
                         
                         // Show success message
                         errorMessage.textContent = 'Login successful! Redirecting...';
                         errorMessage.className = 'alert alert-success mb-4';
-                        errorMessage.classList.remove('d-none');
                         
                         // Get redirect URL from query parameters
                         const urlParams = new URLSearchParams(window.location.search);
                         const redirectUrl = urlParams.get('redirect');
                         
                         // Redirect to dashboard or the redirect URL
-                        console.log('Login successful, redirecting to:', redirectUrl || '/dashboard');
+                        console.log('Login successful, redirecting to:', redirectUrl || '/marketplace');
                         setTimeout(() => {
-                            window.location.href = redirectUrl || '/dashboard';
+                            window.location.href = redirectUrl || '/marketplace';
                         }, 1000);
                     } else {
                         // Show error message

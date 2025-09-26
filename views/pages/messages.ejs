@@ -1,0 +1,53 @@
+<div class="main-container">
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">Messages</h1>
+      <div class="d-flex align-items-center gap-3">
+        <span class="badge bg-primary" id="unread-badge" title="Unread messages">Unread: <span id="unread-count">0</span></span>
+        <button id="mark-all-read" class="btn btn-outline-secondary btn-sm"><i class="fas fa-check-double me-1"></i>Mark all read</button>
+      </div>
+    </div>
+
+    <!-- Compose Message -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <form id="compose-form" class="row g-2 align-items-start">
+          <div class="col-12 col-md-3">
+            <label for="compose-to" class="form-label mb-1">To (username)</label>
+            <input type="text" id="compose-to" class="form-control" placeholder="recipient username" required>
+          </div>
+          <div class="col-12 col-md-7">
+            <label for="compose-content" class="form-label mb-1">Message</label>
+            <textarea id="compose-content" class="form-control" rows="2" maxlength="2000" placeholder="Type your message..." required></textarea>
+          </div>
+          <div class="col-12 col-md-2 d-flex align-items-end">
+            <button id="compose-send" type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-paper-plane me-1"></i>Send
+            </button>
+          </div>
+        </form>
+        <div id="compose-alert" class="mt-2 small"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <ul id="messages-list" class="list-group list-group-flush">
+          <li class="list-group-item text-muted" id="messages-empty">Loading messages…</li>
+        </ul>
+      </div>
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <div class="small text-muted" id="messages-summary"></div>
+        <nav>
+          <ul class="pagination pagination-sm mb-0" id="messages-pagination"></ul>
+        </nav>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <a href="/dashboard" class="btn btn-link"><i class="fas fa-chevron-left"></i> Back to Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/messages.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>

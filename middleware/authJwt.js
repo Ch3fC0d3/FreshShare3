@@ -1,9 +1,27 @@
 const jwt = require('jsonwebtoken');
 const db = require('../models');
+const authConfig = require('../config/auth.config');
 const User = db.user;
 
-// Retrieve JWT secret from environment or use a default (in production, always use environment variable)
-const JWT_SECRET = process.env.JWT_SECRET || 'freshShare-auth-secret';
+// Retrieve JWT secret from shared auth config
+const JWT_SECRET = authConfig.secret;
+const LEGACY_JWT_SECRET = process.env.LEGACY_JWT_SECRET || 'freshShare-auth-secret';
+
+const maskToken = (token) => {
+  if (!token || typeof token !== 'string') return '(none)';
+  if (token.length <= 12) return token;
+  return `${token.slice(0, 6)}…${token.slice(-6)}`;
+};
+
+const formatAuthHeader = (headerValue) => {
+  if (!headerValue || typeof headerValue !== 'string') return '(none)';
+  const parts = headerValue.split(' ');
+  if (parts.length < 2) {
+    return maskToken(headerValue);
+  }
+  const [scheme, value] = parts;
+  return `${scheme} ${maskToken(value)}`;
+};
 
 /**
  * Verify JWT token from request headers
@@ -22,18 +40,43 @@ const verifyToken = (req, res, next) => {
   
   // Enhanced token extraction with detailed logging
   let token = null;
+  const cookieToken = req.cookies && req.cookies.token;
+  const authHeaderValue = getHeaderCaseInsensitive(req.headers, 'authorization');
+
+  try {
+    console.log(`[authJwt] ${req.method} ${req.originalUrl}`);
+    console.log('[authJwt] has cookie-parser:', !!req.cookies);
+    console.log('[authJwt] cookies.token:', maskToken(cookieToken));
+    console.log('[authJwt] Authorization header:', formatAuthHeader(authHeaderValue));
+    console.log('[authJwt] Referer:', req.headers && req.headers.referer ? req.headers.referer : '(none)');
+    console.log('[authJwt] Origin:', req.headers && req.headers.origin ? req.headers.origin : '(none)');
+  } catch (logErr) {
+    try { console.error('[authJwt] logging error:', logErr); } catch (_) {}
+  }
   
   // Check cookies first (preferred method for web pages)
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
+  if (cookieToken) {
+    token = cookieToken;
     console.log(`Token found in cookies for ${req.method} ${req.originalUrl}`);
   } 
   // Then check authorization header (for API calls)
-  else if (getHeaderCaseInsensitive(req.headers, 'authorization')) {
-    const authHeader = getHeaderCaseInsensitive(req.headers, 'authorization');
-    // Check if it has Bearer prefix and extract token
-    token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  else if (authHeaderValue) {
+    const authHeader = authHeaderValue;
+    console.log(`Raw Authorization header: ${authHeader}`);
+    
+    // IMPORTANT: Always extract token properly regardless of format
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+      console.log('Bearer prefix found, extracted token after prefix');
+    } else {
+      token = authHeader.trim();
+      console.log('No Bearer prefix found, using header value as is');
+    }
+    
     console.log(`Token found in Authorization header for ${req.method} ${req.originalUrl}`);
+    console.log(`Token extracted (first 15 chars): ${token.substring(0, 15)}...`);
+    console.log(`Token length: ${token.length}`);
+    console.log(`JWT Secret first 5 chars: ${JWT_SECRET.substring(0, 5)}...`);
     
     // If token is valid, set it as a cookie for future requests
     try {
@@ -108,9 +151,51 @@ const verifyToken = (req, res, next) => {
   // Remove Bearer prefix if present
   const tokenValue = token.startsWith('Bearer ') ? token.slice(7) : token;
   
+  let decoded = null;
   try {
-    // Verify token
-    const decoded = jwt.verify(tokenValue, JWT_SECRET);
+    console.log('Attempting to verify token with primary JWT secret');
+    console.log('Token length:', tokenValue.length);
+    console.log('Token first 15 chars:', tokenValue.substring(0, 15) + '...');
+    console.log('JWT_SECRET first 10 chars:', JWT_SECRET.substring(0, 10) + '...');
+    
+    decoded = jwt.verify(tokenValue, JWT_SECRET);
+    console.log('Token successfully verified with primary JWT secret');
+    console.log('Decoded token user ID:', decoded.id);
+  } catch (primaryError) {
+    console.error('Primary token verification failed:', primaryError.message);
+    console.error('Primary error name:', primaryError.name);
+    
+    try {
+      console.log('Attempting to verify token with legacy JWT secret');
+      console.log('LEGACY_JWT_SECRET first 10 chars:', LEGACY_JWT_SECRET.substring(0, 10) + '...');
+      
+      decoded = jwt.verify(tokenValue, LEGACY_JWT_SECRET);
+      console.warn('Token verified using legacy JWT secret. Consider reissuing tokens.');
+      console.log('Decoded token user ID (legacy):', decoded.id);
+    } catch (legacyError) {
+      console.error('Legacy token verification also failed:', legacyError.message);
+      console.error('Legacy error name:', legacyError.name);
+      // For public endpoints, continue without authentication
+      if (req.originalUrl === '/api/groups' && req.method === 'GET') {
+        return next();
+      }
+
+      // For API routes, return JSON error
+      if (req.originalUrl.startsWith('/api/')) {
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized! Token is invalid or expired.'
+        });
+      }
+
+      // For web routes, clear cookie and redirect to login
+      res.clearCookie('token');
+      return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl) + 
+                         '&error=' + encodeURIComponent('Your session has expired. Please log in again.'));
+    }
+  }
+
+  try {
     
     // Set userId in request
     req.userId = decoded.id;
@@ -139,24 +224,15 @@ const verifyToken = (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Token verification failed:', error.message);
-    
-    // For public endpoints, continue without authentication
-    if (req.originalUrl === '/api/groups' && req.method === 'GET') {
-      return next();
-    }
-    
-    // For API routes, return JSON error
+    console.error('Token post-verification processing failed:', error.message);
     if (req.originalUrl.startsWith('/api/')) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized! Token is invalid or expired.'
       });
     }
-    
-    // For web routes, clear cookie and redirect to login
     res.clearCookie('token');
-    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl) + 
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl) +
                        '&error=' + encodeURIComponent('Your session has expired. Please log in again.'));
   }
 };

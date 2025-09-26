@@ -41,6 +41,8 @@ async function initDashboard() {
     // Load calendar data for current month
     const today = new Date();
     loadCalendarEvents(today.getMonth(), today.getFullYear());
+    // Load active piece orders
+    await loadActivePieceOrders();
     
     showLoadingState(false);
   } catch (error) {
@@ -195,7 +197,8 @@ function updateTodaysSchedule(events) {
   if (!eventsContainer) return;
   
   // Clear existing events
-  const eventsList = eventsContainer.querySelector('div:not(h3)');
+  const eventsList = eventsContainer.querySelector('.events-list');
+  if (!eventsList) return;
   eventsList.innerHTML = '';
   
   if (events.length === 0) {
@@ -259,7 +262,7 @@ function updateOrdersSection(orders) {
         <span class="order-total">$${order.total.toFixed(2)}</span>
         <div class="order-actions">
           <button class="btn btn-outline" onclick="viewOrderDetails('${order.id}')">View Details</button>
-          <button class="btn btn-primary">Reorder</button>
+          <button class="btn btn-primary" onclick="reorderOrder('${order.id}', this)">Reorder</button>
         </div>
       </div>
     `;
@@ -273,7 +276,7 @@ function updateOrdersSection(orders) {
  * @param {Array} deliveries - Upcoming deliveries data
  */
 function updateDeliveriesSection(deliveries) {
-  const deliveryList = document.querySelector('.delivery-list');
+  const deliveryList = document.querySelector('#upcoming-deliveries');
   if (!deliveryList) return;
   
   deliveryList.innerHTML = '';
@@ -405,6 +408,101 @@ function initCalendarNavigation() {
  */
 function viewOrderDetails(orderId) {
   window.location.href = `/orders/${orderId}`;
+}
+
+/**
+ * Recreate per-piece reservations from a past order
+ * @param {string} orderId
+ * @param {HTMLElement} btn
+ */
+async function reorderOrder(orderId, btn){
+  try {
+    if (btn) { btn.disabled = true; }
+    const token = localStorage.getItem('token') || getCookie('token');
+    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/reorder`, {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    const json = await res.json().catch(() => ({ success: false }));
+    if (!res.ok || !json.success){
+      throw new Error((json && json.message) || `HTTP ${res.status}`);
+    }
+    try { if (typeof showToast === 'function') showToast('Items re-added from your past order.'); } catch(_) {}
+    // Refresh active piece orders section
+    try { await loadActivePieceOrders(); } catch(_) {}
+    // If global cart panel exists, refresh it too
+    try {
+      const refresh = document.getElementById('myCartRefresh');
+      if (refresh) refresh.click();
+    } catch(_) {}
+  } catch (e) {
+    console.warn('Reorder failed:', e);
+    try { if (typeof showToast === 'function') showToast(e.message || 'Reorder failed'); } catch(_) {}
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
+}
+
+// ================= Active Piece Orders =================
+async function fetchActivePieceOrders() {
+  try {
+    const token = localStorage.getItem('token') || getCookie('token');
+    const res = await fetch('/api/marketplace/pieces/my', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    if (!res.ok) {
+      if (res.status === 401) return { success: false, data: [] };
+      throw new Error(`HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (e) {
+    console.warn('Failed to fetch active piece orders:', e);
+    return { success: false, data: [] };
+  }
+}
+
+function renderActivePieceOrders(items) {
+  const ul = document.getElementById('active-piece-orders');
+  if (!ul) return;
+  ul.innerHTML = '';
+  if (!items || items.length === 0) {
+    ul.innerHTML = '<li class="no-data">No active piece orders</li>';
+    return;
+  }
+  items.forEach(it => {
+    const li = document.createElement('li');
+    li.className = 'delivery-item';
+    const rawImg = String(it.image || '');
+    const isAbs = /^https?:\/\//i.test(rawImg);
+    const imgSrc = rawImg
+      ? (isAbs ? rawImg : ('/' + rawImg.replace(/^public\//, '').replace(/^\//, '')))
+      : '/uploads/marketplace/default-product.jpg';
+    const left = Number(it.currentCaseRemaining || 0);
+    const yours = Number(it.userPieces || 0);
+    li.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;">
+        <img src="${imgSrc}" alt="${it.title}" style="width:40px;height:40px;border-radius:4px;object-fit:cover;">
+        <div>
+          <div><strong>${it.title}</strong></div>
+          <div class="text-muted small">Your pieces: ${yours} • Filling – ${left} left</div>
+        </div>
+      </div>
+      <div>
+        <a class="btn btn-outline" href="/listings/${it.listingId}">Adjust</a>
+      </div>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+async function loadActivePieceOrders() {
+  const data = await fetchActivePieceOrders();
+  if (data && data.success) renderActivePieceOrders(data.data);
+  const refresh = document.getElementById('refresh-piece-orders');
+  if (refresh && !refresh.__wired) {
+    refresh.addEventListener('click', async (e) => { e.preventDefault(); await loadActivePieceOrders(); });
+    refresh.__wired = true;
+  }
 }
 
 /**

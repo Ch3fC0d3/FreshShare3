@@ -1,0 +1,295 @@
+<%- contentFor('style') %>
+<style>
+    .edit-group-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .form-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .form-section h3 {
+        margin-bottom: 20px;
+        color: #2c3e50;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .form-group textarea {
+        min-height: 100px;
+    }
+
+    .delivery-days {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .day-checkbox {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+    }
+
+    .day-checkbox input {
+        margin-right: 5px;
+        width: auto;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .starter-products-container {
+        border: 1px solid #e1e5ea;
+        border-radius: 8px;
+        padding: 16px;
+        background-color: #fafcff;
+    }
+
+    .starter-product-card {
+        border: 1px solid #d9dee8;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 12px;
+        background-color: #fff;
+        position: relative;
+    }
+
+    .starter-product-card .remove-product-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+
+    .form-hint {
+        font-size: 14px;
+        color: #6c7a89;
+        margin-bottom: 10px;
+    }
+</style>
+
+<%- contentFor('body') %>
+<div class="main-content">
+    <div class="edit-group-container">
+        <h1 class="page-title">Edit Group</h1>
+        <p class="page-description">Update your group's details, schedules, and ranked product settings.</p>
+
+        <form id="edit-group-form">
+            <input type="hidden" id="group-id" value="<%= groupId %>">
+
+            <!-- Basic Information -->
+            <div class="form-section">
+                <h3>Basic Information</h3>
+
+                <div class="form-group">
+                    <label for="group-name">Group Name</label>
+                    <input type="text" id="group-name" name="name" placeholder="Enter a group name">
+                    <div class="error-message" id="name-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="group-category">Category</label>
+                    <select id="group-category" name="category">
+                        <option value="">Select a category</option>
+                        <option value="neighborhood">Neighborhood Group</option>
+                        <option value="community_garden">Community Garden</option>
+                        <option value="food_bank">Food Bank / Pantry</option>
+                        <option value="cooking_club">Cooking Club</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <div class="error-message" id="category-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="group-description">Description</label>
+                    <textarea id="group-description" name="description" placeholder="Describe your group's purpose"></textarea>
+                    <div class="error-message" id="description-error"></div>
+                </div>
+            </div>
+
+            <!-- Location Information -->
+            <div class="form-section">
+                <h3>Location</h3>
+
+                <div class="form-group">
+                    <label for="group-street">Street Address</label>
+                    <input type="text" id="group-street" name="location.street" placeholder="Street address (optional)">
+                </div>
+
+                <div class="form-group">
+                    <label for="group-city">City</label>
+                    <input type="text" id="group-city" name="location.city" placeholder="City">
+                    <div class="error-message" id="city-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="group-state">State/Province</label>
+                    <input type="text" id="group-state" name="location.state" placeholder="State or province">
+                </div>
+
+                <div class="form-group">
+                    <label for="group-zipcode">Zip/Postal Code</label>
+                    <input type="text" id="group-zipcode" name="location.zipCode" placeholder="Zip or postal code">
+                    <div class="error-message" id="zipcode-error"></div>
+                </div>
+            </div>
+
+            <!-- Group Settings -->
+            <div class="form-section">
+                <h3>Group Settings</h3>
+
+                <div class="form-group">
+                    <label for="group-rules">Group Rules</label>
+                    <textarea id="group-rules" name="rules" placeholder="Update group rules (optional)"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Delivery Days</label>
+                    <p class="form-hint">Select the days your group typically meets or receives deliveries.</p>
+                    <div class="delivery-days">
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-monday" name="deliveryDays" value="Monday">
+                            <label for="edit-monday">Monday</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-tuesday" name="deliveryDays" value="Tuesday">
+                            <label for="edit-tuesday">Tuesday</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-wednesday" name="deliveryDays" value="Wednesday">
+                            <label for="edit-wednesday">Wednesday</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-thursday" name="deliveryDays" value="Thursday">
+                            <label for="edit-thursday">Thursday</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-friday" name="deliveryDays" value="Friday">
+                            <label for="edit-friday">Friday</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-saturday" name="deliveryDays" value="Saturday">
+                            <label for="edit-saturday">Saturday</label>
+                        </div>
+                        <div class="day-checkbox">
+                            <input type="checkbox" id="edit-sunday" name="deliveryDays" value="Sunday">
+                            <label for="edit-sunday">Sunday</label>
+                        </div>
+                    </div>
+                    <div class="error-message" id="delivery-days-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Group Shopping Schedule</label>
+                    <p class="form-hint">Optionally set weekly order and pickup windows for this group.</p>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="order-by-day" class="form-label">Order by day</label>
+                            <select class="form-select" id="order-by-day" name="orderByDay">
+                                <option value="">Select day</option>
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="order-by-time" class="form-label">Order by time</label>
+                            <input type="time" class="form-control" id="order-by-time" name="orderByTime" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="delivery-day" class="form-label">Delivery day</label>
+                            <select class="form-select" id="delivery-day" name="deliveryDay">
+                                <option value="">Select day</option>
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="delivery-time" class="form-label">Delivery time</label>
+                            <input type="time" class="form-control" id="delivery-time" name="deliveryTime" />
+                        </div>
+                    </div>
+                    <div class="error-message" id="schedule-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="max-active-products">Max Active Products</label>
+                    <p class="form-hint">Top-ranked products up to this number stay in the active (buyable) list.</p>
+                    <input type="number" id="max-active-products" name="maxActiveProducts" min="1" max="200" />
+                    <div class="error-message" id="max-active-products-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Starter Products (Optional)</label>
+                    <p class="form-hint">Seed the ranked list with products you'd like to highlight.</p>
+                    <div class="starter-products-container" id="starter-products-container">
+                        <div id="starter-products-list"></div>
+                        <button type="button" class="btn btn-outline-primary" id="add-starter-product-btn">
+                            <i class="fas fa-plus"></i> Add Starter Product
+                        </button>
+                    </div>
+                    <div class="error-message" id="starter-products-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="group-privacy">Privacy Setting</label>
+                    <select id="group-privacy" name="isPrivate">
+                        <option value="false">Public - Anyone can find and join</option>
+                        <option value="true">Private - By invitation only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline-secondary" id="cancel-btn">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="save-btn">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<%- contentFor('script') %>
+<script>
+    window.__GROUP_ID__ = '<%= groupId %>';
+</script>
+<script src="/js/edit-group-page.js"></script>

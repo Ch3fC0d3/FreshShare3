@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreshShare - Checkout</title>
+  <link rel="stylesheet" href="/css/main.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
+  <link rel="stylesheet" href="/css/cart.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
+  <style>
+    .checkout-container{max-width:1100px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:1fr 360px;gap:24px}
+    @media (max-width: 900px){.checkout-container{grid-template-columns:1fr}}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+    .card header{padding:14px 16px;border-bottom:1px solid #eef0f3;font-weight:600}
+    .card .body{padding:16px}
+    .summary-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dotted #e5e7eb}
+    .summary-item:last-child{border-bottom:none}
+    .summary-total{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-weight:700}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-grid .full{grid-column:1 / -1}
+    .form-grid label{display:block;font-size:12px;color:#4b5563;margin-bottom:4px}
+    .form-grid input{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px}
+    .place-order{width:100%;padding:12px 16px;margin-top:12px;background:#0d6efd;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600}
+    .place-order:disabled{opacity:.6;cursor:not-allowed}
+    .note{font-size:12px;color:#6b7280}
+    .ok{color:#065f46}
+    .err{color:#7f1d1d}
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <div class="card">
+      <header>
+        Contact & Delivery
+        <a href="/profile-edit" style="float:right;font-weight:500;font-size:12px;color:#0d6efd;text-decoration:none">Edit Profile</a>
+      </header>
+      <div class="body">
+        <p class="note">We only use this information to coordinate local pickup with the seller(s).</p>
+        <div class="form-grid">
+          <div>
+            <label for="coName">Full name</label>
+            <input id="coName" type="text" placeholder="Jane Doe" value="<%= (prefill && prefill.name) ? prefill.name : '' %>">
+          </div>
+          <div>
+            <label for="coEmail">Email</label>
+            <input id="coEmail" type="email" placeholder="jane@example.com" value="<%= (prefill && prefill.email) ? prefill.email : '' %>">
+          </div>
+          <div>
+            <label for="coPhone">Phone</label>
+            <input id="coPhone" type="tel" placeholder="(555) 555-5555" value="<%= (prefill && prefill.phone) ? prefill.phone : '' %>">
+          </div>
+          <div class="full">
+            <label for="coStreet">Street</label>
+            <input id="coStreet" type="text" placeholder="123 Main St" value="<%= (prefill && prefill.street) ? prefill.street : '' %>">
+          </div>
+          <div>
+            <label for="coCity">City</label>
+            <input id="coCity" type="text" placeholder="Your city" value="<%= (prefill && prefill.city) ? prefill.city : '' %>">
+          </div>
+          <div>
+            <label for="coState">State</label>
+            <input id="coState" type="text" placeholder="ST" value="<%= (prefill && prefill.state) ? prefill.state : '' %>">
+          </div>
+          <div>
+            <label for="coZip">ZIP</label>
+            <input id="coZip" type="text" placeholder="00000" value="<%= (prefill && prefill.zip) ? prefill.zip : '' %>">
+          </div>
+        </div>
+        <button id="placeOrderBtn" class="place-order">Place Order</button>
+        <div id="placeOrderMsg" class="note" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>Order Summary</header>
+      <div class="body">
+        <div id="summaryList"></div>
+        <div class="summary-total">
+          <span>Total</span>
+          <span id="summaryTotal">$0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/checkout-page.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+</body>
+</html>

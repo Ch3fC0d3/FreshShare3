@@ -76,123 +76,24 @@ router.put('/:id/events/:eventId', groupController.updateEvent);
 // Delete event
 router.delete('/:id/events/:eventId', groupController.deleteEvent);
 
+// ===== RANKED PRODUCTS =====
+
+// Get ranked products list
+router.get('/:id/products', groupController.listGroupProducts);
+
+// Suggest a product
+router.post('/:id/products', groupController.suggestProduct);
+
+// Vote on a product
+router.post('/:id/products/:productId/vote', groupController.voteOnProduct);
+
+// Update product status (e.g., pin/unpin)
+router.patch('/:id/products/:productId', groupController.updateProductStatus);
+
+// Remove product
+router.delete('/:id/products/:productId', groupController.removeProduct);
+
 // ===== LEGACY ROUTES (MAINTAINED FOR BACKWARD COMPATIBILITY) =====
-
-// Propose a new product
-router.post('/:id/propose-product', async (req, res) => {
-    try {
-        const groupId = req.params.id;
-        const product = req.body;
-        
-        // Find the group
-        const group = await require('../models/group.model').findById(groupId);
-        
-        if (!group) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Group not found' 
-            });
-        }
-        
-        // Check if user is a member
-        const isMember = group.members.includes(req.userId);
-        
-        if (!isMember) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'You must be a member to propose products' 
-            });
-        }
-        
-        // Add product to proposed products
-        if (!group.proposedProducts) {
-            group.proposedProducts = [];
-        }
-        
-        group.proposedProducts.push({
-            ...product,
-            proposedBy: req.userId,
-            votes: 0,
-            dateProposed: new Date()
-        });
-        
-        await group.save();
-        
-        res.status(200).json({ 
-            success: true, 
-            message: 'Product proposed successfully',
-            product
-        });
-    } catch (error) {
-        console.error('Error proposing product:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to propose product'
-        });
-    }
-});
-
-// Vote on a proposed product
-router.post('/:groupId/vote/:productId', async (req, res) => {
-    try {
-        const { groupId, productId } = req.params;
-        
-        // Find the group
-        const group = await require('../models/group.model').findById(groupId);
-        
-        if (!group) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Group not found' 
-            });
-        }
-        
-        // Check if user is a member
-        const isMember = group.members.includes(req.userId);
-        
-        if (!isMember) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'You must be a member to vote on products' 
-            });
-        }
-        
-        // Find the product
-        if (!group.proposedProducts) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'No proposed products found' 
-            });
-        }
-        
-        const productIndex = group.proposedProducts.findIndex(
-            product => product._id.toString() === productId
-        );
-        
-        if (productIndex === -1) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Product not found' 
-            });
-        }
-        
-        // Increment vote count
-        group.proposedProducts[productIndex].votes += 1;
-        await group.save();
-        
-        res.status(200).json({ 
-            success: true, 
-            message: 'Vote recorded successfully',
-            votes: group.proposedProducts[productIndex].votes
-        });
-    } catch (error) {
-        console.error('Error voting on product:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to record vote'
-        });
-    }
-});
 
 // Legacy discussion board route (for backward compatibility)
 router.post('/:id/discussion', async (req, res) => {

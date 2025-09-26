@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreshShare - Order Details</title>
+  <link rel="stylesheet" href="/css/main.css?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>">
+  <style>
+    .wrap{max-width:960px;margin:24px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);margin-bottom:18px}
+    .card header{padding:14px 16px;border-bottom:1px solid #eef0f3;font-weight:600}
+    .card .body{padding:16px}
+    .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dotted #e5e7eb}
+    .row:last-child{border-bottom:none}
+    .muted{color:#6b7280;font-size:13px}
+    .btn{display:inline-block;margin-top:12px;padding:10px 14px;background:#0d6efd;color:#fff;border-radius:8px;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>Order Details</header>
+      <div class="body">
+        <div class="row"><div>Order ID</div><div><%= order && order._id %></div></div>
+        <div class="row"><div>Placed</div><div><%= order && order.createdAt ? new Date(order.createdAt).toLocaleString() : '' %></div></div>
+        <div class="row"><div>Status</div><div><%= order && order.status %></div></div>
+        <div class="row"><div>Total</div><div>$<%= (order && order.total ? order.total.toFixed(2) : '0.00') %></div></div>
+        <a href="/marketplace" class="btn">Back to Marketplace</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>Items</header>
+      <div class="body">
+        <% if (order && order.items && order.items.length) { %>
+          <% order.items.forEach(function(it){ %>
+            <div class="row">
+              <div><%= it.title %> × <%= it.pieces %></div>
+              <div>$<%= (it.lineTotal || (it.pieces * it.unitPrice) || 0).toFixed(2) %></div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="muted">No items found.</div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>Contact</header>
+      <div class="body">
+        <div class="row"><div>Name</div><div><%= order && order.contact && order.contact.name %></div></div>
+        <div class="row"><div>Email</div><div><%= order && order.contact && order.contact.email %></div></div>
+        <% if (order && order.contact && order.contact.phone) { %>
+          <div class="row"><div>Phone</div><div><%= order.contact.phone %></div></div>
+        <% } %>
+        <% if (order && order.contact && (order.contact.street || order.contact.city)) { %>
+          <div class="row"><div>Address</div><div>
+            <%= order.contact.street || '' %>
+            <%= order.contact.city ? ', ' + order.contact.city : '' %>
+            <%= order.contact.state ? ', ' + order.contact.state : '' %>
+            <%= order.contact.zip ? ' ' + order.contact.zip : '' %>
+          </div></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

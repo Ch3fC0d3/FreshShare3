@@ -32,6 +32,15 @@
       <!-- Scanner Controls -->
       <div class="scanner-controls">
         <button id="manual-upc-btn" class="btn btn-secondary">Enter UPC Manually</button>
+        <button id="toggle-torch-btn" class="btn btn-secondary" style="display:none">Flash</button>
+        <div id="zoom-control" class="zoom-control" style="display:none">
+          <label for="zoom-slider" class="form-label" style="margin:0 8px 0 12px">Zoom</label>
+          <input id="zoom-slider" type="range" min="1" max="5" step="0.1" value="1" />
+        </div>
+      </div>
+
+      <div class="scanner-tip" style="font-size: 0.85rem; color: #6c757d; margin-top: 6px;">
+        Tip: Center the barcode in the guide. Tap the video to refocus. Use Flash if available.
       </div>
 
       <!-- Loading Indicator -->
