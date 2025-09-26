@@ -1,0 +1,167 @@
+<%- contentFor('style') %>
+<link rel="stylesheet" href="/css/main.css">
+<!-- cart.css is included globally via layout -->
+
+<%- contentFor('body') %>
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="h3 mb-2"><%= listing.title %></h1>
+          <div class="text-muted mb-3">
+            <% if (listing.category) { %>
+              <span class="badge bg-success me-2 text-capitalize"><%= listing.category.replace('_',' ') %></span>
+            <% } %>
+            <% if (listing.isOrganic) { %>
+              <span class="badge bg-primary">Organic</span>
+            <% } %>
+          </div>
+          <% if (listing.images && listing.images.length) { 
+               const __raw = String(listing.images[0] || '');
+               const __isHttp = /^https?:\/\//i.test(__raw);
+               const __normalized = __raw.replace(/^public[\\/]/, '').replace(/\\\\/g, '/').replace(/^\//, '');
+               const __src = __isHttp ? __raw : ('/' + __normalized);
+          %>
+            <img src="<%= __src %>" alt="<%= listing.title %>" class="img-fluid rounded mb-3" />
+          <% } else { %>
+            <img src="/images/vegetables.jpg" alt="<%= listing.title %>" class="img-fluid rounded mb-3" />
+          <% } %>
+
+          <h2 class="h5">Description</h2>
+          <p><%= listing.description %></p>
+
+          <% if (Array.isArray(listing.tags) && listing.tags.length) { %>
+          <div class="mb-3">
+            <% listing.tags.forEach(t => { %>
+              <span class="badge bg-light text-dark me-1">#<%= t %></span>
+            <% }) %>
+          </div>
+          <% } %>
+
+          <!-- Vendor details intentionally omitted on product page per policy -->
+
+          <h2 class="h5 mt-4">Location</h2>
+          <% const loc = listing.location || {}; %>
+          <ul class="list-unstyled">
+            <% if (loc.address) { %><li><i class="fas fa-map-marker-alt me-1"></i><%= loc.address %></li><% } %>
+            <% if (loc.city || loc.state || loc.zipCode) { %>
+              <li><%= [loc.city, loc.state, loc.zipCode].filter(Boolean).join(', ') %></li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Pricing</h2>
+          <% 
+            const hasExplicitUnitPrice = (typeof listing.price === 'number') && listing.price > 0;
+            const derivedUnitPrice = (typeof listing.caseUnitPrice === 'number')
+              ? listing.caseUnitPrice
+              : ((typeof listing.casePrice === 'number' && typeof listing.caseSize === 'number' && listing.caseSize > 0)
+                ? (listing.casePrice / listing.caseSize)
+                : null);
+            // Prefer the case breakdown price when available
+            const displayUnitPrice = (typeof derivedUnitPrice === 'number')
+              ? derivedUnitPrice
+              : (hasExplicitUnitPrice ? listing.price : null);
+            const unitLabel = listing.priceUnit || 'each';
+          %>
+          <div class="fs-5">$<%= (typeof displayUnitPrice === 'number' ? displayUnitPrice.toFixed(2) : '0.00') %> / <%= unitLabel %></div>
+          <% if (typeof listing.casePrice === 'number') { %>
+            <div class="text-muted mt-1">
+              Case: $<%= listing.casePrice.toFixed(2) %>
+              <% if (typeof listing.caseSize === 'number' && listing.caseSize > 0) { %>
+                for <%= listing.caseSize %>
+                <% if (typeof listing.caseUnitPrice === 'number') { %>
+                  (≈ $<%= listing.caseUnitPrice.toFixed(2) %> each)
+                <% } %>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Group Buy -->
+      <div class="card mt-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Group Buy</h2>
+          <% if (listing.groupBuy && listing.groupBuy.enabled) { %>
+            <div class="quick-gb" data-listing-id="<%= listing._id %>">
+              <div class="small text-muted quick-gb-status" aria-live="polite">Loading...</div>
+              <div class="mt-2">
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar quick-gb-progress" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                </div>
+                <div class="small text-muted mt-1 quick-gb-progress-text"></div>
+              </div>
+              <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                <div class="input-group input-group-sm" style="width: 160px;">
+                  <span class="input-group-text">Cases</span>
+                  <input type="number" class="form-control quick-gb-qty" min="1" step="1" placeholder="e.g., 1">
+                </div>
+                <button type="button" class="btn btn-sm btn-primary quick-gb-commit">Commit</button>
+                <button type="button" class="btn btn-sm btn-outline-danger quick-gb-cancel" style="display:none">Cancel my commitment</button>
+              </div>
+            </div>
+          <% } else { %>
+            <p class="text-muted mb-0">Group Buy is not enabled for this listing.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Order</h2>
+          <% if (listing.pieceOrdering && listing.pieceOrdering.enabled) { %>
+            <div class="quick-po" data-listing-id="<%= listing._id %>">
+              <div class="small text-muted quick-po-remaining" aria-live="polite"></div>
+              <div class="d-flex align-items-center justify-content-end gap-2 mt-2 flex-wrap quick-po-controls">
+                <span class="small text-muted quick-po-unit me-1" style="white-space:nowrap">
+                  $<%= (typeof displayUnitPrice === 'number' ? displayUnitPrice.toFixed(2) : '0.00') %> / <%= unitLabel %>
+                </span>
+                <button type="button" class="marketplace-btn btn-sm quick-dec" title="Decrease">−</button>
+                <input type="number" class="quick-qty" min="0" value="0" style="width:80px;padding:6px 8px;">
+                <button type="button" class="marketplace-btn btn-sm quick-inc" title="Increase">+</button>
+                <button type="button" class="marketplace-btn btn-sm quick-save" title="Save reservation">Reserve</button>
+              </div>
+            </div>
+          <% } else { %>
+            <p class="text-muted">Per-piece ordering is not enabled for this listing.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-body d-flex align-items-center">
+          <% if (listing.seller && listing.seller.profileImage) { %>
+            <img src="<%= listing.seller.profileImage %>" alt="Seller" class="rounded-circle me-2" style="width:40px;height:40px;object-fit:cover;" />
+          <% } else { %>
+            <i class="fas fa-user-circle fa-2x me-2"></i>
+          <% } %>
+          <div>
+            <div class="fw-semibold"><%= listing.seller ? listing.seller.username : 'Seller' %></div>
+            <div class="text-muted small">Seller</div>
+          </div>
+          <% if (listing.seller && listing.seller.username) { %>
+          <div class="ms-auto">
+            <a class="btn btn-outline-primary btn-sm" href="/messages?<%= encodeURIComponent('to') %>=<%= encodeURIComponent(listing.seller.username) %>&<%= encodeURIComponent('toId') %>=<%= encodeURIComponent(String(listing.seller._id)) %>">
+              <i class="fas fa-envelope me-1"></i> Message Seller
+            </a>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Global cart panel and FAB are provided by the base layout -->
+
+<%- contentFor('script') %>
+<script src="/js/marketplace-init.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+<script src="/js/groupbuy-init.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+<script src="/js/toast.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>

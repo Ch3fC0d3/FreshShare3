@@ -1,8 +1,13 @@
 const db = require('../models');
 const Listing = db.listing;
 const Vendor = db.vendor;
+const User = db.user;
+const Group = db.group;
 const usdaApi = require('../utils/usdaApi');
 const jwt = require('jsonwebtoken');
+const https = require('https');
+const FileLogger = require('../file-logger');
+const upcLogger = new FileLogger('upc-lookup.log');
 
 // Helper to extract user ID from request (JWT or req.user)
 function getUserId(req) {
@@ -18,6 +23,148 @@ function getUserId(req) {
   } catch (e) {}
   return null;
 }
+
+// ===== Vendors CRUD =====
+exports.getMyVendors = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const vendors = await Vendor.find({ owner: userId }).sort({ name: 1 }).lean();
+    return res.status(200).json({ success: true, data: vendors });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Failed to load vendors', error: e.message });
+  }
+};
+
+exports.createVendor = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const b = req.body || {};
+    const name = (b.name || '').trim();
+    if (!name) return res.status(400).json({ success: false, message: 'Vendor name is required' });
+    const website = normalizeUrl(b.website);
+    const doc = await Vendor.create({
+      owner: userId,
+      name,
+      contactEmail: (b.contactEmail || '').trim() || undefined,
+      contactPhone: (b.contactPhone || '').trim() || undefined,
+      website: website || undefined,
+      notes: (b.notes || '').trim() || undefined,
+      address: (b.address || '').trim() || undefined,
+      city: (b.city || '').trim() || undefined,
+      state: (b.state || '').trim() || undefined,
+      zipCode: (b.zipCode || '').trim() || undefined,
+      coordinates: (b.lat && b.lng) ? { type: 'Point', coordinates: [Number(b.lng), Number(b.lat)] } : undefined
+    });
+    return res.status(201).json({ success: true, data: doc });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Failed to create vendor', error: e.message });
+  }
+};
+
+exports.updateVendor = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const id = req.params.id;
+    const v = await Vendor.findOne({ _id: id, owner: userId });
+    if (!v) return res.status(404).json({ success: false, message: 'Vendor not found' });
+    const b = req.body || {};
+    const website = normalizeUrl(b.website);
+    const updates = {
+      ...(b.name !== undefined ? { name: String(b.name).trim() } : {}),
+      ...(b.contactEmail !== undefined ? { contactEmail: String(b.contactEmail).trim() } : {}),
+      ...(b.contactPhone !== undefined ? { contactPhone: String(b.contactPhone).trim() } : {}),
+      ...(b.website !== undefined ? { website: website || undefined } : {}),
+      ...(b.notes !== undefined ? { notes: String(b.notes).trim() } : {}),
+      ...(b.address !== undefined ? { address: String(b.address).trim() } : {}),
+      ...(b.city !== undefined ? { city: String(b.city).trim() } : {}),
+      ...(b.state !== undefined ? { state: String(b.state).trim() } : {}),
+      ...(b.zipCode !== undefined ? { zipCode: String(b.zipCode).trim() } : {}),
+    };
+    if (b.lat !== undefined && b.lng !== undefined) {
+      const lat = Number(b.lat), lng = Number(b.lng);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        updates.coordinates = { type: 'Point', coordinates: [lng, lat] };
+      } else {
+        updates.coordinates = undefined;
+      }
+    }
+    await Vendor.updateOne({ _id: id }, { $set: updates });
+    const updated = await Vendor.findById(id).lean();
+    return res.status(200).json({ success: true, data: updated });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Failed to update vendor', error: e.message });
+  }
+};
+
+exports.deleteVendor = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const id = req.params.id;
+    const v = await Vendor.findOne({ _id: id, owner: userId });
+    if (!v) return res.status(404).json({ success: false, message: 'Vendor not found' });
+    await Vendor.deleteOne({ _id: id });
+    return res.status(200).json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Failed to delete vendor', error: e.message });
+  }
+};
+// --- UPC helpers ---
+function digitsOnly(str) { return (str || '').replace(/[^0-9]/g, ''); }
+function normalizeUpcCandidates(input) {
+  const raw = digitsOnly(input);
+  const len = raw.length;
+  const out = new Set();
+  if (!raw) return [];
+  // Base
+  out.add(raw);
+  // Common variants
+  if (len === 12) { out.add('0' + raw); }
+  if (len === 13 && raw.startsWith('0')) { out.add(raw.substring(1)); }
+  // Return array in insertion order
+  return Array.from(out);
+}
+
+function httpGetJson(url, headers = {}, timeoutMs = 3000) {
+  return new Promise((resolve) => {
+    try {
+      const req = https.get(url, { headers, timeout: timeoutMs }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: json });
+          } catch (e) {
+            resolve({ ok: false, status: res.statusCode || 0, data: null, error: 'Invalid JSON' });
+          }
+        });
+      });
+      req.on('timeout', () => { try { req.destroy(new Error('Timeout')); } catch(_){} resolve({ ok:false, status:0, data:null, error:'Timeout' }); });
+      req.on('error', (err) => { resolve({ ok:false, status:0, data:null, error: String(err && err.message || err) }); });
+    } catch (e) { resolve({ ok:false, status:0, data:null, error: String(e && e.message || e) }); }
+  });
+}
+
+async function tryOpenFoodFacts(code) {
+  const url = `https://world.openfoodfacts.org/api/v0/product/${code}.json`;
+  upcLogger.log('[OFF] GET', url);
+  const resp = await httpGetJson(url, { 'Accept': 'application/json' }, 3500);
+  if (!resp || !resp.data) { upcLogger.error('[OFF] No response data'); return null; }
+  const d = resp.data;
+  if (d.status !== 1 || !d.product) { upcLogger.log('[OFF] Not found or status!=1 for', code); return null; }
+  const p = d.product;
+  const imageUrl = p.image_url || (p.selected_images && p.selected_images.front && p.selected_images.front.display && (p.selected_images.front.display.en || p.selected_images.front.display.en_GB)) || p.image_small_url || null;
+  const title = p.product_name || p.generic_name || p.brands_tags && p.brands_tags[0] || `Product (${code})`;
+  const brand = p.brands || (Array.isArray(p.brands_tags) && p.brands_tags.join(', ')) || 'Unknown Brand';
+  const result = { source: 'openfoodfacts', code, title, brand, imageUrl };
+  upcLogger.log('[OFF] Hit:', JSON.stringify(result));
+  return result;
+}
+
 
 // Normalize URL to ensure it includes a scheme
 function normalizeUrl(url) {
@@ -106,10 +253,38 @@ exports.createListing = async (req, res) => {
     const saveVendorFlag = getField('saveVendor') === 'true' || getField('saveVendor') === true || getField('saveVendor') === 'on';
 
     // Coerce numeric fields
-    const price = body.price !== undefined ? Number(body.price) : undefined;
+    let price = body.price !== undefined ? Number(body.price) : undefined;
+    let casePrice = body.casePrice !== undefined ? Number(body.casePrice) : undefined;
     const quantity = body.quantity !== undefined ? Number(body.quantity) : undefined;
     const caseSize = body.caseSize !== undefined ? Number(body.caseSize) : undefined;
     const isOrganic = body.isOrganic === 'true' || body.isOrganic === true;
+    // If unit is case and casePrice is omitted, use price as casePrice
+    const priceUnitNorm = (body.priceUnit || '').toString().toLowerCase();
+    if (priceUnitNorm === 'case' && (casePrice === undefined || Number.isNaN(casePrice))) {
+      casePrice = price;
+    }
+    // If unit is not case and caseSize is valid, compute missing values
+    if (priceUnitNorm !== 'case' && typeof caseSize === 'number' && !Number.isNaN(caseSize) && caseSize > 0) {
+      if ((casePrice === undefined || Number.isNaN(casePrice)) && (typeof price === 'number' && !Number.isNaN(price))) {
+        casePrice = Math.round(price * caseSize * 100) / 100;
+      } else if ((price === undefined || Number.isNaN(price)) && (typeof casePrice === 'number' && !Number.isNaN(casePrice))) {
+        price = Math.round((casePrice / caseSize) * 100) / 100;
+      }
+    }
+
+    // Group buy fields (supports bracket notation)
+    const gbEnabledRaw = getField('groupBuy[enabled]');
+    const gbMinCasesRaw = getField('groupBuy[minCases]');
+    const gbTargetCasesRaw = getField('groupBuy[targetCases]');
+    const gbDeadlineRaw = getField('groupBuy[deadline]');
+    const gbEnabled = gbEnabledRaw === 'true' || gbEnabledRaw === true || gbEnabledRaw === 'on' || gbEnabledRaw === '1';
+    const gbMinCases = gbMinCasesRaw !== undefined ? Number(gbMinCasesRaw) : undefined;
+    const gbTargetCases = gbTargetCasesRaw !== undefined ? Number(gbTargetCasesRaw) : undefined;
+    const gbDeadline = gbDeadlineRaw ? new Date(gbDeadlineRaw) : undefined;
+
+    // Piece ordering fields
+    const poEnabledRaw = getField('pieceOrdering[enabled]');
+    const poEnabled = poEnabledRaw === 'true' || poEnabledRaw === true || poEnabledRaw === 'on' || poEnabledRaw === '1';
 
     // Normalize tags (may come as a single string or multiple entries)
     let tags = [];
@@ -143,8 +318,13 @@ exports.createListing = async (req, res) => {
     if (!body.title || !body.title.trim()) errors.push('Title is required');
     if (!body.description || !body.description.trim()) errors.push('Description is required');
     if (price === undefined || Number.isNaN(price) || price < 0) errors.push('Price must be a non-negative number');
+    if (casePrice !== undefined && (Number.isNaN(casePrice) || casePrice < 0)) errors.push('Case price must be a non-negative number');
     if (!body.category) errors.push('Category is required');
     if (caseSize !== undefined && (Number.isNaN(caseSize) || caseSize < 1)) errors.push('Case size must be at least 1');
+    if (gbEnabled) {
+      if (gbMinCases !== undefined && (Number.isNaN(gbMinCases) || gbMinCases < 1)) errors.push('Group buy minimum cases must be at least 1');
+      if (gbTargetCases !== undefined && (Number.isNaN(gbTargetCases) || gbTargetCases < 1)) errors.push('Group buy target cases must be at least 1');
+    }
     if (errors.length) {
       return res.status(400).json({ success: false, message: 'Validation error', errors });
     }
@@ -182,15 +362,37 @@ exports.createListing = async (req, res) => {
       }
     }
 
+    // Determine group for the listing (must belong to an active group of the seller)
+    let groupId = getField('groupId') || body.groupId || undefined;
+    const userDoc = await User.findById(sellerId).select('groups');
+    if (!userDoc) {
+      return res.status(401).json({ success: false, message: 'User not found for listing creation' });
+    }
+    const activeGroupIds = (userDoc.groups || [])
+      .filter(m => m && String(m.status) === 'active' && m.group)
+      .map(m => String(m.group));
+    if (groupId) {
+      if (!activeGroupIds.includes(String(groupId))) {
+        return res.status(403).json({ success: false, message: 'You can only create listings in a group you belong to' });
+      }
+    } else {
+      if (activeGroupIds.length === 0) {
+        return res.status(400).json({ success: false, message: 'You must join a group before creating a listing' });
+      }
+      groupId = activeGroupIds[0];
+    }
+
     // Create a new listing object
     const listing = new Listing({
       title: body.title,
       description: body.description,
       price,
+      casePrice,
       priceUnit: body.priceUnit,
       category: body.category,
       location, // optional; includes GeoJSON only if lat/lng provided
       seller: sellerId,
+      group: groupId,
       isOrganic,
       quantity,
       caseSize,
@@ -199,6 +401,31 @@ exports.createListing = async (req, res) => {
       vendorId,
       upcCode: body.upcCode
     });
+
+    // Apply groupBuy if provided
+    if (gbEnabled || gbMinCasesRaw !== undefined || gbTargetCasesRaw !== undefined || gbDeadlineRaw !== undefined) {
+      listing.groupBuy = {
+        enabled: gbEnabled,
+        ...(gbMinCases !== undefined ? { minCases: gbMinCases } : {}),
+        ...(gbTargetCases !== undefined ? { targetCases: gbTargetCases } : {}),
+        ...(gbDeadline ? { deadline: gbDeadline } : {})
+      };
+    }
+
+    // Initialize piece ordering
+    const shouldEnablePO = poEnabled || (typeof caseSize === 'number' && !Number.isNaN(caseSize) && caseSize > 0);
+    if (shouldEnablePO) {
+      if (typeof caseSize !== 'number' || Number.isNaN(caseSize) || caseSize < 1) {
+        return res.status(400).json({ success: false, message: 'Case size must be set to enable per-piece ordering' });
+      }
+      listing.pieceOrdering = {
+        enabled: true,
+        currentCaseNumber: 1,
+        currentCaseRemaining: caseSize,
+        casesFulfilled: 0,
+        reservations: []
+      };
+    }
 
     // If UPC code is provided, fetch nutritional information
     if (body.upcCode) {
@@ -213,7 +440,6 @@ exports.createListing = async (req, res) => {
             servingSizeUnit: productInfo.data.servingSizeUnit,
             foodNutrients: productInfo.data.foodNutrients
           };
-
           // If no title was provided, use the product description
           if (!body.title || body.title.trim() === '') {
             listing.title = productInfo.data.description;
@@ -225,9 +451,17 @@ exports.createListing = async (req, res) => {
       }
     }
 
-    // If images were uploaded, add them to the listing
+    // If images were uploaded, add them to the listing (normalize Windows backslashes)
     if (req.files && req.files.length > 0) {
-      listing.images = req.files.map(file => file.path);
+      listing.images = req.files.map(file => String(file.path || '').replace(/\\/g, '/'));
+    } else {
+      // Quick path: use imageUrl provided by UPC lookup if present
+      try {
+        const imageUrl = (body && typeof body.imageUrl === 'string') ? body.imageUrl.trim() : '';
+        if (imageUrl && /^https?:\/\//i.test(imageUrl)) {
+          listing.images = [imageUrl];
+        }
+      } catch (_) {}
     }
 
     // Save the listing to the database
@@ -273,7 +507,8 @@ exports.getListings = async (req, res) => {
       sortBy, 
       limit = 10, 
       page = 1,
-      search
+      search,
+      groupId
     } = req.query;
     
     // Build filter object
@@ -281,6 +516,7 @@ exports.getListings = async (req, res) => {
     
     if (category) filter.category = category;
     if (isOrganic) filter.isOrganic = isOrganic === 'true';
+    if (groupId) filter.group = groupId;
     if (minPrice || maxPrice) {
       filter.price = {};
       if (minPrice) filter.price.$gte = Number(minPrice);
@@ -401,17 +637,28 @@ exports.updateListing = async (req, res) => {
     
     // Prepare update object
     const body = req.body || {};
+    // Normalize numeric fields and apply unit logic
+    let priceU = body.price !== undefined ? Number(body.price) : undefined;
+    let casePriceU = body.casePrice !== undefined ? Number(body.casePrice) : undefined;
+    const puNormU = (body.priceUnit || '').toString().toLowerCase();
+    if (puNormU === 'case' && (casePriceU === undefined || Number.isNaN(casePriceU))) {
+      casePriceU = priceU;
+    }
+    const quantityU = body.quantity !== undefined ? Number(body.quantity) : undefined;
+    const caseSizeU = body.caseSize !== undefined ? Number(body.caseSize) : undefined;
+
     const updateData = {
       title: body.title,
       description: body.description,
-      price: body.price,
+      price: priceU,
+      casePrice: casePriceU,
       priceUnit: body.priceUnit,
       category: body.category,
       location: body.location,
       isOrganic: body.isOrganic,
       isAvailable: body.isAvailable,
-      quantity: body.quantity,
-      caseSize: body.caseSize,
+      quantity: quantityU,
+      caseSize: caseSizeU,
       tags: body.tags,
       updatedAt: Date.now()
     };
@@ -493,6 +740,42 @@ exports.updateListing = async (req, res) => {
       }
     }
     
+    // Handle groupBuy updates (support bracketed fields)
+    const gbEnabledRawU = getField('groupBuy[enabled]');
+    const gbMinCasesRawU = getField('groupBuy[minCases]');
+    const gbTargetCasesRawU = getField('groupBuy[targetCases]');
+    const gbDeadlineRawU = getField('groupBuy[deadline]');
+    const gbU = {};
+    if (gbEnabledRawU !== undefined) gbU.enabled = (gbEnabledRawU === 'true' || gbEnabledRawU === true || gbEnabledRawU === 'on' || gbEnabledRawU === '1');
+    if (gbMinCasesRawU !== undefined) gbU.minCases = Number(gbMinCasesRawU);
+    if (gbTargetCasesRawU !== undefined) gbU.targetCases = Number(gbTargetCasesRawU);
+    if (gbDeadlineRawU) gbU.deadline = new Date(gbDeadlineRawU);
+    if (Object.keys(gbU).length) updateData.groupBuy = gbU;
+
+    // Handle pieceOrdering enable/disable
+    const poEnabledRawU = getField('pieceOrdering[enabled]');
+    if (poEnabledRawU !== undefined) {
+      const enablePo = (poEnabledRawU === 'true' || poEnabledRawU === true || poEnabledRawU === 'on' || poEnabledRawU === '1');
+      if (enablePo) {
+        if (typeof listing.caseSize !== 'number' || listing.caseSize < 1) {
+          return res.status(400).json({ success: false, message: 'Case size must be set to enable per-piece ordering' });
+        }
+        updateData.pieceOrdering = {
+          enabled: true,
+          currentCaseNumber: listing.pieceOrdering?.currentCaseNumber || 1,
+          currentCaseRemaining: (listing.pieceOrdering?.currentCaseRemaining ?? listing.caseSize),
+          casesFulfilled: listing.pieceOrdering?.casesFulfilled || 0,
+          reservations: listing.pieceOrdering?.reservations || []
+        };
+        // If currentCaseRemaining is 0 for some reason, reset to full case
+        if (updateData.pieceOrdering.currentCaseRemaining <= 0) {
+          updateData.pieceOrdering.currentCaseRemaining = listing.caseSize;
+        }
+      } else {
+        updateData.pieceOrdering = { enabled: false };
+      }
+    }
+
     // Update the listing
     const updatedListing = await Listing.findByIdAndUpdate(
       req.params.id,
@@ -530,12 +813,56 @@ exports.deleteListing = async (req, res) => {
       });
     }
     
-    // Check if the user is the owner of the listing
-    // This will be replaced with actual user ID from auth middleware
-    if (listing.seller.toString() !== req.body.userId) {
+    // Check if the user is the owner of the listing (use authenticated user)
+    const currentUserId = (req.user && (req.user.id || req.user._id)) || (function(){
+      try {
+        const tokenFromCookie = req.cookies && req.cookies.token;
+        const authHeader = req.headers && req.headers.authorization;
+        const rawToken = tokenFromCookie || (authHeader ? (authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader) : null);
+        if (rawToken) {
+          const decoded = jwt.verify(rawToken, process.env.JWT_SECRET || 'bezkoder-secret-key');
+          if (decoded && decoded.id) return decoded.id;
+        }
+      } catch (_) {}
+      return null;
+    })();
+
+    if (!currentUserId || String(listing.seller) !== String(currentUserId)) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this listing"
+      });
+    }
+    
+    // Prevent deletion when there are active commitments
+    const gb = listing.groupBuy || {};
+    const hasGbParticipants = Array.isArray(gb.participants) && gb.participants.some(p => Number(p?.cases || 0) > 0);
+    const hasGbCommitted = Number(gb.committedCases || 0) > 0;
+    const hasActiveGroupBuy = !!(gb.enabled && (hasGbParticipants || hasGbCommitted));
+
+    const po = listing.pieceOrdering || {};
+    const hasActivePieceReservations = !!(po.enabled && Array.isArray(po.reservations) && po.reservations.some(r => r && r.status === 'filling' && Number(r.pieces || 0) > 0));
+    const caseSizeNum = Number(listing.caseSize || 0);
+    const hasCaseInProgress = !!(po.enabled && caseSizeNum > 0 && typeof po.currentCaseRemaining === 'number' && po.currentCaseRemaining < caseSizeNum);
+    const hasActivePerPiece = hasActivePieceReservations || hasCaseInProgress;
+
+    if (hasActiveGroupBuy || hasActivePerPiece) {
+      return res.status(409).json({
+        success: false,
+        message: 'Cannot delete listing with active commitments',
+        details: {
+          groupBuy: hasActiveGroupBuy ? {
+            enabled: !!gb.enabled,
+            participants: Array.isArray(gb.participants) ? gb.participants.length : 0,
+            committedCases: Number(gb.committedCases || 0)
+          } : undefined,
+          pieceOrdering: hasActivePerPiece ? {
+            enabled: !!po.enabled,
+            currentCaseNumber: po.currentCaseNumber || 1,
+            currentCaseRemaining: po.currentCaseRemaining,
+            reservationsCount: Array.isArray(po.reservations) ? po.reservations.filter(r => r && r.status === 'filling' && Number(r.pieces || 0) > 0).length : 0
+          } : undefined
+        }
       });
     }
     
@@ -551,6 +878,104 @@ exports.deleteListing = async (req, res) => {
       message: "Failed to delete listing",
       error: error.message
     });
+  }
+};
+
+/**
+ * Group Buy: get status for a listing
+ */
+exports.groupBuyStatus = async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id).select('groupBuy caseSize casePrice');
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    const gb = listing.groupBuy || {};
+    const now = new Date();
+    const isExpired = !!(gb.deadline && new Date(gb.deadline) < now);
+    const participantsCount = Array.isArray(gb.participants) ? gb.participants.length : 0;
+    const userId = getUserId(req);
+    let userCommit = 0;
+    if (userId && Array.isArray(gb.participants)) {
+      const p = gb.participants.find(x => String(x.user) === String(userId));
+      if (p) userCommit = p.cases || 0;
+    }
+    const payload = {
+      enabled: !!gb.enabled,
+      minCases: gb.minCases || 0,
+      targetCases: gb.targetCases || 0,
+      committedCases: gb.committedCases || 0,
+      deadline: gb.deadline || null,
+      isExpired,
+      participantsCount,
+      caseSize: listing.caseSize || 1,
+      casePrice: listing.casePrice || null,
+      userCommit
+    };
+    if (!gb.enabled) return res.status(200).json({ success: true, data: { enabled: false } });
+    return res.status(200).json({ success: true, data: payload });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch group buy status', error: error.message });
+  }
+};
+
+/**
+ * Group Buy: commit cases for current user
+ */
+exports.groupBuyCommit = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    let { cases } = req.body || {};
+    cases = Number(cases);
+    if (!cases || Number.isNaN(cases) || cases < 1) return res.status(400).json({ success: false, message: 'cases must be a positive number' });
+
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    const gb = listing.groupBuy || {};
+    if (!gb.enabled) return res.status(400).json({ success: false, message: 'Group buy is not enabled for this listing' });
+    const now = new Date();
+    if (gb.deadline && new Date(gb.deadline) < now) return res.status(400).json({ success: false, message: 'Group buy has ended' });
+
+    // Upsert participant
+    if (!Array.isArray(gb.participants)) gb.participants = [];
+    const idx = gb.participants.findIndex(p => String(p.user) === String(userId));
+    let delta = cases;
+    if (idx >= 0) {
+      const prev = Number(gb.participants[idx].cases || 0);
+      gb.participants[idx].cases = cases; // set to new value
+      delta = cases - prev;
+    } else {
+      gb.participants.push({ user: userId, cases, committedAt: new Date() });
+    }
+    gb.committedCases = Math.max(0, Number(gb.committedCases || 0) + Number(delta));
+    listing.groupBuy = gb;
+    await listing.save();
+    return res.status(200).json({ success: true, message: 'Commitment saved', data: { committedCases: gb.committedCases, yourCases: cases } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to commit to group buy', error: error.message });
+  }
+};
+
+/**
+ * Group Buy: cancel commitment for current user
+ */
+exports.groupBuyCancel = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    const gb = listing.groupBuy || {};
+    if (!Array.isArray(gb.participants)) gb.participants = [];
+    const idx = gb.participants.findIndex(p => String(p.user) === String(userId));
+    if (idx === -1) return res.status(200).json({ success: true, message: 'No existing commitment' });
+    const prev = Number(gb.participants[idx].cases || 0);
+    gb.participants.splice(idx, 1);
+    gb.committedCases = Math.max(0, Number(gb.committedCases || 0) - prev);
+    listing.groupBuy = gb;
+    await listing.save();
+    return res.status(200).json({ success: true, message: 'Commitment canceled', data: { committedCases: gb.committedCases } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to cancel commitment', error: error.message });
   }
 };
 
@@ -597,116 +1022,105 @@ exports.searchListings = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.lookupUpc = async (req, res) => {
-  console.log('\n==== UPC LOOKUP CONTROLLER CALLED ====');
-  console.log('Timestamp:', new Date().toISOString());
-  
+  upcLogger.log('==== UPC LOOKUP START ====', new Date().toISOString());
   try {
     const { upc } = req.params;
-    console.log('Server: Received UPC lookup request for:', upc);
-    console.log('Request IP:', req.ip);
-    console.log('Request method:', req.method);
-    
-    if (!upc) {
-      console.log('Server: UPC code is missing');
-      return res.status(400).json({
-        success: false,
-        message: "UPC code is required"
-      });
-    }
-    
-    // Validate UPC code format
-    if (!/^\d+$/.test(upc)) {
-      console.log('Server: Invalid UPC code format:', upc);
-      return res.status(400).json({
-        success: false,
-        message: "Invalid UPC code format. UPC must contain only digits."
-      });
-    }
-    
-    // Call USDA API to get product information
-    console.log('Server: Calling USDA API for UPC:', upc);
-    console.log('USDA API key exists:', !!process.env.USDA_API_KEY);
     const isDebug = !!(req.query && (req.query.debug === '1' || req.query.debug === 'true' || req.query.debug === 'yes'));
-    
-    try {
-      const productInfo = await usdaApi.getProductByUpc(upc);
-      console.log('Server: USDA API response received');
-      console.log('Response success:', productInfo && productInfo.success);
-      console.log('Response data (raw):', JSON.stringify(productInfo, null, 2));
+    upcLogger.log('[REQ] UPC param:', upc, 'IP:', req.ip);
 
-      // Normalize payload to guarantee non-empty consistent shape for frontend
+    if (!upc) {
+      upcLogger.error('[REQ] Missing UPC');
+      return res.status(400).json({ success: false, message: 'UPC code is required' });
+    }
+
+    const candidates = normalizeUpcCandidates(upc);
+    if (candidates.length === 0) {
+      upcLogger.error('[REQ] Invalid UPC format (no digits):', upc);
+      return res.status(400).json({ success: false, message: 'Invalid UPC code format. Digits only.' });
+    }
+
+    // Tier 1: Open Food Facts
+    for (const code of candidates) {
+      try {
+        const hit = await tryOpenFoodFacts(code);
+        if (hit) {
+          const payload = {
+            success: true,
+            data: {
+              description: hit.title,
+              brandName: hit.brand,
+              upc: code,
+              imageUrl: hit.imageUrl,
+              isGenericFallback: false
+            },
+            source: hit.source
+          };
+          return res.status(200).json(payload);
+        }
+      } catch (e) { upcLogger.error('[OFF] error for', code, e && e.message); }
+    }
+
+    // Tier 2 removed: Paid UPC APIs are not used by policy
+
+    // Tier 3: USDA (existing fallback in project)
+    try {
+      const primary = candidates[0];
+      upcLogger.log('[USDA] Fallback for', primary, 'key?', !!process.env.USDA_API_KEY);
+      const productInfo = await usdaApi.getProductByUpc(primary);
       const incoming = productInfo && productInfo.data ? productInfo.data : {};
       const base = incoming && typeof incoming === 'object' ? (incoming.product || incoming) : {};
       const normalized = {
-        description: base.description || incoming.description || `Product (UPC: ${upc})`,
+        description: base.description || incoming.description || `Product (UPC: ${primary})`,
         brandName: base.brandName || incoming.brandName || 'Unknown Brand',
         ingredients: base.ingredients || incoming.ingredients || 'No ingredients information available',
-        upc: base.upc || incoming.upc || upc,
+        upc: base.upc || incoming.upc || primary,
         isGenericFallback: Boolean((incoming && incoming.isGenericFallback) || (base && base.isGenericFallback))
       };
-      if (Array.isArray(base.foodNutrients) || Array.isArray(incoming.foodNutrients)) {
-        normalized.foodNutrients = base.foodNutrients || incoming.foodNutrients;
-      }
-      if (Array.isArray(base.nutrients) || Array.isArray(incoming.nutrients)) {
-        normalized.nutrients = base.nutrients || incoming.nutrients;
-      }
-
-      if (normalized.isGenericFallback) {
-        console.log('Server: Returning normalized generic fallback data for UPC:', upc);
-      }
-
-      console.log('Server: Sending normalized response');
-      const out = { success: true, data: normalized };
-      if (isDebug && productInfo && productInfo.debugDetails) {
-        out.debug = productInfo.debugDetails;
-      }
-      return res.status(200).json(out);
+      return res.status(200).json({ success: true, data: normalized, source: 'usda' });
     } catch (apiError) {
-      console.error('USDA API error:', apiError);
-      // Return a fallback response with generic product data
+      upcLogger.error('[USDA] error:', apiError && apiError.message);
+      const primary = candidates[0];
       const debugInfo = isDebug ? {
-        upstreamError: apiError && (apiError.response && apiError.response.data ? (typeof apiError.response.data === 'object' ? apiError.response.data : String(apiError.response.data)) : String(apiError.message || apiError)),
+        upstreamError: String(apiError && (apiError.message || apiError)),
         hasApiKey: !!process.env.USDA_API_KEY,
         nodeEnv: process.env.NODE_ENV || 'development'
       } : undefined;
       return res.status(200).json({
         success: true,
-        message: "Created generic product info due to API error",
+        message: 'Created generic product info due to API error',
         data: {
-          description: `Product (UPC: ${upc})`,
+          description: `Product (UPC: ${primary})`,
           brandName: 'Unknown Brand',
           ingredients: 'No ingredients information available',
-          upc: upc,
+          upc: primary,
           isGenericFallback: true
         },
         ...(debugInfo ? { debug: debugInfo } : {})
       });
     }
   } catch (error) {
-    console.error('UPC lookup controller error:', error);
-    console.error('Error stack:', error.stack);
-    
-    // Even on controller error, return a successful response with generic data
+    upcLogger.error('[Controller] fatal error:', error && error.message);
+    const code = digitsOnly(req.params && req.params.upc);
     const isDebug = !!(req.query && (req.query.debug === '1' || req.query.debug === 'true' || req.query.debug === 'yes'));
     const debugInfo = isDebug ? {
       controllerError: String(error && (error.message || error)),
       hasApiKey: !!process.env.USDA_API_KEY,
       nodeEnv: process.env.NODE_ENV || 'development'
     } : undefined;
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Created generic product info due to server error",
+      message: 'Created generic product info due to server error',
       data: {
-        description: `Product (UPC code: ${req.params.upc || 'unknown'})`,
+        description: `Product (UPC code: ${code || 'unknown'})`,
         brandName: 'Unknown Brand',
         ingredients: 'No ingredients information available',
-        upc: req.params.upc || 'unknown',
+        upc: code || 'unknown',
         isGenericFallback: true
       },
       ...(debugInfo ? { debug: debugInfo } : {})
     });
   } finally {
-    console.log('==== UPC LOOKUP CONTROLLER FINISHED ====\n');
+    upcLogger.log('==== UPC LOOKUP END ====');
   }
 };
 
@@ -820,7 +1234,7 @@ exports.getMyListingTemplates = async (req, res) => {
     const listings = await Listing.find({ seller: userId })
       .sort({ updatedAt: -1 })
       .limit(20)
-      .select('title description price priceUnit category quantity caseSize isOrganic vendor vendorId upcCode');
+      .select('title description price casePrice priceUnit category quantity caseSize isOrganic vendor vendorId upcCode groupBuy pieceOrdering');
     console.log('[getMyListingTemplates] found templates:', Array.isArray(listings) ? listings.length : 0);
     res.status(200).json({ success: true, data: listings });
   } catch (error) {
@@ -862,5 +1276,264 @@ exports.deleteVendor = async (req, res) => {
     res.status(200).json({ success: true, message: 'Vendor deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to delete vendor', error: error.message });
+  }
+};
+
+// ===== Piece Ordering Endpoints =====
+/**
+ * Get per-piece status for a listing
+ */
+exports.pieceStatus = async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id).select('title caseSize pieceOrdering');
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    const po = listing.pieceOrdering || {};
+    // Auto-enable per-piece ordering when caseSize is set (policy: per-piece only)
+    if (!po.enabled) {
+      let cs = Number(listing.caseSize || 0);
+      let setCaseSize = false;
+      if (!(cs > 0)) { cs = 1; setCaseSize = true; }
+      if (cs > 0) {
+        const initPO = {
+          enabled: true,
+          currentCaseNumber: 1,
+          currentCaseRemaining: cs,
+          casesFulfilled: 0,
+          reservations: []
+        };
+        try {
+          const update = setCaseSize ? { pieceOrdering: initPO, caseSize: cs } : { pieceOrdering: initPO };
+          await Listing.updateOne({ _id: listing._id }, { $set: update });
+        } catch (_) {}
+        // Return initialized state immediately
+        return res.status(200).json({
+          success: true,
+          data: {
+            enabled: true,
+            caseSize: cs,
+            currentCaseNumber: 1,
+            currentCaseRemaining: cs,
+            casesFulfilled: 0,
+            userPieces: 0
+          }
+        });
+      }
+      return res.status(200).json({ success: true, data: { enabled: false } });
+    }
+    const userId = getUserId(req);
+    let userPieces = 0;
+    const currentCase = po.currentCaseNumber || 1;
+    if (userId && Array.isArray(po.reservations)) {
+      const r = po.reservations.find(x => String(x.user) === String(userId) && x.status === 'filling' && x.caseNumber === currentCase);
+      if (r) userPieces = Number(r.pieces || 0);
+    }
+    return res.status(200).json({
+      success: true,
+      data: {
+        enabled: true,
+        caseSize: listing.caseSize || 1,
+        currentCaseNumber: currentCase,
+        currentCaseRemaining: po.currentCaseRemaining ?? (listing.caseSize || 0),
+        casesFulfilled: po.casesFulfilled || 0,
+        userPieces
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch piece status', error: error.message });
+  }
+};
+
+/**
+ * Set user's pieces for the current case (absolute). Caps by remaining and case size.
+ */
+exports.pieceSet = async (req, res) => {
+  try {
+    console.log('[pieceSet] listingId:', req.params && req.params.id);
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    let { pieces } = req.body || {};
+    pieces = Number(pieces);
+    if (Number.isNaN(pieces) || pieces < 0) return res.status(400).json({ success: false, message: 'pieces must be a non-negative number' });
+
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    let po = listing.pieceOrdering || {};
+    if (!po.enabled) {
+      let cs = Number(listing.caseSize || 0);
+      if (!(cs > 0)) cs = 1; // default when missing
+      if (cs > 0) {
+        listing.caseSize = cs;
+        listing.pieceOrdering = {
+          enabled: true,
+          currentCaseNumber: 1,
+          currentCaseRemaining: cs,
+          casesFulfilled: 0,
+          reservations: []
+        };
+        po = listing.pieceOrdering;
+      } else {
+        return res.status(400).json({ success: false, message: 'Per-piece ordering is not enabled for this listing' });
+      }
+    }
+    if (typeof listing.caseSize !== 'number' || listing.caseSize < 1) return res.status(400).json({ success: false, message: 'Invalid case size' });
+    if (!Array.isArray(po.reservations)) po.reservations = [];
+    if (typeof po.currentCaseNumber !== 'number' || po.currentCaseNumber < 1) po.currentCaseNumber = 1;
+    if (typeof po.currentCaseRemaining !== 'number') po.currentCaseRemaining = listing.caseSize;
+
+    const currentCase = po.currentCaseNumber;
+    const idx = po.reservations.findIndex(x => String(x.user) === String(userId) && x.status === 'filling' && x.caseNumber === currentCase);
+    const prev = idx >= 0 ? Number(po.reservations[idx].pieces || 0) : 0;
+
+    if (pieces === 0) {
+      if (idx >= 0) {
+        po.currentCaseRemaining = Math.max(0, po.currentCaseRemaining + prev);
+        po.reservations.splice(idx, 1);
+      }
+    } else {
+      const maxAllowed = listing.caseSize;
+      let desired = Math.min(pieces, maxAllowed);
+      const maxAbsolute = prev + po.currentCaseRemaining;
+      if (desired > maxAbsolute) desired = maxAbsolute;
+      const delta = desired - prev;
+      po.currentCaseRemaining = Math.max(0, po.currentCaseRemaining - Math.max(0, delta));
+      if (idx >= 0) {
+        po.reservations[idx].pieces = desired;
+      } else {
+        po.reservations.push({ user: userId, caseNumber: currentCase, pieces: desired, status: 'filling', reservedAt: new Date() });
+      }
+    }
+
+    let caseClosed = false;
+    if (po.currentCaseRemaining === 0) {
+      po.reservations = po.reservations.map(r => {
+        if (Number(r.caseNumber || 0) === currentCase && r.status === 'filling') {
+          const base = (r && typeof r.toObject === 'function') ? r.toObject() : r || {};
+          return { ...base, status: 'fulfilled' };
+        }
+        return r;
+      });
+      po.casesFulfilled = Number(po.casesFulfilled || 0) + 1;
+      po.currentCaseNumber = currentCase + 1;
+      po.currentCaseRemaining = Number(listing.caseSize);
+      caseClosed = true;
+    }
+
+    // Persist without triggering full document validation (some legacy listings may miss required fields like `group`)
+    await Listing.updateOne({ _id: listing._id }, { $set: { pieceOrdering: po } });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Reservation updated',
+      data: {
+        caseClosed,
+        currentCaseNumber: po.currentCaseNumber,
+        currentCaseRemaining: po.currentCaseRemaining,
+        userPieces: (function(){
+          const r = (po.reservations || []).find(x => String(x.user) === String(userId) && x.status === 'filling' && x.caseNumber === po.currentCaseNumber);
+          return r ? Number(r.pieces || 0) : 0;
+        })()
+      }
+    });
+  } catch (error) {
+    console.error('❌ [pieceSet] error:', error && error.message);
+    if (error && error.stack) console.error(error.stack);
+    res.status(500).json({ success: false, message: 'Failed to set per-piece reservation', error: error.message });
+  }
+};
+
+// ... (rest of the code remains the same)
+
+/**
+ * Cancel user's active reservation on the current case
+ */
+exports.pieceCancel = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    const po = listing.pieceOrdering || {};
+    if (!po.enabled) {
+      const cs = Number(listing.caseSize || 0);
+      if (cs > 0) {
+        listing.pieceOrdering = {
+          enabled: true,
+          currentCaseNumber: 1,
+          currentCaseRemaining: cs,
+          casesFulfilled: 0,
+          reservations: []
+        };
+      } else {
+        return res.status(400).json({ success: false, message: 'Per-piece ordering is not enabled for this listing' });
+      }
+    }
+    if (!Array.isArray(po.reservations)) po.reservations = [];
+    const currentCase = po.currentCaseNumber || 1;
+    const idx = po.reservations.findIndex(x => String(x.user) === String(userId) && x.status === 'filling' && x.caseNumber === currentCase);
+    if (idx === -1) return res.status(200).json({ success: true, message: 'No active reservation' });
+    const prev = Number(po.reservations[idx].pieces || 0);
+    po.currentCaseRemaining = Math.max(0, (po.currentCaseRemaining ?? 0) + prev);
+    po.reservations.splice(idx, 1);
+    await Listing.updateOne({ _id: listing._id }, { $set: { pieceOrdering: po } });
+    return res.status(200).json({ success: true, message: 'Reservation canceled', data: { currentCaseNumber: po.currentCaseNumber, currentCaseRemaining: po.currentCaseRemaining, yourPieces: 0 } });
+  } catch (error) {
+    console.error('❌ [pieceCancel] error:', error && error.message);
+    if (error && error.stack) console.error(error.stack);
+    return res.status(500).json({ success: false, message: 'Failed to cancel reservation', error: error.message });
+  }
+};
+
+/**
+ * Get current user's active per-piece reservations (for cart)
+ */
+exports.myPieceReservations = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const listings = await Listing.find({
+      'pieceOrdering.enabled': true,
+      'pieceOrdering.reservations': { $elemMatch: { user: userId, status: { $in: ['filling', 'fulfilled'] } } }
+    }).select('title images price priceUnit casePrice caseSize pieceOrdering vendor caseUnitPrice');
+
+    const data = (listings || []).map(lst => {
+      const po = lst.pieceOrdering || {};
+      const currentCase = po.currentCaseNumber || 1;
+      // Sum all active 'filling' reservations for this user regardless of case number
+      const userPieces = (po.reservations || [])
+        .filter(r => String(r.user) === String(userId) && (r.status === 'filling' || r.status === 'fulfilled'))
+        .reduce((sum, r) => sum + (Number(r.pieces || 0) || 0), 0);
+      // derive a unit price for per-piece subtotal calculations
+      const priceUnitStr = String(lst.priceUnit || '').toLowerCase();
+      const hasExplicitUnitPrice = (typeof lst.price === 'number') && lst.price > 0 && priceUnitStr !== 'case';
+      const derivedUnitPrice = (typeof lst.caseUnitPrice === 'number')
+        ? lst.caseUnitPrice
+        : ((typeof lst.casePrice === 'number' && typeof lst.caseSize === 'number' && lst.caseSize > 0)
+          ? (lst.casePrice / lst.caseSize)
+          : null);
+      // Prefer the case breakdown price when available (keeps UI and cart consistent)
+      const unitPrice = (typeof derivedUnitPrice === 'number')
+        ? derivedUnitPrice
+        : (hasExplicitUnitPrice ? lst.price : null);
+      const priceUnit = 'each';
+      return {
+        listingId: lst._id,
+        title: lst.title,
+        image: (Array.isArray(lst.images) && lst.images[0]) ? lst.images[0] : null,
+        caseSize: lst.caseSize || 1,
+        currentCaseNumber: currentCase,
+        currentCaseRemaining: po.currentCaseRemaining ?? (lst.caseSize || 0),
+        userPieces,
+        // Fields consumed by cart.js
+        pieces: userPieces,
+        caseNumber: currentCase,
+        piecesLeftToFill: Math.max(0, (po.currentCaseRemaining ?? 0)),
+        unitPrice: (typeof unitPrice === 'number') ? unitPrice : null,
+        priceUnit
+      };
+    });
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch reservations', error: error.message });
   }
 };

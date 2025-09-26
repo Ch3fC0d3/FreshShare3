@@ -4,9 +4,11 @@ const db = require('../models');
 const User = db.user;
 const crypto = require('crypto');
 const emailController = require('./email.controller');
+const authConfig = require('../config/auth.config');
 
-// Retrieve JWT secret from environment or use a default (in production, always use environment variable)
-const JWT_SECRET = process.env.JWT_SECRET || "bezkoder-secret-key";
+// Retrieve JWT secret from shared config and keep legacy secret for compatibility
+const JWT_SECRET = authConfig.secret;
+const LEGACY_JWT_SECRET = process.env.LEGACY_JWT_SECRET || 'freshShare-auth-secret';
 
 /**
  * Register a new user

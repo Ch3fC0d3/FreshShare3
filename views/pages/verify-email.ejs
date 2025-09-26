@@ -74,48 +74,4 @@
   </div>
 </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const resendEmailForm = document.getElementById('resendEmailForm');
-    const submitResendBtn = document.getElementById('submitResendBtn');
-    const resendSuccessAlert = document.getElementById('resendSuccessAlert');
-    const resendErrorAlert = document.getElementById('resendErrorAlert');
-    
-    submitResendBtn.addEventListener('click', async function() {
-      const email = document.getElementById('email').value;
-      if (!email) return;
-      
-      try {
-        resendSuccessAlert.classList.add('d-none');
-        resendErrorAlert.classList.add('d-none');
-        submitResendBtn.disabled = true;
-        submitResendBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
-        
-        const response = await fetch('/api/email/send-verification', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          resendSuccessAlert.classList.remove('d-none');
-          document.getElementById('email').value = '';
-        } else {
-          resendErrorAlert.textContent = data.message || 'Failed to send verification email. Please try again.';
-          resendErrorAlert.classList.remove('d-none');
-        }
-      } catch (error) {
-        resendErrorAlert.textContent = 'An error occurred. Please try again later.';
-        resendErrorAlert.classList.remove('d-none');
-        console.error('Error:', error);
-      } finally {
-        submitResendBtn.disabled = false;
-        submitResendBtn.innerHTML = 'Send';
-      }
-    });
-  });
-</script>
+<script src="/js/verify-email-page.js"></script>

@@ -54,29 +54,4 @@
 <script src="/js/local-auth.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/login-helper.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Check if we should redirect to a specific page after login
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectUrl = urlParams.get('redirect');
-        const errorMsg = urlParams.get('error');
-        
-        // Display error message if present in URL
-        if (errorMsg) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = decodeURIComponent(errorMsg);
-            errorMessage.classList.remove('d-none');
-        }
-        
-        // Disable automatic client-side redirects to prevent redirect loops
-        console.log('Disabling automatic redirects to prevent login loops');
-        
-        // Clear any potentially invalid tokens that might be causing issues
-        if (localStorage.getItem('token')) {
-            console.log('Clearing potentially invalid localStorage token');
-            localStorage.removeItem('token');
-        }
-        
-        // Form submission is now handled by login-helper.js
-    });
-</script>
+<script src="/js/login-page.js"></script>

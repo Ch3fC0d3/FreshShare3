@@ -20,6 +20,12 @@ const ListingSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  // Optional wholesale case price
+  casePrice: {
+    type: Number,
+    min: 0,
+    required: false
+  },
   priceUnit: {
     type: String,
     default: 'each',
@@ -66,6 +72,14 @@ const ListingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  group: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Group',
+    // TEMPORARY: relaxed to support legacy listings missing a group.
+    // A backfill migration will populate this, after which we can set required: true again.
+    required: false,
+    index: true
   },
   isOrganic: {
     type: Boolean,
@@ -120,6 +134,33 @@ const ListingSchema = new mongoose.Schema({
     type: Number,
     min: 1,
     default: 1
+  },
+  // Group buying configuration
+  groupBuy: {
+    enabled: { type: Boolean, default: false },
+    minCases: { type: Number, min: 1, default: 1 },
+    targetCases: { type: Number, min: 1 },
+    deadline: { type: Date },
+    committedCases: { type: Number, min: 0, default: 0 },
+    participants: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      cases: { type: Number, min: 1, required: true },
+      committedAt: { type: Date, default: Date.now }
+    }]
+  },
+  // Per-piece ordering with rolling cases
+  pieceOrdering: {
+    enabled: { type: Boolean, default: false },
+    currentCaseNumber: { type: Number, default: 1, min: 1 },
+    currentCaseRemaining: { type: Number, default: 0, min: 0 },
+    casesFulfilled: { type: Number, default: 0, min: 0 },
+    reservations: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      caseNumber: { type: Number, required: true, min: 1 },
+      pieces: { type: Number, required: true, min: 1 },
+      status: { type: String, enum: ['filling', 'fulfilled', 'canceled'], default: 'filling' },
+      reservedAt: { type: Date, default: Date.now }
+    }]
   },
   tags: [{
     type: String,
@@ -180,6 +221,20 @@ ListingSchema.index({
 
 // Create geospatial index for location-based queries
 ListingSchema.index({ 'location.coordinates': '2dsphere' });
+
+// Expose virtuals in outputs
+ListingSchema.set('toJSON', { virtuals: true });
+ListingSchema.set('toObject', { virtuals: true });
+
+// Virtual: price per unit within a case
+ListingSchema.virtual('caseUnitPrice').get(function() {
+  try {
+    if (typeof this.casePrice === 'number' && typeof this.caseSize === 'number' && this.caseSize > 0) {
+      return this.casePrice / this.caseSize;
+    }
+  } catch (_) {}
+  return undefined;
+});
 
 const Listing = mongoose.model('Listing', ListingSchema);
 

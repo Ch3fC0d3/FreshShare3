@@ -142,77 +142,28 @@
                     <i class="fas fa-edit"></i> Edit Profile
                 </a>
             </div>
+
+            <!-- Recent Orders -->
+            <% if (typeof recentOrders !== 'undefined' && recentOrders && recentOrders.length) { %>
+            <div class="profile-section">
+                <h2 class="section-subtitle">Recent Orders</h2>
+                <div class="profile-info">
+                    <% recentOrders.forEach(function(o){ %>
+                    <div class="info-item">
+                        <span class="info-label">Order</span>
+                        <span class="info-value">
+                            <a href="/orders/<%= o._id %>"><%= o._id %></a>
+                            <span class="text-muted" style="margin-left:8px"><%= o.createdAt ? new Date(o.createdAt).toLocaleString() : '' %></span>
+                            <span class="text-muted" style="margin-left:8px">$<%= (o.total || 0).toFixed(2) %></span>
+                        </span>
+                    </div>
+                    <% }); %>
+                </div>
+            </div>
+            <% } %>
         </div>
     </div>
 </div>
 
 <%- contentFor('script') %>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Profile page loaded');
-        
-        // Check if there's an error message in the URL (e.g., from a redirect)
-        const urlParams = new URLSearchParams(window.location.search);
-        const errorMsg = urlParams.get('error');
-        
-        if (errorMsg) {
-            // Display error to user
-            const errorContainer = document.createElement('div');
-            errorContainer.className = 'alert alert-danger mt-3';
-            errorContainer.textContent = decodeURIComponent(errorMsg);
-            document.querySelector('.profile-container').prepend(errorContainer);
-        }
-        
-        // Add error handling for missing data and API errors
-        const handleMissingData = () => {
-            // Check if we have the minimum required user data
-            const username = document.querySelector('.text-muted')?.textContent;
-            if (!username || username === '@') {
-                console.error('Missing user data - authentication may have failed');
-                // Redirect to login if no data is available
-                window.location.href = '/login?redirect=/profile&error=' + encodeURIComponent('Please log in to view your profile');
-                return;
-            }
-            
-            // Add fetch error handling for API requests
-            const originalFetch = window.fetch;
-            window.fetch = async function(url, options) {
-                try {
-                    const response = await originalFetch(url, options);
-                    
-                    // Handle 403 Forbidden errors
-                    if (response.status === 403) {
-                        console.error('403 Forbidden error detected');
-                        // Show error message
-                        const errorContainer = document.createElement('div');
-                        errorContainer.className = 'alert alert-danger mt-3';
-                        errorContainer.textContent = 'Authentication error: Your session may have expired. Please log in again.';
-                        document.querySelector('.profile-container').prepend(errorContainer);
-                        
-                        // Redirect after a short delay
-                        setTimeout(() => {
-                            window.location.href = '/login?redirect=/profile&error=' + 
-                                encodeURIComponent('Your session has expired. Please log in again.');
-                        }, 2000);
-                    }
-                    
-                    return response;
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    // Show network error message
-                    const errorContainer = document.createElement('div');
-                    errorContainer.className = 'alert alert-danger mt-3';
-                    errorContainer.textContent = 'Network error: Could not connect to the server. Please try again later.';
-                    document.querySelector('.profile-container').prepend(errorContainer);
-                    return new Response(JSON.stringify({ error: error.message }), {
-                        status: 500,
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                }
-            };
-        };
-        
-        // Run check after a short delay to ensure DOM is fully processed
-        setTimeout(handleMissingData, 500);
-    });
-</script>
+<script src="/js/profile-page.js"></script>

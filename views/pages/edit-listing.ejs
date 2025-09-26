@@ -21,6 +21,8 @@
     </div>
     <% } %>
 
+    <div id="editListingAlert" class="alert" role="alert" style="display:none"></div>
+
     <% if (user) { %>
     <form id="editListingForm">
       <!-- Basic Information -->
@@ -38,15 +40,19 @@
           <div class="col-md-4 mb-3">
             <label for="price" class="form-label">Price*</label>
             <input type="number" min="0" step="0.01" class="form-control" id="price" name="price" required>
+            <div class="form-text">If Unit is <strong>Case</strong>, this Price is treated as the <strong>Case Price</strong>.</div>
           </div>
           <div class="col-md-4 mb-3">
             <label for="priceUnit" class="form-label">Price Unit</label>
             <select class="form-select" id="priceUnit" name="priceUnit">
               <option value="">Select unit</option>
-              <option value="lb">lb</option>
-              <option value="kg">kg</option>
-              <option value="case">case</option>
-              <option value="each">each</option>
+              <option value="each">Each</option>
+              <option value="lb">Per pound (lb)</option>
+              <option value="kg">Per kilogram (kg)</option>
+              <option value="oz">Per ounce (oz)</option>
+              <option value="bunch">Per bunch</option>
+              <option value="hour">Per hour</option>
+              <option value="case">Case</option>
             </select>
           </div>
           <div class="col-md-4 mb-3">
@@ -63,6 +69,15 @@
               <option>Frozen</option>
               <option>Prepared</option>
             </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="casePrice" class="form-label">Case Price</label>
+            <input type="number" min="0" step="0.01" class="form-control" id="casePrice" name="casePrice" placeholder="Total price per case">
+            <div class="form-text">Total price for one wholesale case. Combine with Case Size below.</div>
+            <div class="form-text" id="priceBreakdown"></div>
           </div>
         </div>
 
@@ -93,228 +108,129 @@
         </div>
       </div>
 
-      <!-- Vendor Information (optional) -->
+      <!-- Group Buy -->
       <div class="form-section">
-        <h3>Vendor Information <small class="text-muted">(optional)</small></h3>
+        <h3>Group Buy</h3>
+        <div class="form-check form-switch mb-2">
+          <input type="checkbox" class="form-check-input switch-lg" id="groupBuy-enabled" name="groupBuy[enabled]">
+          <label class="form-check-label fw-semibold" for="groupBuy-enabled">Enable group buy</label>
+        </div>
+        <div class="alert alert-info py-2" role="alert">
+          <i class="bi bi-people me-1"></i>
+          Buyers can <strong>commit cases together</strong>. When the target is reached by the deadline, place the order.
+        </div>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="groupBuy-minCases" class="form-label">Minimum Cases</label>
+            <input type="number" min="1" step="1" class="form-control" id="groupBuy-minCases" name="groupBuy[minCases]" placeholder="e.g., 2">
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="groupBuy-targetCases" class="form-label">Target Cases</label>
+            <input type="number" min="1" step="1" class="form-control" id="groupBuy-targetCases" name="groupBuy[targetCases]" placeholder="e.g., 6">
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="groupBuy-deadline" class="form-label">Deadline</label>
+            <input type="datetime-local" class="form-control" id="groupBuy-deadline" name="groupBuy[deadline]">
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-Piece Ordering -->
+      <div class="form-section">
+        <h3>Per-Piece Ordering</h3>
+        <div class="form-check form-switch mb-2">
+          <input type="checkbox" class="form-check-input switch-lg" id="pieceOrdering-enabled" name="pieceOrdering[enabled]">
+          <label class="form-check-label fw-semibold" for="pieceOrdering-enabled">Enable per-piece ordering with rolling cases</label>
+        </div>
+        <div class="alert alert-info py-2 po-explainer" role="alert">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>Shoppers reserve individual pieces</strong> up to a case. When the case fills, it locks and a new case opens automatically.
+        </div>
+      </div>
+
+      <!-- Commitments Summary -->
+      <div class="form-section" id="commitmentsSection">
+        <h3>Commitments Summary</h3>
+        <div id="pendingChangesNote" class="text-warning small" style="display:none">Pending changes not yet saved</div>
+        <div id="commitmentsContent" class="small text-muted">Loading...</div>
+        <div class="mt-2 d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshCommitmentsBtn">Refresh</button>
+          <button type="button" class="btn btn-outline-danger btn-sm" id="cancelGbBtn" style="display:none">Cancel my group buy commitment</button>
+          <button type="button" class="btn btn-outline-danger btn-sm" id="cancelPoBtn" style="display:none">Cancel my piece reservation</button>
+        </div>
+      </div>
+
+      <!-- Vendor selection -->
+      <div class="form-section">
+        <h3>Vendor <small class="text-muted">(optional)</small></h3>
         <div class="row align-items-end">
           <div class="col-md-8 mb-3">
             <label for="saved-vendor" class="form-label">Saved Vendor</label>
             <select class="form-select" id="saved-vendor">
               <option value="">Select a saved vendor</option>
             </select>
-            <div class="form-text">Choose a saved vendor to auto-fill the fields.</div>
             <div id="vendorsFetchStatus" class="form-text text-muted" style="display:none"></div>
             <a href="#" id="vendorsRetry" class="small" style="display:none">Retry</a>
           </div>
           <div class="col-md-4 mb-3">
-            <div class="form-check mt-4">
-              <input type="checkbox" class="form-check-input" id="save-vendor">
-              <label class="form-check-label" for="save-vendor">Save vendor info for future use</label>
+            <label class="form-label d-block">&nbsp;</label>
+            <div class="d-grid gap-2">
+              <button type="button" id="vendorQuickPickBtn" class="btn btn-secondary w-100"><i class="fas fa-user-check me-1"></i> Quick Pick</button>
+              <a href="/vendors?return=<%= encodeURIComponent('/listings/' + listingId + '/edit') %>" class="btn btn-outline-secondary w-100"><i class="fas fa-plus me-1"></i> Add Vendor</a>
             </div>
           </div>
         </div>
         <input type="hidden" id="vendorId" name="vendorId" />
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="vendor-name" class="form-label">Vendor Name</label>
-            <input type="text" class="form-control" id="vendor-name" name="vendor[name]" placeholder="e.g., Local Farm Co.">
+      </div>
+
+      <!-- Vendor Quick Pick Modal (Bootstrap) -->
+      <div class="modal fade" id="vendorQuickPickModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Select a Vendor</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="vendorQuickPickClose"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <input id="vendorQuickPickSearch" type="text" class="form-control" placeholder="Search vendors by name or city..." autocomplete="off">
+              </div>
+              <div id="vendorQuickPickList" class="list-group">
+                <div class="p-3 text-muted">Loading…</div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-6 mb-3">
-            <label for="vendor-website" class="form-label">Website</label>
-            <input type="text" inputmode="url" class="form-control" id="vendor-website" name="vendor[website]" placeholder="https://example.com">
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="vendor-email" class="form-label">Contact Email</label>
-            <input type="email" class="form-control" id="vendor-email" name="vendor[contactEmail]" placeholder="vendor@example.com">
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="vendor-phone" class="form-label">Contact Phone</label>
-            <input type="tel" class="form-control" id="vendor-phone" name="vendor[contactPhone]" placeholder="(555) 123-4567">
-          </div>
-        </div>
-        <div class="mb-3">
-          <label for="vendor-notes" class="form-label">Notes</label>
-          <textarea class="form-control" id="vendor-notes" name="vendor[notes]" rows="2"></textarea>
         </div>
       </div>
 
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <a href="/marketplace" class="btn btn-outline-secondary">Cancel</a>
+        <button type="button" class="btn btn-danger ms-auto" id="deleteListingBtn">Delete Listing</button>
       </div>
     </form>
     <% } %>
   </div>
 </div>
 
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteLabel">Delete Listing?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        This will permanently delete this listing. This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
 <%- contentFor('script') %>
-<script>
-  const pageEl = document.getElementById('editListingPage');
-  const IS_AUTH = (pageEl.dataset.auth === 'true');
-  const LISTING_ID = pageEl.dataset.listingId;
-  
-  if (IS_AUTH) {
-    // Elements
-    const form = document.getElementById('editListingForm');
-    const savedVendorSelect = document.getElementById('saved-vendor');
-    const vendorIdInput = document.getElementById('vendorId');
-    const saveVendorCheckbox = document.getElementById('save-vendor');
-
-    // Utility
-    function setValue(id, val) {
-      const el = document.getElementById(id);
-      if (el) el.value = val ?? '';
-    }
-
-    // Load listing data and vendors
-    let SAVED_VENDORS = [];
-    let listing = null;
-
-    async function loadListing() {
-      const res = await fetch(`/api/marketplace/${LISTING_ID}`);
-      const json = await res.json();
-      if (!json.success) throw new Error('Failed to load listing');
-      listing = json.data;
-      populateFormFromListing();
-    }
-
-    async function loadVendors() {
-      const statusEl = document.getElementById('vendorsFetchStatus');
-      const retryEl = document.getElementById('vendorsRetry');
-      if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Loading saved vendors...'; }
-      if (retryEl) retryEl.style.display = 'none';
-      try {
-        const res = await fetch('/api/marketplace/vendors');
-        if (!res.ok) {
-          if (statusEl) {
-            if (res.status === 401) statusEl.textContent = 'Please log in to load saved vendors.';
-            else statusEl.textContent = `Failed to load vendors (HTTP ${res.status}).`;
-          }
-          if (retryEl) retryEl.style.display = 'inline';
-          return;
-        }
-        const json = await res.json();
-        if (json.success) {
-          SAVED_VENDORS = json.data || [];
-          populateVendorSelect();
-          if (statusEl) {
-            if (SAVED_VENDORS.length === 0) { statusEl.textContent = 'No saved vendors yet.'; statusEl.style.display = 'block'; }
-            else { statusEl.textContent = ''; statusEl.style.display = 'none'; }
-          }
-          if (retryEl) retryEl.style.display = 'none';
-          if (listing && listing.vendorId) {
-            const hasOption = SAVED_VENDORS.some(v => v._id === listing.vendorId);
-            if (hasOption) savedVendorSelect.value = listing.vendorId;
-          }
-        } else {
-          if (statusEl) statusEl.textContent = 'Failed to load vendors.';
-          if (retryEl) retryEl.style.display = 'inline';
-        }
-      } catch (e) {
-        if (statusEl) statusEl.textContent = 'Network error loading vendors.';
-        if (retryEl) retryEl.style.display = 'inline';
-      }
-    }
-
-    function populateVendorSelect() {
-      savedVendorSelect.innerHTML = '<option value="">Select a saved vendor</option>';
-      SAVED_VENDORS.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v._id;
-        opt.textContent = v.name || '(Unnamed vendor)';
-        savedVendorSelect.appendChild(opt);
-      });
-    }
-
-    function populateFormFromListing() {
-      setValue('title', listing.title);
-      const desc = document.getElementById('description'); if (desc) desc.value = listing.description || '';
-      setValue('price', listing.price);
-      const priceUnit = document.getElementById('priceUnit'); if (priceUnit) priceUnit.value = listing.priceUnit || '';
-      const category = document.getElementById('category'); if (category && listing.category) category.value = listing.category;
-      setValue('quantity', listing.quantity);
-      setValue('caseSize', listing.caseSize);
-      const isOrg = document.getElementById('isOrganic'); if (isOrg) isOrg.checked = !!listing.isOrganic;
-      setValue('upcCode', listing.upcCode);
-      const tagsInput = document.getElementById('tags');
-      if (Array.isArray(listing.tags)) tagsInput.value = listing.tags.join(', ');
-
-      // Vendor fields (use snapshot first)
-      if (listing.vendor) {
-        setValue('vendor-name', listing.vendor.name);
-        setValue('vendor-email', listing.vendor.contactEmail);
-        setValue('vendor-phone', listing.vendor.contactPhone);
-        setValue('vendor-website', listing.vendor.website);
-        const notesEl = document.getElementById('vendor-notes'); if (notesEl) notesEl.value = listing.vendor.notes || '';
-      }
-      if (listing.vendorId) {
-        vendorIdInput.value = listing.vendorId;
-      }
-    }
-
-    function onVendorSelect() {
-      const id = savedVendorSelect.value;
-      vendorIdInput.value = id || '';
-      const v = SAVED_VENDORS.find(x => x._id === id);
-      if (v) {
-        setValue('vendor-name', v.name || '');
-        setValue('vendor-email', v.contactEmail || '');
-        setValue('vendor-phone', v.contactPhone || '');
-        setValue('vendor-website', v.website || '');
-        const notesEl = document.getElementById('vendor-notes'); if (notesEl) notesEl.value = v.notes || '';
-      }
-    }
-
-    savedVendorSelect.addEventListener('change', onVendorSelect);
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const body = {
-        title: document.getElementById('title').value.trim(),
-        description: document.getElementById('description').value.trim(),
-        price: Number(document.getElementById('price').value),
-        priceUnit: document.getElementById('priceUnit').value,
-        category: document.getElementById('category').value,
-        quantity: document.getElementById('quantity').value ? Number(document.getElementById('quantity').value) : undefined,
-        caseSize: document.getElementById('caseSize').value ? Number(document.getElementById('caseSize').value) : undefined,
-        isOrganic: document.getElementById('isOrganic').checked,
-        upcCode: document.getElementById('upcCode').value.trim(),
-        tags: (document.getElementById('tags').value || '').split(',').map(t => t.trim()).filter(Boolean),
-        // vendor fields (bracketed for controller parsing)
-        'vendor[name]': document.getElementById('vendor-name').value.trim(),
-        'vendor[contactEmail]': document.getElementById('vendor-email').value.trim(),
-        'vendor[contactPhone]': document.getElementById('vendor-phone').value.trim(),
-        'vendor[website]': document.getElementById('vendor-website').value.trim(),
-        'vendor[notes]': document.getElementById('vendor-notes').value.trim(),
-        vendorId: document.getElementById('vendorId').value || undefined,
-        saveVendor: saveVendorCheckbox.checked ? 'true' : 'false'
-      };
-
-      try {
-        const res = await fetch(`/api/marketplace/${LISTING_ID}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const json = await res.json();
-        if (json.success) {
-          window.location.href = '/marketplace';
-        } else {
-          alert('Failed to update listing: ' + (json.message || 'Error'));
-        }
-      } catch (err) {
-        alert('Failed to update listing');
-      }
-    });
-
-    // Initialize
-    const vendorsRetryLink = document.getElementById('vendorsRetry');
-    if (vendorsRetryLink) vendorsRetryLink.addEventListener('click', (e) => { e.preventDefault(); loadVendors(); });
-    Promise.all([loadListing(), loadVendors()]).catch(err => {
-      console.error(err);
-      alert('Failed to load edit page data');
-    });
-  }
-</script>
+<script src="/js/edit-listing-page.js"></script>

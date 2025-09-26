@@ -28,6 +28,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let discussionMessages = [];
     let groupEvents = [];
     let groupMembers = [];
+    let groupInfo = null;
+    let rankedProducts = [];
+    let currentProductFilter = 'all';
+    let productsMetrics = {
+        totalCount: 0,
+        activeCount: 0,
+        requestedCount: 0,
+        pinnedCount: 0,
+        maxActiveProducts: 0,
+        activeProductIds: []
+    };
+    const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     
     // Initialize the page
     initPage();
@@ -45,6 +57,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Setup event listeners
             setupEventListeners();
+
+            // Load ranked products list
+            await loadRankedProducts();
             
             // Load shopping list
             loadShoppingList();
@@ -61,6 +76,115 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error initializing page:', error);
             showToast('Error', 'Failed to load group details', 'error');
         }
+    }
+
+    function setupProductEventHandlers() {
+        const refreshBtn = document.getElementById('refresh-products-btn');
+        const suggestBtn = document.getElementById('suggest-product-btn');
+        const emptyStateBtn = document.getElementById('empty-state-suggest-btn');
+        const submitSuggestBtn = document.getElementById('submit-suggest-product-btn');
+        const filterButtons = document.querySelectorAll('.ranked-products-tabs .btn');
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing';
+                try {
+                    await loadRankedProducts();
+                    showToast('Success', 'Product rankings updated.', 'success');
+                } catch (err) {
+                    showToast('Error', 'Failed to refresh products', 'error');
+                } finally {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '<i class="fas fa-sync"></i> Refresh';
+                }
+            });
+        }
+
+        const openSuggestModal = () => {
+            if (!isMember) {
+                showToast('Join Group', 'You must join the group before suggesting products.', 'info');
+                return;
+            }
+            const modalEl = document.getElementById('suggest-product-modal');
+            if (!modalEl) return;
+            document.getElementById('suggest-product-form').reset();
+            const errorEl = document.getElementById('suggest-product-error');
+            if (errorEl) {
+                errorEl.style.display = 'none';
+                errorEl.textContent = '';
+            }
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        };
+
+        if (suggestBtn) suggestBtn.addEventListener('click', openSuggestModal);
+        if (emptyStateBtn) emptyStateBtn.addEventListener('click', openSuggestModal);
+
+        if (submitSuggestBtn) {
+            submitSuggestBtn.addEventListener('click', async () => {
+                const nameInput = document.getElementById('suggest-product-name');
+                const noteInput = document.getElementById('suggest-product-note');
+                const imageInput = document.getElementById('suggest-product-image');
+                const urlInput = document.getElementById('suggest-product-url');
+                const errorEl = document.getElementById('suggest-product-error');
+
+                const payload = {
+                    name: nameInput.value.trim(),
+                    note: noteInput.value.trim(),
+                    imageUrl: imageInput.value.trim(),
+                    productUrl: urlInput.value.trim()
+                };
+
+                if (!payload.name) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Product name is required.';
+                        errorEl.style.display = 'block';
+                    }
+                    return;
+                }
+
+                submitSuggestBtn.disabled = true;
+                submitSuggestBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting';
+
+                try {
+                    const response = await authorizedFetch(`/api/groups/${groupId}/products`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json().catch(() => ({ message: 'Failed to suggest product.' }));
+                        throw new Error(data.message || 'Failed to suggest product.');
+                    }
+
+                    showToast('Success', 'Product suggested successfully', 'success');
+                    const modalEl = document.getElementById('suggest-product-modal');
+                    if (modalEl) {
+                        bootstrap.Modal.getInstance(modalEl)?.hide();
+                    }
+                    await loadRankedProducts();
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err.message || 'Failed to suggest product.';
+                        errorEl.style.display = 'block';
+                    }
+                } finally {
+                    submitSuggestBtn.disabled = false;
+                    submitSuggestBtn.innerHTML = 'Submit Suggestion';
+                }
+            });
+        }
+
+        filterButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                filterButtons.forEach((b) => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentProductFilter = btn.getAttribute('data-filter');
+                renderRankedProducts();
+            });
+        });
     }
     
     /**
@@ -105,13 +229,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('Failed to load group details');
             }
             
-            const group = await response.json();
+            const payload = await response.json();
+            const group = payload?.group || payload;
+            groupInfo = group;
             displayGroupDetails(group);
             
             // Check if current user is admin or member
             if (currentUser) {
-                isAdmin = group.admins.includes(currentUser.id) || group.createdBy === currentUser.id;
-                isMember = group.members.includes(currentUser.id);
+                isAdmin = Array.isArray(groupInfo.admins) && groupInfo.admins.includes(currentUser.id) || groupInfo.createdBy === currentUser.id;
+                isMember = Array.isArray(groupInfo.members) && groupInfo.members.includes(currentUser.id);
                 
                 // Update UI based on user role
                 updateUIBasedOnRole();
@@ -125,6 +251,16 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Display group details in the UI
      */
+    async function authorizedFetch(url, options = {}) {
+        const headers = options.headers ? { ...options.headers } : {};
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        if (token) {
+            const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+            headers['Authorization'] = authHeader;
+        }
+        return fetch(url, { ...options, headers });
+    }
+
     function displayGroupDetails(group) {
         // Set group name and description
         document.getElementById('group-name').textContent = group.name;
@@ -146,13 +282,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('group-location').textContent = locationParts.join(', ');
         
         // Set delivery days
-        document.getElementById('delivery-days').textContent = group.deliveryDays.join(', ');
-        
-        // Display group rules
-        displayGroupRules(group.rules);
+        document.getElementById('delivery-days').textContent = (group.deliveryDays || []).join(', ');
+        updateScheduleDisplay();
+        updateMaxActiveBanner();
     }
     
     /**
+     * Load ranked products from the server
      * Format category name for display
      */
     function formatCategoryName(category) {
@@ -160,6 +296,20 @@ document.addEventListener('DOMContentLoaded', function() {
             .split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
+    }
+    
+    // Basic HTML escape helper for safe text rendering
+    function escapeHtml(s){
+        try {
+            return String(s)
+                .replaceAll('&','&amp;')
+                .replaceAll('<','&lt;')
+                .replaceAll('>','&gt;')
+                .replaceAll('"','&quot;')
+                .replaceAll("'",'&#039;');
+        } catch(_) {
+            return String(s||'');
+        }
     }
     
     /**
@@ -242,12 +392,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const addItemToggle = document.getElementById('add-item-toggle');
         const createEventBtn = document.getElementById('create-event-btn');
         const inviteMemberBtn = document.getElementById('invite-member-btn');
-        
+        const scheduleAdminActions = document.getElementById('schedule-admin-actions');
+        const scheduleForm = document.getElementById('schedule-form');
+        const rankedSection = document.getElementById('ranked-products-section');
+        const suggestBtn = document.getElementById('suggest-product-btn');
+        const emptySuggestBtn = document.getElementById('empty-state-suggest-btn');
+
         // Update buttons based on membership status
         if (isMember) {
             joinGroupBtn.style.display = 'none';
             leaveGroupBtn.style.display = 'inline-block';
             addItemToggle.style.display = 'inline-block';
+            if (isAdmin) {
+                scheduleAdminActions.style.display = 'inline-block';
+            } else {
+                scheduleAdminActions.style.display = 'none';
+            }
             createEventBtn.style.display = 'inline-block';
         } else {
             joinGroupBtn.style.display = 'inline-block';
@@ -260,9 +420,531 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isAdmin) {
             adminActions.style.display = 'inline-block';
             inviteMemberBtn.style.display = 'inline-block';
+            if (scheduleAdminActions) scheduleAdminActions.classList.remove('d-none');
         } else {
             adminActions.style.display = 'none';
             inviteMemberBtn.style.display = 'none';
+            if (scheduleAdminActions) scheduleAdminActions.classList.add('d-none');
+            if (scheduleForm) scheduleForm.style.display = 'none';
+        }
+
+        if (rankedSection) {
+            rankedSection.style.display = isMember ? 'block' : 'none';
+        }
+        if (suggestBtn) {
+            suggestBtn.style.display = isMember ? 'inline-block' : 'none';
+        }
+        if (emptySuggestBtn) {
+            emptySuggestBtn.style.display = isMember ? 'inline-flex' : 'none';
+        }
+    }
+
+    function updateMaxActiveBanner() {
+        const banner = document.getElementById('max-products-banner');
+        if (!banner || !groupInfo) return;
+        const maxProducts = groupInfo.maxActiveProducts || productsMetrics.maxActiveProducts;
+        const countBadge = document.getElementById('active-products-count-badge');
+        const maxCountEl = document.getElementById('max-products-count');
+        const summaryEl = document.getElementById('active-products-summary');
+
+        if (maxProducts > 0) {
+            banner.style.display = 'flex';
+            if (maxCountEl) maxCountEl.textContent = maxProducts;
+            if (countBadge) countBadge.textContent = `${productsMetrics.activeCount || 0} Active`;
+            if (summaryEl) {
+                const requestedCount = Math.max(0, (productsMetrics.totalCount || 0) - (productsMetrics.activeCount || 0));
+                summaryEl.textContent = `• ${productsMetrics.activeCount || 0} active · ${requestedCount} in queue`;
+            }
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    async function loadRankedProducts() {
+        if (!isMember && !isAdmin) {
+            rankedProducts = [];
+            renderRankedProducts();
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams();
+            if (currentProductFilter === 'mine') params.set('mine', 'true');
+            if (currentProductFilter === 'pinned') params.set('pinned', 'true');
+            if (['active', 'requested'].includes(currentProductFilter)) params.set('status', currentProductFilter);
+
+            const response = await authorizedFetch(`/api/groups/${groupId}/products?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ranked products (${response.status})`);
+            }
+            const data = await response.json();
+            rankedProducts = Array.isArray(data.products) ? data.products : [];
+            productsMetrics = data.metrics || productsMetrics;
+            updateMaxActiveBanner();
+            renderRankedProducts();
+        } catch (error) {
+            console.error('Error loading ranked products:', error);
+            rankedProducts = [];
+            renderRankedProducts();
+            showToast('Error', 'Unable to load ranked products right now.', 'error');
+        }
+    }
+
+    function renderRankedProducts() {
+        const listEl = document.getElementById('ranked-products-list');
+        const emptyStateEl = document.getElementById('ranked-products-empty');
+        const infoBanner = document.getElementById('products-info-banner');
+
+        if (!listEl || !emptyStateEl) return;
+
+        listEl.innerHTML = '';
+
+        if (!isMember && !isAdmin) {
+            emptyStateEl.style.display = 'block';
+            emptyStateEl.innerHTML = '<p class="mb-0">Join this group to view and suggest products.</p>';
+            if (infoBanner) infoBanner.style.display = 'none';
+            return;
+        }
+
+        let filtered = rankedProducts.slice();
+        if (currentProductFilter === 'mine') {
+            filtered = filtered.filter((product) => product.isMine);
+        } else if (currentProductFilter === 'pinned') {
+            filtered = filtered.filter((product) => product.pinned);
+        }
+
+        if (filtered.length === 0) {
+            emptyStateEl.style.display = 'block';
+            emptyStateEl.innerHTML = '<p class="mb-2">No requests yet—be the first to suggest a product.</p><button class="btn btn-primary" id="empty-state-suggest-btn"><i class="fas fa-plus"></i> Suggest a Product</button>';
+            if (infoBanner) infoBanner.style.display = 'none';
+            setupProductEventHandlers();
+            return;
+        }
+
+        emptyStateEl.style.display = 'none';
+
+        const activeIds = new Set(productsMetrics.activeProductIds || []);
+
+        filtered.forEach((product) => {
+            const card = document.createElement('div');
+            card.className = 'ranked-product-card';
+            if (activeIds.has(product.id)) card.classList.add('highlight-active');
+
+            const productStatus = product.status || (activeIds.has(product.id) ? 'active' : 'requested');
+            const pinnedBadge = product.pinned ? '<span class="badge bg-warning text-dark ms-2"><i class="fas fa-thumbtack"></i> Pinned</span>' : '';
+            const isActive = productStatus === 'active';
+
+            card.innerHTML = `
+                <div class="product-rank-badge">#${product.rank || '?'}</div>
+                <div class="ranked-product-topline">
+                    <div class="ranked-product-info">
+                        <h4 class="ranked-product-title">${escapeHtml(product.name || 'Untitled Product')}
+                            <span class="product-status-badge ${productStatus}">${productStatus === 'active' ? 'Active' : 'Requested'}</span>
+                            ${isActive ? '<span class="badge bg-success ms-1">Buyable</span>' : ''}
+                            ${pinnedBadge}
+                        </h4>
+                        <div class="ranked-product-meta">
+                            <span><i class="fas fa-user"></i> ${escapeHtml(product.createdBy?.displayName || 'Unknown')}</span>
+                            <span><i class="far fa-clock"></i> ${formatRelativeTime(product.lastActivityAt)}</span>
+                            <span><i class="fas fa-signal"></i> Score: ${product.score ?? 0}</span>
+                        </div>
+                        ${product.note ? `<p class="mb-2">${escapeHtml(product.note)}</p>` : ''}
+                        <div class="ranked-product-links">
+                            ${product.imageUrl ? `<a href="${encodeURI(product.imageUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="fas fa-image"></i> View image</a>` : ''}
+                            ${product.productUrl ? `<a href="${encodeURI(product.productUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="fas fa-external-link-alt"></i> Product link</a>` : ''}
+                        </div>
+                    </div>
+                    <div class="ranked-product-score">
+                        <div class="score-value">${product.score ?? 0}</div>
+                        <div class="score-label">Score</div>
+                        <div class="text-muted small">${product.upvoteCount || 0} up · ${product.downvoteCount || 0} down</div>
+                    </div>
+                </div>
+                <div class="ranked-product-actions">
+                    <div class="vote-buttons" data-product-id="${product.id}">
+                        <button class="btn btn-outline-success btn-sm vote-btn" data-vote="up" ${product.userVote === 'up' ? 'disabled' : ''}><i class="fas fa-thumbs-up"></i></button>
+                        <button class="btn btn-outline-danger btn-sm vote-btn" data-vote="down" ${product.userVote === 'down' ? 'disabled' : ''}><i class="fas fa-thumbs-down"></i></button>
+                        <button class="btn btn-outline-secondary btn-sm vote-btn" data-vote="clear" ${!product.userVote ? 'disabled' : ''}>Clear</button>
+                    </div>
+                    ${isAdmin ? renderAdminProductActions(product) : ''}
+                </div>
+            `;
+
+            listEl.appendChild(card);
+        });
+
+        // Attach vote handlers
+        listEl.querySelectorAll('.vote-buttons').forEach((container) => {
+            container.addEventListener('click', async (event) => {
+                const button = event.target.closest('.vote-btn');
+                if (!button) return;
+                const productId = container.getAttribute('data-product-id');
+                const vote = button.getAttribute('data-vote');
+                await voteOnProduct(productId, vote, button);
+            });
+        });
+
+        // Attach admin handlers
+        if (isAdmin) {
+            listEl.querySelectorAll('.admin-product-actions').forEach((container) => {
+                container.addEventListener('click', async (event) => {
+                    const actionBtn = event.target.closest('[data-action]');
+                    if (!actionBtn) return;
+                    const productId = container.getAttribute('data-product-id');
+                    const action = actionBtn.getAttribute('data-action');
+                    if (action === 'remove') {
+                        await removeProduct(productId, actionBtn);
+                    } else if (action === 'pin') {
+                        const currentPinned = actionBtn.getAttribute('data-pinned') === 'true';
+                        await updateProductStatus(productId, { pinned: !currentPinned }, actionBtn);
+                    }
+                });
+            });
+        }
+
+        if (infoBanner) {
+            const { activeCount = 0, totalCount = 0, maxActiveProducts = 0 } = productsMetrics;
+            infoBanner.textContent = `Top ${Math.min(maxActiveProducts, totalCount)} products are available to buy. Rankings update as members vote.`;
+            infoBanner.style.display = totalCount > 0 ? 'block' : 'none';
+        }
+
+        setupProductEventHandlers();
+    }
+
+    function renderAdminProductActions(product) {
+        const pinned = product.pinned ? 'true' : 'false';
+        const pinLabel = product.pinned ? 'Unpin' : 'Pin';
+        return `
+            <div class="admin-product-actions" data-product-id="${product.id}">
+                <button class="btn btn-outline-secondary btn-sm" data-action="pin" data-pinned="${pinned}">
+                    <i class="fas fa-thumbtack"></i> ${pinLabel}
+                </button>
+                <button class="btn btn-outline-danger btn-sm" data-action="remove">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </div>
+        `;
+    }
+
+    async function voteOnProduct(productId, vote, buttonEl) {
+        if (!isMember) {
+            showToast('Join Group', 'You must join the group before voting.', 'info');
+            return;
+        }
+
+        const container = buttonEl.closest('.vote-buttons');
+        const buttons = container.querySelectorAll('.vote-btn');
+        buttons.forEach((btn) => btn.disabled = true);
+        buttonEl.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+        try {
+            const response = await authorizedFetch(`/api/groups/${groupId}/products/${productId}/vote`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vote })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to record vote.');
+            }
+
+            const data = await response.json();
+            if (data?.product) {
+                const index = rankedProducts.findIndex((product) => product.id === productId);
+                if (index !== -1) {
+                    rankedProducts[index] = data.product;
+                }
+                productsMetrics = data.metrics || productsMetrics;
+                updateMaxActiveBanner();
+                renderRankedProducts();
+            } else {
+                await loadRankedProducts();
+            }
+        } catch (error) {
+            console.error('Error voting on product:', error);
+            showToast('Error', error.message || 'Failed to record vote', 'error');
+        } finally {
+            buttons.forEach((btn) => btn.disabled = false);
+        }
+    }
+
+    async function updateProductStatus(productId, payload, buttonEl) {
+        const originalLabel = buttonEl.innerHTML;
+        buttonEl.disabled = true;
+        buttonEl.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+        try {
+            const response = await authorizedFetch(`/api/groups/${groupId}/products/${productId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update product status.');
+            }
+
+            const data = await response.json();
+            if (data?.product) {
+                const index = rankedProducts.findIndex((product) => product.id === productId);
+                if (index !== -1) {
+                    rankedProducts[index] = data.product;
+                }
+                productsMetrics = data.metrics || productsMetrics;
+                updateMaxActiveBanner();
+                renderRankedProducts();
+            } else {
+                await loadRankedProducts();
+            }
+            showToast('Success', 'Product updated.', 'success');
+        } catch (error) {
+            console.error('Error updating product status:', error);
+            showToast('Error', error.message || 'Failed to update product', 'error');
+        } finally {
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = originalLabel;
+        }
+    }
+
+    async function removeProduct(productId, buttonEl) {
+        if (!confirm('Remove this product from the ranked list?')) {
+            return;
+        }
+
+        const originalLabel = buttonEl.innerHTML;
+        buttonEl.disabled = true;
+        buttonEl.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+        try {
+            const response = await authorizedFetch(`/api/groups/${groupId}/products/${productId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to remove product.');
+            }
+
+            const data = await response.json();
+            rankedProducts = data.products || rankedProducts.filter((product) => product.id !== productId);
+            productsMetrics = data.metrics || productsMetrics;
+            updateMaxActiveBanner();
+            renderRankedProducts();
+            showToast('Success', 'Product removed.', 'success');
+        } catch (error) {
+            console.error('Error removing product:', error);
+            showToast('Error', error.message || 'Failed to remove product', 'error');
+        } finally {
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = originalLabel;
+        }
+    }
+
+    function formatRelativeTime(dateString) {
+        if (!dateString) return 'Recently';
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return `${diffMinutes} min ago`;
+            const diffHours = Math.floor(diffMinutes / 60);
+            if (diffHours < 24) return `${diffHours} hr ago`;
+            const diffDays = Math.floor(diffHours / 24);
+            if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+            return date.toLocaleDateString();
+        } catch (_) {
+            return 'Recently';
+        }
+    }
+
+    // Periodically refresh the order-by warning (every 60 seconds)
+    setInterval(() => { try { updateOrderByWarning(); } catch(_){} }, 60000);
+
+    function openScheduleForm() {
+        const form = document.getElementById('schedule-form');
+        if (!form) return;
+        populateScheduleForm();
+        form.style.display = 'block';
+    }
+
+    function closeScheduleForm() {
+        const form = document.getElementById('schedule-form');
+        if (form) form.style.display = 'none';
+    }
+
+    function populateScheduleForm() {
+        if (!groupInfo) return;
+        const orderDay = document.getElementById('order-by-input-day');
+        const orderTime = document.getElementById('order-by-input-time');
+        const deliveryDay = document.getElementById('delivery-day-input');
+        const deliveryTime = document.getElementById('delivery-time-input');
+        if (orderDay) orderDay.value = groupInfo.orderBySchedule?.day || '';
+        if (orderTime) orderTime.value = groupInfo.orderBySchedule?.time || '';
+        if (deliveryDay) deliveryDay.value = groupInfo.deliverySchedule?.day || '';
+        if (deliveryTime) deliveryTime.value = groupInfo.deliverySchedule?.time || '';
+    }
+
+    function updateScheduleDisplay() {
+        const orderEl = document.getElementById('order-by-date-display');
+        const deliveryEl = document.getElementById('delivery-date-display');
+        if (!orderEl || !deliveryEl) return;
+        orderEl.textContent = formatSchedule(groupInfo?.orderBySchedule) || 'Not set';
+        deliveryEl.textContent = formatSchedule(groupInfo?.deliverySchedule) || 'Not set';
+        updateOrderByWarning();
+    }
+
+    function updateOrderByWarning() {
+        const banner = document.getElementById('order-by-warning');
+        if (!banner) return;
+        const schedule = groupInfo?.orderBySchedule;
+        if (!schedule || !schedule.day || !schedule.time) {
+            banner.style.display = 'none';
+            banner.className = 'alert mt-3';
+            banner.textContent = '';
+            return;
+        }
+        const orderDate = resolveNextOccurrence(schedule.day, schedule.time);
+        if (!orderDate) {
+            banner.style.display = 'none';
+            banner.className = 'alert mt-3';
+            banner.textContent = '';
+            return;
+        }
+        const now = new Date();
+        const diffMs = orderDate.getTime() - now.getTime();
+        const thresholdMs = 24 * 60 * 60 * 1000; // 24 hours
+        if (diffMs <= 0) {
+            banner.className = 'alert alert-danger mt-3';
+            banner.innerHTML = '<strong>The order-by window has passed.</strong> New orders may not be accepted until the next cycle.';
+            banner.style.display = 'block';
+        } else if (diffMs <= thresholdMs) {
+            banner.className = 'alert alert-warning mt-3';
+            banner.innerHTML = `<strong>Order by is approaching:</strong> ${formatDuration(diffMs)} remaining.`;
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+            banner.className = 'alert mt-3';
+            banner.textContent = '';
+        }
+    }
+
+    function formatDuration(ms) {
+        const sec = Math.max(0, Math.floor(ms / 1000));
+        const days = Math.floor(sec / 86400);
+        const hours = Math.floor((sec % 86400) / 3600);
+        const mins = Math.floor((sec % 3600) / 60);
+        const parts = [];
+        if (days) parts.push(days + 'd');
+        if (hours) parts.push(hours + 'h');
+        if (mins || (!days && !hours)) parts.push(mins + 'm');
+        return parts.join(' ');
+    }
+
+    function formatSchedule(schedule) {
+        if (!schedule || !schedule.day || !schedule.time) return '';
+        try {
+            const [hour, minute] = schedule.time.split(':').map(Number);
+            if (Number.isNaN(hour) || Number.isNaN(minute)) return '';
+            const date = new Date();
+            date.setHours(hour, minute, 0, 0);
+            const timeString = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            return `${schedule.day} at ${timeString}`;
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function resolveNextOccurrence(day, time) {
+        try {
+            const dayIndex = DAYS.indexOf(day);
+            if (dayIndex === -1) return null;
+            const [hour, minute] = time.split(':').map(Number);
+            if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+            const now = new Date();
+            const result = new Date(now);
+            const dayDiff = (dayIndex + 7 - now.getDay()) % 7;
+            result.setDate(now.getDate() + dayDiff);
+            result.setHours(hour, minute, 0, 0);
+            if (result <= now) {
+                result.setDate(result.getDate() + 7);
+            }
+            return result;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function saveSchedule() {
+        if (!groupInfo) return;
+        const orderDayEl = document.getElementById('order-by-input-day');
+        const orderTimeEl = document.getElementById('order-by-input-time');
+        const deliveryDayEl = document.getElementById('delivery-day-input');
+        const deliveryTimeEl = document.getElementById('delivery-time-input');
+        const scheduleForm = document.getElementById('schedule-form');
+        const saveBtn = document.getElementById('save-schedule-btn');
+        const errorEl = document.getElementById('schedule-form-error');
+        if (errorEl){ errorEl.style.display = 'none'; errorEl.textContent = ''; }
+
+        const orderDayVal = orderDayEl?.value || '';
+        const orderTimeVal = orderTimeEl?.value || '';
+        const deliveryDayVal = deliveryDayEl?.value || '';
+        const deliveryTimeVal = deliveryTimeEl?.value || '';
+
+        const scheduleErrors = [];
+        const payload = {};
+
+        if (orderDayVal || orderTimeVal) {
+            if (!orderDayVal || !orderTimeVal) {
+                scheduleErrors.push('Select both order-by day and time.');
+            } else {
+                payload.orderBySchedule = { day: orderDayVal, time: orderTimeVal };
+            }
+        } else {
+            payload.orderBySchedule = { day: null, time: null };
+        }
+
+        if (deliveryDayVal || deliveryTimeVal) {
+            if (!deliveryDayVal || !deliveryTimeVal) {
+                scheduleErrors.push('Select both delivery day and time.');
+            } else {
+                payload.deliverySchedule = { day: deliveryDayVal, time: deliveryTimeVal };
+            }
+        } else {
+            payload.deliverySchedule = { day: null, time: null };
+        }
+
+        if (scheduleErrors.length > 0) {
+            if (errorEl){ errorEl.textContent = scheduleErrors.join(' '); errorEl.style.display = 'block'; }
+            return;
+        }
+        const prevHtml = saveBtn ? saveBtn.innerHTML : '';
+        try {
+            if (saveBtn){ saveBtn.disabled = true; saveBtn.innerHTML = 'Saving...'; }
+            const res = await fetch(`/api/groups/${groupId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json.success === false) {
+                throw new Error(json?.message || 'Failed to update schedule');
+            }
+            const updatedGroup = json.group || json;
+            groupInfo = updatedGroup;
+            updateScheduleDisplay();
+            updateOrderByWarning();
+            showToast('Success', 'Group schedule updated', 'success');
+            closeScheduleForm();
+        } catch (error) {
+            console.error('Error saving schedule:', error);
+            showToast('Error', error.message || 'Failed to update schedule', 'error');
+        } finally {
+            if (saveBtn){ saveBtn.disabled = false; saveBtn.innerHTML = prevHtml || 'Save schedule'; }
+            if (scheduleForm) scheduleForm.style.display = 'none';
         }
     }
     
@@ -281,13 +963,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Edit group button (admin only)
         document.getElementById('edit-group-btn').addEventListener('click', editGroup);
+
+        setupProductEventHandlers();
         
-        // Shopping list item toggle
-        document.getElementById('add-item-toggle').addEventListener('click', toggleAddItemForm);
+        // Repurpose Add Item to Create Listing for this group
+        document.getElementById('add-item-toggle').addEventListener('click', function(){
+            window.location.href = `/create-listing?groupId=${encodeURIComponent(groupId)}`;
+        });
+        const editScheduleBtn = document.getElementById('edit-schedule-btn');
+        if (editScheduleBtn) editScheduleBtn.addEventListener('click', openScheduleForm);
+        const saveScheduleBtn = document.getElementById('save-schedule-btn');
+        if (saveScheduleBtn) saveScheduleBtn.addEventListener('click', saveSchedule);
+        const cancelScheduleBtn = document.getElementById('cancel-schedule-btn');
+        if (cancelScheduleBtn) cancelScheduleBtn.addEventListener('click', closeScheduleForm);
         
-        // Shopping list form buttons
-        document.getElementById('save-item-btn').addEventListener('click', addShoppingListItem);
-        document.getElementById('cancel-item-btn').addEventListener('click', toggleAddItemForm);
+        // Shopping list form buttons (legacy form removed; guard to avoid null errors)
+        const saveItemBtn = document.getElementById('save-item-btn');
+        if (saveItemBtn) saveItemBtn.addEventListener('click', addShoppingListItem);
+        const cancelItemBtn = document.getElementById('cancel-item-btn');
+        if (cancelItemBtn) cancelItemBtn.addEventListener('click', toggleAddItemForm);
         
         // Discussion board
         document.getElementById('send-message-btn').addEventListener('click', sendMessage);
@@ -309,7 +1003,11 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'You must be logged in to join a group', 'error');
             return;
         }
-        
+        // disable join button during request
+        const joinBtn = document.getElementById('join-group-btn');
+        let prevPe='', prevOp='', prevHtml='';
+        if (joinBtn){ if (joinBtn.dataset.loading === '1') return; joinBtn.dataset.loading='1'; prevPe=joinBtn.style.pointerEvents; prevOp=joinBtn.style.opacity; prevHtml=joinBtn.innerHTML; joinBtn.style.pointerEvents='none'; joinBtn.style.opacity='0.6'; try{ joinBtn.innerHTML = 'Joining...'; }catch(_){} }
+
         try {
             const response = await fetch(`/api/groups/${groupId}/join`, {
                 method: 'POST',
@@ -334,6 +1032,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error joining group:', error);
             showToast('Error', 'Failed to join group', 'error');
+        } finally {
+            if (joinBtn){ joinBtn.dataset.loading=''; joinBtn.style.pointerEvents = prevPe || ''; joinBtn.style.opacity = prevOp || ''; if (prevHtml) joinBtn.innerHTML = prevHtml; }
         }
     }
     
@@ -349,7 +1049,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!confirm('Are you sure you want to leave this group?')) {
             return;
         }
-        
+        // disable leave button during request
+        const leaveBtn = document.getElementById('leave-group-btn');
+        let prevPe='', prevOp='', prevHtml='';
+        if (leaveBtn){ if (leaveBtn.dataset.loading === '1') return; leaveBtn.dataset.loading='1'; prevPe=leaveBtn.style.pointerEvents; prevOp=leaveBtn.style.opacity; prevHtml=leaveBtn.innerHTML; leaveBtn.style.pointerEvents='none'; leaveBtn.style.opacity='0.6'; try{ leaveBtn.innerHTML = 'Leaving...'; }catch(_){} }
+
         try {
             const response = await fetch(`/api/groups/${groupId}/leave`, {
                 method: 'POST',
@@ -375,6 +1079,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error leaving group:', error);
             showToast('Error', 'Failed to leave group', 'error');
+        } finally {
+            if (leaveBtn){ leaveBtn.dataset.loading=''; leaveBtn.style.pointerEvents = prevPe || ''; leaveBtn.style.opacity = prevOp || ''; if (prevHtml) leaveBtn.innerHTML = prevHtml; }
         }
     }
     
@@ -398,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function editGroup() {
         // Redirect to edit page
-        window.location.href = `/edit-group?id=${groupId}`;
+        window.location.href = `/groups/${groupId}/edit`;
     }
     
     /**
@@ -426,25 +1132,27 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     async function loadShoppingList() {
         try {
-            const response = await fetch(`/api/groups/${groupId}/shopping-list`, {
+            // Fetch marketplace listings for this group as the group shopping list
+            const url = `/api/marketplace?groupId=${encodeURIComponent(groupId)}&limit=100&page=1&sortBy=latest`;
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
             if (!response.ok) {
-                console.error('Failed to load shopping list items');
-                showToast('Error', 'Failed to load shopping list items', 'error');
-                return;
+                console.error('Failed to load group marketplace listings');
+                showToast('Error', 'Failed to load group products', 'error');
+                shoppingList = [];
+                return displayShoppingList();
             }
-            
-            shoppingList = await response.json();
+            const json = await response.json().catch(() => null);
+            shoppingList = (json && json.success && json.data && Array.isArray(json.data.listings)) ? json.data.listings : [];
             displayShoppingList();
         } catch (error) {
-            console.error('Error loading shopping list:', error);
-            showToast('Error', 'Failed to load shopping list items', 'error');
+            console.error('Error loading group products:', error);
+            showToast('Error', 'Failed to load group products', 'error');
             shoppingList = [];
             displayShoppingList();
         }
@@ -460,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear previous content
         tableBody.innerHTML = '';
         
-        if (shoppingList.length === 0) {
+        if (!Array.isArray(shoppingList) || shoppingList.length === 0) {
             tableBody.parentElement.parentElement.style.display = 'none';
             emptyState.style.display = 'block';
             return;
@@ -469,40 +1177,26 @@ document.addEventListener('DOMContentLoaded', function() {
         tableBody.parentElement.parentElement.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // Add each item to the table
-        shoppingList.forEach(item => {
+        // Render each marketplace listing as a shopping list row
+        shoppingList.forEach(listing => {
             const row = document.createElement('tr');
-            
+            const vendorName = (listing.vendor && listing.vendor.name) ? listing.vendor.name : '-';
+            const casePrice = (typeof listing.casePrice === 'number') ? listing.casePrice : 0;
+            const quantity = (typeof listing.quantity === 'number') ? listing.quantity : 1;
+            const caseSize = (typeof listing.caseSize === 'number') ? listing.caseSize : 1;
+            const totalUnits = (caseSize > 0 && quantity > 0) ? (caseSize * quantity) : (listing.totalUnits || '-');
             row.innerHTML = `
-                <td>${item.productName}</td>
-                <td>${item.vendor || '-'}</td>
-                <td>$${item.casePrice.toFixed(2)}</td>
-                <td>${item.quantity}</td>
-                <td>${item.totalUnits}</td>
+                <td>${escapeHtml(listing.title || '(Untitled)')}</td>
+                <td>${escapeHtml(vendorName)}</td>
+                <td>$${Number(casePrice || 0).toFixed(2)}</td>
+                <td>${quantity}</td>
+                <td>${totalUnits}</td>
                 <td class="shopping-list-actions">
-                    ${isMember ? `
-                        <button class="btn btn-sm btn-outline-primary edit-item" data-id="${item._id}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${isAdmin ? `
-                            <button class="btn btn-sm btn-outline-danger delete-item" data-id="${item._id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        ` : ''}
-                    ` : ''}
-                </td>
-            `;
-            
+                  <a class="btn btn-sm btn-outline-secondary" href="/listings/${listing._id}" title="View listing">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </td>`;
             tableBody.appendChild(row);
-        });
-        
-        // Add event listeners to edit and delete buttons
-        document.querySelectorAll('.edit-item').forEach(button => {
-            button.addEventListener('click', () => editShoppingListItem(button.dataset.id));
-        });
-        
-        document.querySelectorAll('.delete-item').forEach(button => {
-            button.addEventListener('click', () => deleteShoppingListItem(button.dataset.id));
         });
     }
     
@@ -523,6 +1217,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'Product name is required', 'error');
             return;
         }
+        const saveBtn = document.getElementById('save-item-btn');
+        let prevPe='', prevOp='', prevHtml='';
+        if (saveBtn){ if (saveBtn.dataset.loading === '1') return; saveBtn.dataset.loading='1'; prevPe=saveBtn.style.pointerEvents; prevOp=saveBtn.style.opacity; prevHtml=saveBtn.innerHTML; saveBtn.style.pointerEvents='none'; saveBtn.style.opacity='0.6'; try{ saveBtn.innerHTML='Saving...'; }catch(_){} }
         
         // Create item object
         const newItem = {
@@ -569,6 +1266,8 @@ document.addEventListener('DOMContentLoaded', function() {
             displayShoppingList();
             toggleAddItemForm();
             showToast('Success', 'Item added to shopping list', 'success');
+        } finally {
+            if (saveBtn){ saveBtn.dataset.loading=''; saveBtn.style.pointerEvents = prevPe || ''; saveBtn.style.opacity = prevOp || ''; if (prevHtml) saveBtn.innerHTML = prevHtml; }
         }
     }
     
@@ -622,6 +1321,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'Product name is required', 'error');
             return;
         }
+        const saveBtn = document.getElementById('save-item-btn');
+        let prevPe='', prevOp='', prevHtml='';
+        if (saveBtn){ if (saveBtn.dataset.loading === '1') return; saveBtn.dataset.loading='1'; prevPe=saveBtn.style.pointerEvents; prevOp=saveBtn.style.opacity; prevHtml=saveBtn.innerHTML; saveBtn.style.pointerEvents='none'; saveBtn.style.opacity='0.6'; try{ saveBtn.innerHTML='Saving...'; }catch(_){} }
         
         // Create updated item object
         const updatedItem = {
@@ -693,18 +1395,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 showToast('Success', 'Item updated', 'success');
             }
+        } finally {
+            if (saveBtn){ saveBtn.dataset.loading=''; saveBtn.style.pointerEvents = prevPe || ''; saveBtn.style.opacity = prevOp || ''; if (prevHtml) saveBtn.innerHTML = prevHtml; }
         }
     }
     
     /**
      * Delete a shopping list item
      */
-    async function deleteShoppingListItem(itemId) {
+    async function deleteShoppingListItem(itemId, btnEl) {
         // Confirm before deleting
         if (!confirm('Are you sure you want to delete this item?')) {
             return;
         }
-        
+        let prevPe='', prevOp='', prevHtml='';
+        if (btnEl){ if (btnEl.dataset.loading === '1') return; btnEl.dataset.loading='1'; prevPe=btnEl.style.pointerEvents; prevOp=btnEl.style.opacity; prevHtml=btnEl.innerHTML; btnEl.style.pointerEvents='none'; btnEl.style.opacity='0.6'; try{ btnEl.innerHTML='Deleting...'; }catch(_){} }
+
         try {
             const response = await fetch(`/api/groups/${groupId}/shopping-list/${itemId}`, {
                 method: 'DELETE',
@@ -732,6 +1438,8 @@ document.addEventListener('DOMContentLoaded', function() {
             shoppingList = shoppingList.filter(item => item._id !== itemId);
             displayShoppingList();
             showToast('Success', 'Item deleted', 'success');
+        } finally {
+            if (btnEl){ btnEl.dataset.loading=''; btnEl.style.pointerEvents = prevPe || ''; btnEl.style.opacity = prevOp || ''; if (prevHtml) btnEl.innerHTML = prevHtml; }
         }
     }
     
@@ -824,6 +1532,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'Message cannot be empty', 'error');
             return;
         }
+        const sendBtn = document.getElementById('send-message-btn');
+        let prevPe='', prevOp='', prevHtml='';
+        if (sendBtn){ if (sendBtn.dataset.loading === '1') return; sendBtn.dataset.loading='1'; prevPe=sendBtn.style.pointerEvents; prevOp=sendBtn.style.opacity; prevHtml=sendBtn.innerHTML; sendBtn.style.pointerEvents='none'; sendBtn.style.opacity='0.6'; try{ sendBtn.innerHTML='Sending...'; }catch(_){} }
         
         const newMessage = {
             content,
@@ -884,6 +1595,8 @@ document.addEventListener('DOMContentLoaded', function() {
             displayDiscussionMessages();
             messageInput.value = '';
             showToast('Success', 'Message posted', 'success');
+        } finally {
+            if (sendBtn){ sendBtn.dataset.loading=''; sendBtn.style.pointerEvents = prevPe || ''; sendBtn.style.opacity = prevOp || ''; if (prevHtml) sendBtn.innerHTML = prevHtml; }
         }
     }
     
@@ -1022,6 +1735,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'Event date is required', 'error');
             return;
         }
+        const saveEventBtn = document.getElementById('save-event-btn');
+        let prevPe='', prevOp='', prevHtml='';
+        if (saveEventBtn){ if (saveEventBtn.dataset.loading === '1') return; saveEventBtn.dataset.loading='1'; prevPe=saveEventBtn.style.pointerEvents; prevOp=saveEventBtn.style.opacity; prevHtml=saveEventBtn.innerHTML; saveEventBtn.style.pointerEvents='none'; saveEventBtn.style.opacity='0.6'; try{ saveEventBtn.innerHTML='Saving...'; }catch(_){} }
         
         // Create event object
         const newEvent = {
@@ -1068,6 +1784,8 @@ document.addEventListener('DOMContentLoaded', function() {
             displayEvents();
             toggleCreateEventForm();
             showToast('Success', 'Event created', 'success');
+        } finally {
+            if (saveEventBtn){ saveEventBtn.dataset.loading=''; saveEventBtn.style.pointerEvents = prevPe || ''; saveEventBtn.style.opacity = prevOp || ''; if (prevHtml) saveEventBtn.innerHTML = prevHtml; }
         }
     }
     

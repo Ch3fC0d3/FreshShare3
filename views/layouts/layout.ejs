@@ -16,6 +16,9 @@
     
     <!-- Base Styles -->
     <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/cart.css">
+    <!-- Inline favicon to avoid /favicon.ico 404 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%2364b36a'/%3E%3Cstop offset='100%25' stop-color='%233a8f45'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' ry='12' fill='%23e8f5e9'/%3E%3Cpath d='M42 14c-6 2-10 7-11 13-6-2-12 1-15 6 5 1 10 0 14-2-2 5-2 10 1 15 2-5 5-9 9-12 4-3 8-5 12-5-2-5-5-10-10-15z' fill='url(%23g)'/%3E%3C/svg%3E">
     
     <!-- Custom Styles -->
     <style>
@@ -35,12 +38,39 @@
     <!-- Main Content -->
     <%- body %>
 
+    <!-- Global My Cart slide-in panel -->
+    <div id="myCartPanel" class="mycart-panel" aria-hidden="true">
+      <div class="mycart-header">
+        <div class="mycart-title"><i class="fas fa-shopping-cart me-2"></i>My Cart</div>
+        <button id="myCartClose" class="mycart-close" aria-label="Close">×</button>
+      </div>
+      <div class="mycart-body">
+        <div id="myCartList" class="mycart-list">
+          <div class="mycart-empty">
+            <i class="fas fa-box-open"></i>
+            <div>No reservations yet</div>
+          </div>
+        </div>
+      </div>
+      <div class="mycart-footer">
+        <button id="myCartRefresh" class="marketplace-btn" style="width:100%"><i class="fas fa-rotate"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Floating Cart Button -->
+    <button id="cartFab" class="cart-fab" aria-label="Open cart" title="My Cart">
+      <i class="fas fa-shopping-cart"></i>
+      <span id="myCartCountFab" class="badge">0</span>
+    </button>
+
     <!-- Footer -->
     <%- include('../partials/footer') %>
 
     <!-- Common Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="/js/header.js"></script>
+    <script src="/js/header.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+    <script src="/js/toast.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
+    <script src="/js/cart.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
     
     <!-- Page-specific scripts -->
     <%- typeof script !== 'undefined' ? script : '' %>

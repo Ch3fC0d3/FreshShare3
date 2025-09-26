@@ -1,5 +1,0 @@
-[2025-09-03T21:06:05.518Z] ===== Starting API Test =====
-[2025-09-03T21:06:05.546Z] Server is already running on port 3002. Status: 200
-[2025-09-03T21:06:05.547Z] Now testing the API endpoint...
-[2025-09-03T21:06:05.548Z] Testing API endpoint: /api/marketplace/food-search?query=apple
-[2025-09-03T21:06:05.896Z] API Response Status: 200

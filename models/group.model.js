@@ -1,5 +1,59 @@
 const mongoose = require('mongoose');
 
+const rankedProductSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Product name is required'],
+    trim: true,
+    maxlength: [120, 'Product name cannot exceed 120 characters']
+  },
+  note: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Product note cannot exceed 500 characters']
+  },
+  imageUrl: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Image URL cannot exceed 500 characters']
+  },
+  productUrl: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Product URL cannot exceed 500 characters']
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['active', 'requested'],
+    default: 'requested'
+  },
+  score: {
+    type: Number,
+    default: 0
+  },
+  upvoters: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  downvoters: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  pinned: {
+    type: Boolean,
+    default: false
+  },
+  lastActivityAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: true, timestamps: true });
+
 const groupSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -118,7 +172,47 @@ const groupSchema = new mongoose.Schema({
   admins: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }]
+  }],
+  maxActiveProducts: {
+    type: Number,
+    min: [0, 'Max active products cannot be negative'],
+    max: [200, 'Max active products cannot exceed 200'],
+    default: 20
+  },
+  products: {
+    type: [rankedProductSchema],
+    default: []
+  },
+  orderBySchedule: {
+    day: {
+      type: String,
+      enum: {
+        values: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        message: '{VALUE} is not a valid day'
+      },
+      default: null
+    },
+    time: {
+      type: String,
+      default: null,
+      match: [/^([01]\d|2[0-3]):[0-5]\d$/, 'Order by time must be in HH:MM 24-hour format']
+    }
+  },
+  deliverySchedule: {
+    day: {
+      type: String,
+      enum: {
+        values: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        message: '{VALUE} is not a valid day'
+      },
+      default: null
+    },
+    time: {
+      type: String,
+      default: null,
+      match: [/^([01]\d|2[0-3]):[0-5]\d$/, 'Delivery time must be in HH:MM 24-hour format']
+    }
+  }
 }, {
   timestamps: true
 });
@@ -129,6 +223,8 @@ groupSchema.index({ category: 1 });
 groupSchema.index({ createdBy: 1 });
 groupSchema.index({ members: 1 });
 groupSchema.index({ admins: 1 });
+groupSchema.index({ 'products.status': 1 });
+groupSchema.index({ 'products.score': -1 });
 
 const Group = mongoose.model('Group', groupSchema);
 

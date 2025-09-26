@@ -28,6 +28,28 @@ $filesToRemove = @(
     "test-usda-api.js",
     "vs-code-test.js",
     
+    # Test/demo HTML pages
+    "dashboard-test.html",
+    "connection-test.html",
+    "test-upc-browser.html",
+    "usda-test.html",
+    
+    # Logs and test outputs
+    "api-test-log.txt",
+    "connection-test.log",
+    "port-test.log",
+    "test-output.log",
+    "server-debug.log",
+    "server-diagnostic.log",
+    "server-diagnostics.log",
+    "server-start.log",
+    "server-output.log",
+    "server_output.log",
+    "upc-lookup.log",
+    "usda_api_test_results.log",
+    "usda-direct-results.log",
+    "usda-demo_key-success.txt",
+    
     # Duplicate config files
     "db.config.js",
     "marketplace.controller.js",

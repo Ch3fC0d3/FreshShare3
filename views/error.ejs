@@ -1,0 +1,36 @@
+<%- contentFor('style') %>
+<link rel="stylesheet" href="/css/main.css">
+
+<%- contentFor('body') %>
+<div class="main-content">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card shadow-sm">
+          <div class="card-body p-4 p-md-5">
+            <div class="text-center">
+              <h1 class="h3 mb-3"><%= typeof title !== 'undefined' ? title : 'Error' %></h1>
+              <% if (typeof message !== 'undefined' && message) { %>
+                <p class="lead mb-0"><%= message %></p>
+              <% } else { %>
+                <p class="text-muted mb-0">Something went wrong. Please try again.</p>
+              <% } %>
+            </div>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+              <hr class="my-4" />
+              <div class="bg-light border rounded p-3">
+                <pre class="small mb-0"><%= error %></pre>
+              </div>
+            <% } %>
+
+            <div class="text-center mt-4">
+              <a href="/" class="btn btn-primary">Go Home</a>
+              <a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Go Back</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

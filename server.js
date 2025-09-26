@@ -54,6 +54,9 @@ const app = express();
 // Use port 3002 to ensure consistency with frontend JS in local-auth.js
 const PORT = 3002;
 
+// Ensure templates always have an assetVersion available
+app.locals.assetVersion = process.env.ASSET_VERSION || String(Date.now());
+
 // Database configuration
 const dbConfig = require('./config/db.config.js');
 
@@ -73,10 +76,56 @@ app.use((req, res, next) => {
   next();
 });
 
+// Security: Content Security Policy (CSP)
+// Allow our own scripts/styles/images/fonts and required CDNs. Do NOT allow 'unsafe-eval'.
+app.use((req, res, next) => {
+  try {
+    const csp = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      // Allow WebAssembly execution without enabling general eval
+      "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+      // Allow product images from Open Food Facts (free source) and Unsplash (stable photos)
+      "img-src 'self' data: blob: https://images.openfoodfacts.org https://static.openfoodfacts.org https://images.unsplash.com https://plus.unsplash.com",
+      "font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.gstatic.com data:",
+      "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+      // Permit web workers created from blob URLs (needed by some libraries such as Quagga)
+      "worker-src 'self' blob:",
+      // Back-compat for browsers that still rely on child-src for workers
+      "child-src 'self' blob:",
+      "frame-ancestors 'self'",
+      "form-action 'self'"
+    ].join('; ');
+    res.setHeader('Content-Security-Policy', csp);
+  } catch (_) { /* no-op */ }
+  next();
+});
+
+// Quiet DevTools probe noise: serve empty JSON for Chrome's appspecific check
+// This avoids 404s in console when DevTools/Extensions probe this path.
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+  try { res.setHeader('Content-Type', 'application/json'); } catch (_) {}
+  res.status(200).send('{}');
+});
+
 // Ensure 'user' is always defined for views (null by default)
 app.use((req, res, next) => {
   if (typeof res.locals.user === 'undefined') {
     res.locals.user = null;
+  }
+  next();
+});
+
+// Asset version for cache-busting static assets in views
+app.use((req, res, next) => {
+  try {
+    if (!global.__ASSET_VERSION) {
+      global.__ASSET_VERSION = String(Date.now());
+    }
+    res.locals.assetVersion = process.env.ASSET_VERSION || global.__ASSET_VERSION;
+  } catch (_) {
+    res.locals.assetVersion = String(Date.now());
   }
   next();
 });
@@ -92,39 +141,7 @@ app.use((req, res, next) => {
 });
 
 // Token synchronization middleware - ensures tokens in Authorization headers are set as cookies
-app.use((req, res, next) => {
-  try {
-    // Check if there's an Authorization header but no token cookie
-    if (req.headers.authorization && (!req.cookies.token || req.cookies.token === 'undefined')) {
-      const authHeader = req.headers.authorization;
-      const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
-      
-      if (token && token !== 'undefined' && token !== 'null') {
-        // Try to verify the token before setting it as a cookie
-        try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || "bezkoder-secret-key");
-          if (decoded && decoded.id) {
-            // Set the token as a cookie
-            res.cookie('token', token, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-              sameSite: 'lax',
-              path: '/'
-            });
-            console.log(`Set token cookie from Authorization header for user ID: ${decoded.id}`);
-          }
-        } catch (err) {
-          console.error('Error verifying token from Authorization header:', err.message);
-        }
-      }
-    }
-    next();
-  } catch (err) {
-    console.error('Token sync middleware error:', err);
-    next();
-  }
-});
+// Removed token synchronization middleware; rely solely on HttpOnly cookie from login route
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -182,9 +199,22 @@ app.use(async (req, res, next) => {
       });
     }
 
+    const mask = (value) => {
+      if (!value || typeof value !== 'string') return '(none)';
+      if (value.length <= 12) return value;
+      return `${value.slice(0, 6)}…${value.slice(-6)}`;
+    };
+
+    try {
+      console.log(`[globalAuth] ${req.method} ${req.originalUrl}`);
+      console.log('[globalAuth] token candidate (pre-check):', mask(token));
+    } catch (_) {}
+
     if (token) {
       try {
         // Verify token using the same secret as in auth.config.js
+        console.log('[globalAuth] verifying token with primary secret. Token length:', token.length);
+        console.log('[globalAuth] token preview:', mask(token));
         const decoded = jwt.verify(token, process.env.JWT_SECRET || "bezkoder-secret-key");
         const User = require('./models/user.model');
         const user = await User.findById(decoded.id).select('-password');
@@ -220,7 +250,8 @@ app.use(async (req, res, next) => {
           res.clearCookie('token'); // Clear token if user doesn't exist
         }
       } catch (err) {
-        console.error('Token verification failed:', err);
+        console.error('[globalAuth] token verification failed:', err && err.name, err && err.message);
+        console.error('[globalAuth] token value (masked):', mask(token));
         res.clearCookie('token'); // Clear invalid token
       }
     } else {
@@ -273,6 +304,26 @@ app.get('/marketplace', async (req, res) => {
     if (search) {
       filter.$text = { $search: search };
     }
+
+    // Restrict to user's active groups if logged in
+    try {
+      const u = res.locals.user;
+      if (u && Array.isArray(u.groups)) {
+        const activeGroupIds = u.groups
+          .filter(m => m && m.status === 'active' && m.group)
+          .map(m => String(m.group));
+        if (activeGroupIds.length > 0) {
+          filter.group = { $in: activeGroupIds };
+        } else {
+          // No active groups: render an empty marketplace for this user
+          return res.render('pages/marketplace', { 
+            title: 'FreshShare - Marketplace',
+            listings: [],
+            filters: { category, minPrice, maxPrice, isOrganic, sortBy, search }
+          });
+        }
+      }
+    } catch (_) {}
     
     // Build sort object
     let sort = { createdAt: -1 }; // Default sort by newest
@@ -317,6 +368,25 @@ app.get('/create-listing', (req, res) => {
   });
 });
 
+// Listing Details page
+app.get('/listings/:id', async (req, res) => {
+  try {
+    const db = require('./models');
+    const Listing = db.listing;
+    const listing = await Listing.findById(req.params.id).populate('seller', 'username profileImage');
+    if (!listing) {
+      return res.status(404).render('error', { title: 'Not Found', message: 'Listing not found' });
+    }
+    return res.render('pages/listing-details', {
+      title: `FreshShare - ${listing.title || 'Listing'}`,
+      listing
+    });
+  } catch (err) {
+    console.error('Listing details page error:', err);
+    return res.status(500).render('error', { title: 'Error', message: 'Failed to load listing details page' });
+  }
+});
+
 app.get('/forum', (req, res) => {
   res.render('pages/forum', { 
     title: 'FreshShare - Forum'
@@ -340,6 +410,43 @@ app.get('/group-details', (req, res) => {
     title: 'FreshShare - Group Details',
     groupId: req.query.id
   });
+});
+
+app.get('/groups/:id/edit', async (req, res) => {
+  try {
+    const redirectPath = `/groups/${req.params.id}/edit`;
+    if (!res.locals.user) {
+      return res.redirect('/login?redirect=' + encodeURIComponent(redirectPath));
+    }
+
+    const Group = require('./models/group.model');
+    const group = await Group.findById(req.params.id).select('admins createdBy');
+
+    if (!group) {
+      return res.status(404).render('error', { title: 'Not Found', message: 'Group not found' });
+    }
+
+    const userId = String(res.locals.user._id);
+    const isAdmin = String(group.createdBy) === userId || group.admins.some((admin) => String(admin) === userId);
+
+    if (!isAdmin) {
+      return res.status(403).render('error', {
+        title: 'Forbidden',
+        message: 'You are not authorized to edit this group.'
+      });
+    }
+
+    return res.render('pages/edit-group', {
+      title: 'FreshShare - Edit Group',
+      groupId: req.params.id
+    });
+  } catch (err) {
+    console.error('Edit group page error:', err);
+    return res.status(500).render('error', {
+      title: 'Error',
+      message: 'Failed to load edit group page'
+    });
+  }
 });
 
 app.get('/groups/:id/shopping', (req, res) => {
@@ -381,11 +488,57 @@ app.get('/listings/:id/edit', async (req, res) => {
   }
 });
 
-app.get('/orders/:id', (req, res) => {
-  res.render('pages/order_details', { 
-    title: 'FreshShare - Order Details',
-    orderId: req.params.id
-  });
+app.get('/orders/:id', async (req, res) => {
+  try {
+    const QuickOrder = require('./models/quick-order.model');
+    const id = req.params.id;
+    const order = await QuickOrder.findById(id).lean();
+    if (!order) {
+      return res.status(404).render('error', { title: 'Order Not Found', message: 'The order you are looking for does not exist.' });
+    }
+    return res.render('pages/order-details', {
+      title: 'FreshShare - Order Details',
+      order
+    });
+  } catch (e) {
+    console.error('Order details error:', e);
+    return res.status(500).render('error', { title: 'Error', message: 'Failed to load order details' });
+  }
+});
+
+// Quick Order confirmation page
+app.get('/orders/confirm/:id', async (req, res) => {
+  try {
+    const QuickOrder = require('./models/quick-order.model');
+    const Listing = require('./models/listing.model');
+    const User = require('./models/user.model');
+    const id = req.params.id;
+    const order = await QuickOrder.findById(id).lean();
+    if (!order) {
+      return res.status(404).render('error', { title: 'Order Not Found', message: 'The order you are looking for does not exist.' });
+    }
+    // Derive seller contact info for the items in the order
+    let sellers = [];
+    try {
+      const listingIds = (order.items || []).map(it => it.listingId).filter(Boolean);
+      if (listingIds.length) {
+        const listings = await Listing.find({ _id: { $in: listingIds } }).select('seller title').lean();
+        const sellerIds = Array.from(new Set(listings.map(l => String(l.seller)).filter(Boolean)));
+        if (sellerIds.length) {
+          const users = await User.find({ _id: { $in: sellerIds } }).select('username email phoneNumber').lean();
+          sellers = users.map(u => ({ id: String(u._id), name: u.username, email: u.email || '', phone: u.phoneNumber || '' }));
+        }
+      }
+    } catch (_) {}
+    return res.render('pages/order-confirmation', {
+      title: 'FreshShare - Order Confirmation',
+      order,
+      sellers
+    });
+  } catch (e) {
+    console.error('Order confirmation error:', e);
+    return res.status(500).render('error', { title: 'Error', message: 'Failed to load order confirmation page' });
+  }
 });
 
 app.get('/about', (req, res) => {
@@ -398,6 +551,32 @@ app.get('/contact', (req, res) => {
   res.render('pages/contact', { 
     title: 'FreshShare - Contact'
   });
+});
+
+// Checkout page
+app.get('/checkout', (req, res) => {
+  try {
+    if (!res.locals.user) {
+      return res.redirect('/login?redirect=' + encodeURIComponent('/checkout'));
+    }
+    const u = res.locals.user || {};
+    const prefill = {
+      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || '',
+      email: u.email || '',
+      phone: u.phoneNumber || '',
+      street: (u.location && u.location.street) || '',
+      city: (u.location && u.location.city) || '',
+      state: (u.location && u.location.state) || '',
+      zip: (u.location && (u.location.zip || u.location.zipCode)) || ''
+    };
+    res.render('pages/checkout', {
+      title: 'FreshShare - Checkout',
+      prefill
+    });
+  } catch (e) {
+    console.error('Checkout route error:', e);
+    res.status(500).render('error', { title: 'Error', message: 'Failed to load checkout page' });
+  }
 });
 
 app.get('/profile', async (req, res) => {
@@ -436,10 +615,20 @@ app.get('/profile', async (req, res) => {
       phoneNumber: userData.phoneNumber || ''
     };
 
+    // Recent Quick Orders for this user
+    let recentOrders = [];
+    try {
+      const QuickOrder = require('./models/quick-order.model');
+      recentOrders = await QuickOrder.find({ user: userData._id }).sort({ createdAt: -1 }).limit(10).lean();
+    } catch (e) {
+      console.warn('Failed to fetch recent orders for profile:', e && e.message);
+    }
+
     // Render the profile page with the user data
     res.render('pages/profile', {
       title: 'FreshShare - Profile',
-      user: formattedUserData
+      user: formattedUserData,
+      recentOrders
     });
   } catch (error) {
     console.error('Profile page error:', error);
@@ -492,7 +681,40 @@ app.get('/vendors', (req, res) => {
     return res.redirect('/login?redirect=/vendors');
   }
   res.render('pages/vendors', {
-    title: 'FreshShare - Vendors'
+    title: 'FreshShare - Vendors',
+    query: req.query || {}
+  });
+});
+
+// Admin page (Webmaster)
+app.get('/admin', async (req, res) => {
+  try {
+    if (!res.locals.user) {
+      return res.redirect('/login?redirect=/admin');
+    }
+    // Compute admin role id once
+    const Role = require('./models/role.model');
+    const User = require('./models/user.model');
+    const r = await Role.findOne({ name: 'admin' }).select('_id').lean();
+    const adminRoleId = r ? String(r._id) : null;
+    const me = await User.findById(res.locals.user._id).select('roles username').lean();
+    const hasAdmin = !!(adminRoleId && me && Array.isArray(me.roles) && me.roles.map(String).includes(adminRoleId));
+    if (!hasAdmin) {
+      return res.status(403).render('error', { title: 'Forbidden', message: 'You do not have access to the admin dashboard.' });
+    }
+    return res.render('pages/admin', { title: 'FreshShare - Admin', currentUserId: String(res.locals.user._id) });
+  } catch (e) {
+    console.error('Admin page error:', e && e.message);
+    return res.status(500).render('error', { title: 'Error', message: 'Failed to load admin page' });
+  }
+});
+// Messages page
+app.get('/messages', (req, res) => {
+  if (!res.locals.user) {
+    return res.redirect('/login?redirect=/messages');
+  }
+  res.render('pages/messages', {
+    title: 'FreshShare - Messages'
   });
 });
 
@@ -526,6 +748,55 @@ console.log('All routes initialized successfully');
 const marketplaceApiRoutes = require('./routes/api/marketplace');
 app.use('/api/marketplace', marketplaceApiRoutes);
 
+// Groups API routes
+const groupApiRoutes = require('./routes/groups.routes');
+const authJwt = require('./middleware/authJwt');
+app.use('/api/groups', authJwt.verifyToken, groupApiRoutes);
+
+// Dashboard API routes
+try {
+  const dashboardApiRoutes = require('./routes/api/dashboard');
+  app.use('/api/dashboard', authJwt.verifyToken, dashboardApiRoutes);
+  console.log('Dashboard API mounted at /api/dashboard');
+} catch (e) {
+  console.error('Failed to mount /api/dashboard:', e && e.message);
+}
+
+// Admin API routes
+try {
+  const adminApiRoutes = require('./routes/api/admin');
+  app.use('/api/admin', authJwt.verifyToken, adminApiRoutes);
+  console.log('Admin API mounted at /api/admin');
+} catch (e) {
+  console.error('Failed to mount /api/admin:', e && e.message);
+}
+// Messages API routes
+try {
+  const messagesApiRoutes = require('./routes/api/messages');
+  app.use('/api/messages', authJwt.verifyToken, messagesApiRoutes);
+  console.log('Messages API mounted at /api/messages');
+} catch (e) {
+  console.error('Failed to mount /api/messages:', e && e.message);
+}
+
+// Orders API routes (quick checkout)
+try {
+  const ordersApiRoutes = require('./routes/api/orders');
+  app.use('/api/orders', ordersApiRoutes);
+  console.log('Orders API mounted at /api/orders');
+} catch (e) {
+  console.error('Failed to mount /api/orders:', e && e.message);
+}
+
+// Forum API routes
+try {
+  const forumApiRoutes = require('./routes/api/forum');
+  app.use('/api/forum', forumApiRoutes);
+  console.log('Forum API mounted at /api/forum');
+} catch (e) {
+  console.error('Failed to mount /api/forum:', e && e.message);
+}
+
 // Auth routes (pages + API)
 const authRoutes = require('./routes/auth.routes');
 app.use('/', authRoutes);
@@ -542,8 +813,32 @@ try {
 console.log('API routes available:');
 console.log('- /api/marketplace/upc/:upc - UPC lookup endpoint');
 console.log('- /api/marketplace/upc-test/:upc - UPC test endpoint');
+console.log('- /api/groups - Groups API (create, list, manage)');
 console.log('- /api/auth/login - Login endpoint');
 console.log('- /api/auth/signup - Signup endpoint');
+
+// Simple API root summary
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    name: 'FreshShare API',
+    version: '1.0.0',
+    endpoints: [
+      { method: 'GET', path: '/api/marketplace', description: 'List marketplace listings (query filters supported)' },
+      { method: 'POST', path: '/api/marketplace', description: 'Create listing' },
+      { method: 'GET', path: '/api/marketplace/:id', description: 'Get listing by id' },
+      { method: 'PUT', path: '/api/marketplace/:id', description: 'Update listing' },
+      { method: 'DELETE', path: '/api/marketplace/:id', description: 'Delete listing' },
+      { method: 'GET', path: '/api/marketplace/:id/groupbuy/status', description: 'Group buy status' },
+      { method: 'GET', path: '/api/marketplace/:id/pieces/status', description: 'Per-piece status' },
+      { method: 'GET', path: '/api/groups', description: 'List groups (auth required)' },
+      { method: 'POST', path: '/api/groups', description: 'Create group (auth required)' },
+      { method: 'POST', path: '/api/auth/login', description: 'Login' },
+      { method: 'POST', path: '/api/auth/signup', description: 'Signup' },
+      { method: 'GET', path: '/api/health/db', description: 'DB health' }
+    ]
+  });
+});
 
 // Simple health endpoint for MongoDB connection status
 app.get('/api/health/db', async (req, res) => {

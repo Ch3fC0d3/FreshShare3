@@ -62,13 +62,13 @@
                                     <div class="calendar-day">13</div>
                                     <div class="calendar-day">14</div>
                                     <div class="calendar-day">15</div>
-                                    <div class="calendar-day has-delivery">16</div>
+                                    <div class="calendar-day">16</div>
                                     <div class="calendar-day">17</div>
                                     
                                     <div class="calendar-day">18</div>
                                     <div class="calendar-day">19</div>
                                     <div class="calendar-day">20</div>
-                                    <div class="calendar-day has-delivery">21</div>
+                                    <div class="calendar-day">21</div>
                                     <div class="calendar-day">22</div>
                                     <div class="calendar-day">23</div>
                                     <div class="calendar-day">24</div>
@@ -76,7 +76,7 @@
                                     <div class="calendar-day">25</div>
                                     <div class="calendar-day">26</div>
                                     <div class="calendar-day">27</div>
-                                    <div class="calendar-day today has-delivery">28</div>
+                                    <div class="calendar-day">28</div>
                                     <div class="calendar-day">29</div>
                                     <div class="calendar-day other-month">1</div>
                                     <div class="calendar-day other-month">2</div>
@@ -85,21 +85,7 @@
                             
                             <div class="upcoming-events">
                                 <h3>Today's Schedule</h3>
-                                <div class="event-item">
-                                    <span class="event-date">9:00 AM</span>
-                                    <div class="event-title">Produce Delivery</div>
-                                    <div class="event-desc">Local Farm Co-op</div>
-                                </div>
-                                <div class="event-item">
-                                    <span class="event-date">2:30 PM</span>
-                                    <div class="event-title">Community Swap</div>
-                                    <div class="event-desc">Food exchange</div>
-                                </div>
-                                <div class="event-item">
-                                    <span class="event-date">5:00 PM</span>
-                                    <div class="event-title">Cooking Class</div>
-                                    <div class="event-desc">Seasonal recipes</div>
-                                </div>
+                                <div class="events-list"></div>
                             </div>
                         </div>
                     </div>
@@ -109,34 +95,29 @@
                 <div class="dashboard-card">
                     <div class="card-header">
                         <h2>Recent Orders & Purchase History</h2>
-                        <a href="#" class="view-all">View Full Order History <i class="fas fa-chevron-right"></i></a>
+                        <a href="/profile" class="view-all">View Full Order History <i class="fas fa-chevron-right"></i></a>
                     </div>
                     <div class="card-body">
-                        <ul class="order-list">
-                            <!-- Example order item -->
-                            <li class="order-item">
-                                <div class="order-header">
-                                    <span class="order-id">Order #38291</span>
-                                    <span class="order-date">Feb 21, 2025</span>
-                                </div>
-                                <div class="order-items">
-                                    Local Honey, Fresh Bread, Organic Eggs (5 items)
-                                </div>
-                                <div class="order-footer">
-                                    <span class="order-total">$43.50</span>
-                                    <div class="order-actions">
-                                        <button class="btn btn-outline">View Details</button>
-                                        <button class="btn btn-primary">Reorder</button>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
+                        <ul class="order-list"></ul>
                     </div>
                 </div>
             </div>
 
             <!-- Right Column -->
             <div class="grid-col-4">
+                <!-- Active Piece Orders -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2>Active Piece Orders</h2>
+                        <a href="#" class="view-all" id="refresh-piece-orders">Refresh <i class="fas fa-rotate"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <ul class="delivery-list" id="active-piece-orders">
+                            <li class="no-data">No active piece orders</li>
+                        </ul>
+                    </div>
+                </div>
+
                 <!-- Upcoming Deliveries Section -->
                 <div class="dashboard-card">
                     <div class="card-header">
@@ -144,49 +125,7 @@
                         <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                     </div>
                     <div class="card-body">
-                        <ul class="delivery-list">
-                            <li class="delivery-item">
-                                <div>
-                                    <span>Publish Basket</span>
-                                    <span>Tomorrow</span>
-                                </div>
-                                <div>
-                                    From: Green Valley Farms
-                                </div>
-                                <div>
-                                    <span>Confirmed</span>
-                                    <span>$28.50</span>
-                                </div>
-                            </li>
-                            
-                            <li class="delivery-item">
-                                <div>
-                                    <span>Bakery Bundle</span>
-                                    <span>Mar 3, 2025</span>
-                                </div>
-                                <div>
-                                    From: Artisan Bread Co.
-                                </div>
-                                <div>
-                                    <span>Pending</span>
-                                    <span>$16.75</span>
-                                </div>
-                            </li>
-                            
-                            <li class="delivery-item">
-                                <div>
-                                    <span>Dairy Selection</span>
-                                    <span>Mar 5, 2025</span>
-                                </div>
-                                <div>
-                                    From: Local Creamery
-                                </div>
-                                <div>
-                                    <span>Confirmed</span>
-                                    <span>$22.00</span>
-                                </div>
-                            </li>
-                        </ul>
+                        <ul id="upcoming-deliveries" class="delivery-list"></ul>
                     </div>
                 </div>
 
@@ -194,55 +133,10 @@
                 <div class="dashboard-card">
                     <div class="card-header">
                         <h2>Messages & Notifications</h2>
-                        <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
+                        <a href="/messages" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                     </div>
                     <div class="card-body">
-                        <ul class="message-list">
-                            <li class="message-item">
-                                <div>
-                                    <div>
-                                        <i class="fas fa-bell"></i>
-                                    </div>
-                                    <div>
-                                        <div>Delivery Confirmation</div>
-                                        <div>Your delivery is scheduled for tomorrow</div>
-                                    </div>
-                                </div>
-                                <div>
-                                    2 hours ago
-                                </div>
-                            </li>
-                            
-                            <li class="message-item">
-                                <div>
-                                    <div>
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div>
-                                        <div>Sarah Johnson</div>
-                                        <div>Thanks for sharing the extra tomatoes!</div>
-                                    </div>
-                                </div>
-                                <div>
-                                    Yesterday
-                                </div>
-                            </li>
-                            
-                            <li class="message-item">
-                                <div>
-                                    <div>
-                                        <i class="fas fa-star"></i>
-                                    </div>
-                                    <div>
-                                        <div>Community Update</div>
-                                        <div>New farmers added to your local network</div>
-                                    </div>
-                                </div>
-                                <div>
-                                    Feb 26
-                                </div>
-                            </li>
-                        </ul>
+                        <ul class="message-list"></ul>
                     </div>
                 </div>
             </div>
@@ -250,6 +144,6 @@
     </div>
 
     <!-- Dashboard JavaScript -->
-    <script src="/js/dashboard.js"></script>
+    <script src="/js/dashboard.js?v=<%= (typeof assetVersion !== 'undefined' ? assetVersion : Date.now()) %>"></script>
 </body>
 </html>

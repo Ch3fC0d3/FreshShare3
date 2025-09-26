@@ -94,6 +94,34 @@
         margin-top: 5px;
         display: none;
     }
+
+    .starter-products-container {
+        border: 1px solid #e1e5ea;
+        border-radius: 8px;
+        padding: 16px;
+        background-color: #fafcff;
+    }
+
+    .starter-product-card {
+        border: 1px solid #d9dee8;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 12px;
+        background-color: #fff;
+        position: relative;
+    }
+
+    .starter-product-card .remove-product-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+
+    .form-hint {
+        font-size: 14px;
+        color: #6c7a89;
+        margin-bottom: 10px;
+    }
 </style>
 
 <%- contentFor('body') %>
@@ -217,6 +245,67 @@
                 </div>
                 
                 <div class="form-group">
+                    <label>Group Shopping Schedule</label>
+                    <p class="form-hint">Optionally set weekly order and pickup windows for this group.</p>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="order-by-day" class="form-label">Order by day</label>
+                            <select class="form-select" id="order-by-day" name="orderByDay">
+                                <option value="">Select day</option>
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="order-by-time" class="form-label">Order by time</label>
+                            <input type="time" class="form-control" id="order-by-time" name="orderByTime" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="delivery-day" class="form-label">Delivery day</label>
+                            <select class="form-select" id="delivery-day" name="deliveryDay">
+                                <option value="">Select day</option>
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="delivery-time" class="form-label">Delivery time</label>
+                            <input type="time" class="form-control" id="delivery-time" name="deliveryTime" />
+                        </div>
+                    </div>
+                    <div class="error-message" id="schedule-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="max-active-products" class="required-field">Max Active Products</label>
+                    <p class="form-hint">Set how many products can be active at once in your group marketplace. Top-ranked items up to this number become buyable.</p>
+                    <input type="number" id="max-active-products" name="maxActiveProducts" min="1" max="200" value="20" />
+                    <div class="error-message" id="max-active-products-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Starter Products (Optional)</label>
+                    <p class="form-hint">Pre-load items for the ranked list. These start as active if they fall within your max active products cap.</p>
+                    <div class="starter-products-container" id="starter-products-container">
+                        <div id="starter-products-list"></div>
+                        <button type="button" class="btn btn-outline-primary" id="add-starter-product-btn">
+                            <i class="fas fa-plus"></i> Add Starter Product
+                        </button>
+                    </div>
+                    <div class="error-message" id="starter-products-error"></div>
+                </div>
+                
+                <div class="form-group">
                     <label for="group-privacy">Privacy Setting</label>
                     <select id="group-privacy" name="isPrivate">
                         <option value="false">Public - Anyone can find and join</option>
@@ -234,216 +323,4 @@
 </div>
 
 <%- contentFor('script') %>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('create-group-form');
-        const cancelBtn = document.getElementById('cancel-btn');
-        
-        // Debug authentication status
-        const cookieStatus = document.getElementById('cookie-status');
-        const localStorageStatus = document.getElementById('localstorage-status');
-        const tokenValue = document.getElementById('token-value');
-        const debugToggle = document.getElementById('debug-toggle');
-        
-        // Check cookie token
-        const hasCookieToken = document.cookie.includes('token');
-        cookieStatus.innerHTML = `<strong>Cookie Token:</strong> ${hasCookieToken ? 'Present' : 'Not found'}`;
-        cookieStatus.style.color = hasCookieToken ? 'green' : 'red';
-        
-        // Check localStorage token
-        const localToken = localStorage.getItem('token');
-        localStorageStatus.innerHTML = `<strong>LocalStorage Token:</strong> ${localToken ? 'Present' : 'Not found'}`;
-        localStorageStatus.style.color = localToken ? 'green' : 'red';
-        
-        // Setup token display toggle
-        debugToggle.addEventListener('click', function() {
-            if (debugToggle.textContent === 'Show Token') {
-                // Extract token from cookie
-                let cookieToken = '';
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.startsWith('token=')) {
-                        cookieToken = cookie.substring('token='.length);
-                        break;
-                    }
-                }
-                
-                tokenValue.innerHTML = `<strong>Cookie Token Value:</strong> ${cookieToken ? cookieToken.substring(0, 10) + '...' : 'None'}<br>` +
-                                      `<strong>LocalStorage Token Value:</strong> ${localToken ? localToken.substring(0, 10) + '...' : 'None'}`;
-                debugToggle.textContent = 'Hide Token';
-            } else {
-                tokenValue.innerHTML = '';
-                debugToggle.textContent = 'Show Token';
-            }
-        });
-        
-        // Preview category image when category changes
-        const categorySelect = document.getElementById('group-category');
-        
-        // Cancel button redirects back to groups page
-        cancelBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.location.href = '/groups';
-        });
-        
-        // Form submission
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Reset error messages
-            const errorMessages = document.querySelectorAll('.error-message');
-            errorMessages.forEach(el => {
-                el.style.display = 'none';
-                el.textContent = '';
-            });
-            
-            // Skip client-side token checks and rely on server-side authentication
-            // The server will handle authentication through cookies or redirect as needed
-            
-            // Validate form
-            let isValid = true;
-            
-            // Check required fields
-            const requiredFields = [
-                { id: 'group-name', error: 'name-error', message: 'Group name is required (min 3 characters)' },
-                { id: 'group-description', error: 'description-error', message: 'Group description is required (min 10 characters)' },
-                { id: 'group-city', error: 'city-error', message: 'City is required' },
-                { id: 'group-zipcode', error: 'zipcode-error', message: 'Zip/Postal code is required' }
-            ];
-            
-            requiredFields.forEach(field => {
-                const input = document.getElementById(field.id);
-                const value = input.value.trim();
-                
-                if (!value) {
-                    const errorEl = document.getElementById(field.error);
-                    errorEl.textContent = field.message;
-                    errorEl.style.display = 'block';
-                    isValid = false;
-                } else if (field.id === 'group-name' && value.length < 3) {
-                    const errorEl = document.getElementById(field.error);
-                    errorEl.textContent = 'Group name must be at least 3 characters';
-                    errorEl.style.display = 'block';
-                    isValid = false;
-                } else if (field.id === 'group-description' && value.length < 10) {
-                    const errorEl = document.getElementById(field.error);
-                    errorEl.textContent = 'Description must be at least 10 characters';
-                    errorEl.style.display = 'block';
-                    isValid = false;
-                }
-            });
-            
-            // Check category
-            const category = document.getElementById('group-category').value;
-            if (!category) {
-                const errorEl = document.getElementById('category-error');
-                errorEl.textContent = 'Please select a category';
-                errorEl.style.display = 'block';
-                isValid = false;
-            }
-            
-            // Check if at least one delivery day is selected
-            const deliveryDays = document.querySelectorAll('input[name="deliveryDays"]:checked');
-            if (deliveryDays.length === 0) {
-                const errorEl = document.getElementById('delivery-days-error');
-                errorEl.textContent = 'Please select at least one delivery day';
-                errorEl.style.display = 'block';
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                return;
-            }
-            
-            // Get form data
-            const formData = {
-                name: document.getElementById('group-name').value.trim(),
-                category: category,
-                description: document.getElementById('group-description').value.trim(),
-                location: {
-                    street: document.getElementById('group-street').value.trim() || '',
-                    city: document.getElementById('group-city').value.trim(),
-                    state: document.getElementById('group-state').value.trim() || '',
-                    zipCode: document.getElementById('group-zipcode').value.trim()
-                },
-                rules: document.getElementById('group-rules').value.trim() || '',
-                isPrivate: document.getElementById('group-privacy').checked,
-                deliveryDays: Array.from(deliveryDays).map(day => day.value)
-            };
-            
-            console.log('Submitting group data:', formData);
-            
-            try {
-                // Get token from localStorage if available
-                const token = localStorage.getItem('token');
-                
-                // Prepare headers with token if available
-                const headers = {
-                    'Content-Type': 'application/json'
-                };
-                
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                    console.log('Including token in Authorization header');
-                }
-                
-                // Submit form data to API with token in Authorization header
-                const response = await fetch('/api/groups', {
-                    method: 'POST',
-                    headers: headers,
-                    credentials: 'same-origin', // Include cookies in the request
-                    body: JSON.stringify(formData)
-                });
-                
-                console.log('API Response status:', response.status);
-                const data = await response.json();
-                console.log('API Response data:', data);
-                
-                if (response.ok && data.success) {
-                    // Redirect to the groups page instead of the specific group
-                    window.location.href = '/groups';
-                } else if (response.status === 401) {
-                    // Authentication error - redirect to login page
-                    console.log('Authentication required. Redirecting to login page.');
-                    const debugInfo = document.getElementById('auth-debug');
-                    if (debugInfo) {
-                        debugInfo.innerHTML += `<div class="alert alert-danger">Server says you are not authenticated. Redirecting to login page...</div>`;
-                    }
-                    
-                    // Add the token to localStorage before redirecting (for debugging)
-                    if (localStorage.getItem('token')) {
-                        console.log('Token exists in localStorage. Token value:', localStorage.getItem('token').substring(0, 10) + '...');
-                    } else {
-                        console.log('No token in localStorage');
-                    }
-                    
-                    // Redirect to login page
-                    setTimeout(() => {
-                        window.location.href = data.redirect || '/login?redirect=/create-group';
-                    }, 2000);
-                } else {
-                    // Show validation errors if present
-                    if (data.errors && Array.isArray(data.errors)) {
-                        data.errors.forEach(error => {
-                            const field = error.split(' ')[0].toLowerCase();
-                            const errorEl = document.getElementById(`${field}-error`);
-                            if (errorEl) {
-                                errorEl.textContent = error;
-                                errorEl.style.display = 'block';
-                            }
-                        });
-                    } else {
-                        // Show general error message
-                        const errorMessage = data.message || 'An unknown error occurred';
-                        console.error('Failed to create group:', errorMessage);
-                        alert('Failed to create group: ' + errorMessage);
-                    }
-                }
-            } catch (error) {
-                console.error('Error creating group:', error);
-                alert('An error occurred while creating the group. Please try again.');
-            }
-        });
-    });
-</script>
+<script src="/js/create-group-page.js"></script>

@@ -1,0 +1,32 @@
+/* Shopping Cart Floating Action Button */
+.cart-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-color, #0d6efd);
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3000; /* above headers and panels */
+  pointer-events: auto;
+}
+.cart-fab i { font-size: 20px; }
+.cart-fab .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #dc3545;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 3px 6px;
+  display: none;
+}

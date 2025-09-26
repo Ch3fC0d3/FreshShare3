@@ -91,7 +91,7 @@ const UpcLookup = {
       placeholder.style.display = 'none';
     }
     
-    // Initialize Quagga with proper configuration
+    // Initialize Quagga with improved camera constraints and locator settings
     Quagga.init({
       inputStream: {
         name: 'Live',
@@ -99,17 +99,21 @@ const UpcLookup = {
         target: scannerContainer,
         willReadFrequently: true, // Optimize canvas performance
         constraints: {
-          width: 480,
-          height: 320,
-          facingMode: 'environment' // Use back camera on mobile devices
+          facingMode: { ideal: 'environment' }, // back camera
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          aspectRatio: { ideal: 1.7777777778 },
+          frameRate: { ideal: 30, max: 60 },
+          // Request continuous focus when supported
+          advanced: [{ focusMode: 'continuous' }]
         }
       },
       locator: {
-        patchSize: 'medium',
-        halfSample: true
+        patchSize: 'large', // larger search window helps at higher resolution
+        halfSample: false
       },
       numOfWorkers: 2,
-      frequency: 10,
+      frequency: 15,
       decoder: {
         readers: ['upc_reader', 'upc_e_reader', 'ean_reader', 'ean_8_reader']
       },
@@ -129,7 +133,96 @@ const UpcLookup = {
       
       // Start Quagga once initialized
       Quagga.start();
-      
+
+      // Try to improve focus/UX on supported browsers
+      try {
+        const video = scannerContainer.querySelector('video');
+        if (video) {
+          video.setAttribute('playsinline', 'true');
+          video.setAttribute('autoplay', 'true');
+          // iOS Safari often requires muted autoplay
+          video.muted = true;
+        }
+
+        const stream = video && video.srcObject;
+        const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+        if (track) {
+          const caps = (track.getCapabilities && track.getCapabilities()) || {};
+          const settings = (track.getSettings && track.getSettings()) || {};
+
+          // Prefer continuous focus if available, else single-shot
+          if (caps.focusMode) {
+            const modes = Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode];
+            if (modes.includes('continuous')) {
+              track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(()=>{});
+            } else if (modes.includes('single-shot')) {
+              track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] }).catch(()=>{});
+            }
+          }
+
+          // Tap to refocus (where supported)
+          scannerContainer.addEventListener('click', () => {
+            if (!track) return;
+            const caps2 = (track.getCapabilities && track.getCapabilities()) || {};
+            if (caps2.focusMode) {
+              const modes2 = Array.isArray(caps2.focusMode) ? caps2.focusMode : [caps2.focusMode];
+              const desired = modes2.includes('single-shot') ? 'single-shot' : (modes2.includes('continuous') ? 'continuous' : null);
+              if (desired) track.applyConstraints({ advanced: [{ focusMode: desired }] }).catch(()=>{});
+            }
+          });
+
+          // Optional: maintain some zoom if device supports it (no UI, just keep current)
+          if (caps.zoom && typeof settings.zoom === 'number') {
+            track.applyConstraints({ advanced: [{ zoom: settings.zoom }] }).catch(()=>{});
+          }
+
+          // Torch (flash) toggle support
+          const torchBtn = document.getElementById('toggle-torch-btn');
+          let torchOn = false;
+          const hasTorch = !!(caps.torch || (Array.isArray(caps.fillLightMode) && caps.fillLightMode.includes('flash')));
+          if (torchBtn) {
+            if (hasTorch) {
+              torchBtn.style.display = '';
+              torchBtn.addEventListener('click', async () => {
+                torchOn = !torchOn;
+                try {
+                  await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+                } catch (_) {
+                  // Some browsers expose fillLightMode instead of torch; ignore failures silently
+                }
+                torchBtn.classList.toggle('active', torchOn);
+              });
+            } else {
+              torchBtn.style.display = 'none';
+            }
+          }
+
+          // Zoom slider support
+          const zoomCtl = document.getElementById('zoom-control');
+          const zoomSlider = document.getElementById('zoom-slider');
+          if (zoomCtl && zoomSlider && caps.zoom) {
+            try {
+              const min = typeof caps.zoom.min === 'number' ? caps.zoom.min : 1;
+              const max = typeof caps.zoom.max === 'number' ? caps.zoom.max : 5;
+              const step = typeof caps.zoom.step === 'number' ? caps.zoom.step : 0.1;
+              zoomSlider.min = String(min);
+              zoomSlider.max = String(max);
+              zoomSlider.step = String(step);
+              zoomSlider.value = String(typeof settings.zoom === 'number' ? settings.zoom : min);
+              zoomCtl.style.display = '';
+              zoomSlider.addEventListener('input', () => {
+                const z = Number(zoomSlider.value);
+                track.applyConstraints({ advanced: [{ zoom: z }] }).catch(()=>{});
+              });
+            } catch (_) {
+              zoomCtl.style.display = 'none';
+            }
+          } else if (zoomCtl) {
+            zoomCtl.style.display = 'none';
+          }
+        }
+      } catch (_) {}
+
       // Listen for barcode detection
       Quagga.onDetected(this.onBarcodeDetected.bind(this));
     });
@@ -294,6 +387,14 @@ const UpcLookup = {
     // Handle different response formats
     const productData = product.product || product;
     console.log('Processed product data:', productData);
+    // Set hidden imageUrl field if available
+    try {
+      const imageUrlField = document.getElementById('imageUrl');
+      if (imageUrlField) {
+        const url = productData && typeof productData.imageUrl === 'string' ? productData.imageUrl : '';
+        imageUrlField.value = url || '';
+      }
+    } catch (_) {}
     
     // Check if this is fallback data
     const isFallback = productData.isGenericFallback === true;
@@ -547,6 +648,14 @@ const UpcLookup = {
     
     try {
       const productInfo = JSON.parse(resultsEl.dataset.productInfo);
+      // Ensure hidden imageUrl field is set when user applies UPC data
+      try {
+        const imageUrlField = document.getElementById('imageUrl');
+        if (imageUrlField) {
+          const url = productInfo && typeof productInfo.imageUrl === 'string' ? productInfo.imageUrl : '';
+          imageUrlField.value = url || '';
+        }
+      } catch (_) {}
       
       // Fill in the listing form with product information
       const titleInput = document.getElementById('listing-title') || document.getElementById('title');

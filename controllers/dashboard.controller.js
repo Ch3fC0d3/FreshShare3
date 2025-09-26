@@ -3,6 +3,7 @@ const Order = db.order;
 const Group = db.group;
 const Message = db.message;
 const User = db.user;
+const mongoose = require('mongoose');
 
 /**
  * Get dashboard data for the authenticated user
@@ -95,33 +96,49 @@ exports.getDashboardData = async (req, res) => {
       }));
     }
 
-    // Get upcoming events
-    // Find events from groups where the user is a member
-    const userGroups = await Group.find({
-      members: req.userId
-    }).select('name events');
+    // Get upcoming events (align with Group Events collection used by Groups API)
+    let dashboardEvents = [];
+    try {
+      // Determine user's active group IDs from User document first (faster)
+      const activeGroupIds = (user.groups || [])
+        .filter(m => m && String(m.status) === 'active' && m.group)
+        .map(m => String(m.group));
 
-    let allEvents = [];
-    userGroups.forEach(group => {
-      if (group.events && group.events.length > 0) {
-        const groupEvents = group.events.map(event => ({
-          ...event.toObject(),
-          groupId: group._id,
-          groupName: group.name
-        }));
-        allEvents = [...allEvents, ...groupEvents];
+      // Fallback: if none found, query groups by membership
+      let groupsForUser = [];
+      if (activeGroupIds.length === 0) {
+        groupsForUser = await Group.find({ members: req.userId }).select('_id name').lean();
+      } else {
+        groupsForUser = await Group.find({ _id: { $in: activeGroupIds } }).select('_id name').lean();
       }
-    });
+      const groupIdList = groupsForUser.map(g => String(g._id));
+      const groupNameById = Object.fromEntries(groupsForUser.map(g => [String(g._id), g.name]));
 
-    // Filter for upcoming events and sort by date
-    const upcomingEvents = allEvents
-      .filter(event => new Date(event.date) >= now)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .slice(0, 3);
+      // Read events from the Event model registered by group.controller
+      let EventModel = null;
+      try { EventModel = mongoose.model('Event'); } catch(_) { EventModel = null; }
+      if (EventModel && groupIdList.length > 0) {
+        const events = await EventModel.find({
+          groupId: { $in: groupIdList },
+          date: { $gte: now }
+        }).sort({ date: 1 }).limit(10).lean();
+        dashboardEvents = events.map(ev => ({
+          title: ev.title,
+          description: ev.description,
+          date: ev.date,
+          location: ev.location,
+          groupId: ev.groupId,
+          groupName: groupNameById[String(ev.groupId)] || 'Group',
+          id: ev._id
+        }));
+      }
+    } catch (e) {
+      console.warn('Dashboard events fallback due to error:', e && e.message);
+    }
 
-    if (upcomingEvents.length > 0) {
-      console.log(`Found ${upcomingEvents.length} upcoming events`);
-      dashboardData.events = upcomingEvents;
+    if (dashboardEvents.length > 0) {
+      dashboardData.events = dashboardEvents.slice(0, 3);
+      console.log(`Found ${dashboardData.events.length} upcoming events`);
     }
 
     // Get recent messages
@@ -192,33 +209,40 @@ exports.getCalendarEvents = async (req, res) => {
     
     console.log(`Fetching calendar events for ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
 
-    // Find all groups the user is a member of
-    const userGroups = await Group.find({
-      members: req.userId
-    }).select('name events');
-    
-    // Get events from user's groups
+    // Events from Group Events collection
     let events = [];
-    userGroups.forEach(group => {
-      if (group.events && group.events.length > 0) {
-        const groupEvents = group.events
-          .filter(event => {
-            const eventDate = new Date(event.date);
-            return eventDate >= startDate && eventDate <= endDate;
-          })
-          .map(event => ({
-            title: event.title,
-            description: event.description,
-            date: event.date,
-            location: event.location,
-            groupId: group._id,
-            groupName: group.name,
-            id: event._id
-          }));
-        
-        events = [...events, ...groupEvents];
+    try {
+      // Determine user's active group IDs from User document first
+      const user = await User.findById(req.userId).select('groups').lean();
+      const activeGroupIds = (user?.groups || [])
+        .filter(m => m && String(m.status) === 'active' && m.group)
+        .map(m => String(m.group));
+      const groupsForUser = activeGroupIds.length > 0
+        ? await Group.find({ _id: { $in: activeGroupIds } }).select('_id name').lean()
+        : await Group.find({ members: req.userId }).select('_id name').lean();
+      const groupIdList = groupsForUser.map(g => String(g._id));
+      const groupNameById = Object.fromEntries(groupsForUser.map(g => [String(g._id), g.name]));
+
+      let EventModel = null;
+      try { EventModel = mongoose.model('Event'); } catch(_) { EventModel = null; }
+      if (EventModel && groupIdList.length > 0) {
+        const eventDocs = await EventModel.find({
+          groupId: { $in: groupIdList },
+          date: { $gte: startDate, $lte: endDate }
+        }).sort({ date: 1 }).lean();
+        events = eventDocs.map(ev => ({
+          title: ev.title,
+          description: ev.description,
+          date: ev.date,
+          location: ev.location,
+          groupId: ev.groupId,
+          groupName: groupNameById[String(ev.groupId)] || 'Group',
+          id: ev._id
+        }));
       }
-    });
+    } catch (e) {
+      console.warn('Calendar events fallback due to error:', e && e.message);
+    }
     
     // Get order deliveries for the month
     const orders = await Order.find({

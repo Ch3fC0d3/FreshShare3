@@ -230,6 +230,171 @@
         background-color: #fff3cd;
         color: #856404;
     }
+
+    .ranked-products-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .ranked-products-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .ranked-products-tabs .btn {
+        border-radius: 999px;
+        padding: 6px 16px;
+    }
+
+    .ranked-products-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ranked-product-card {
+        border: 1px solid #e3e8ef;
+        border-radius: 10px;
+        padding: 16px;
+        background-color: #fff;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .ranked-product-card.highlight-active {
+        border-color: #4caf50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
+    }
+
+    .ranked-product-topline {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .ranked-product-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+    }
+
+    .ranked-product-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .ranked-product-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.9rem;
+        color: #5f6b7a;
+    }
+
+    .ranked-product-score {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 70px;
+        border-radius: 8px;
+        background-color: #f5f7fa;
+        padding: 8px;
+    }
+
+    .ranked-product-score .score-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    .ranked-product-score .score-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #7b8794;
+    }
+
+    .ranked-product-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .ranked-product-actions .vote-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .ranked-product-actions .vote-buttons .btn {
+        min-width: 36px;
+    }
+
+    .ranked-product-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .ranked-products-empty {
+        text-align: center;
+        padding: 30px 15px;
+        border: 1px dashed #d5dbe5;
+        border-radius: 10px;
+        background-color: #fafbfd;
+        color: #5f6b7a;
+    }
+
+    .product-status-badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .product-status-badge.active {
+        background-color: #e6f4ea;
+        color: #237a3b;
+    }
+
+    .product-status-badge.requested {
+        background-color: #f4f6fb;
+        color: #3f506e;
+    }
+
+    .product-rank-badge {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        background-color: #3b82f6;
+        color: #fff;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-weight: 600;
+        box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25);
+    }
+
+    .max-products-banner {
+        background-color: #f4f6fb;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
 </style>
 
 <%- contentFor('body') %>
@@ -261,51 +426,148 @@
 
     <div class="row">
         <div class="col-md-8">
+            <!-- Ranked Products Section -->
+            <div class="group-section" id="ranked-products-section">
+                <div class="ranked-products-header">
+                    <div>
+                        <h3 class="mb-1">Group Picks (Ranked)</h3>
+                        <div class="text-muted small">Sorted by score (upvotes – downvotes). Top items become active automatically.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" id="refresh-products-btn">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                        <button class="btn btn-primary" id="suggest-product-btn">
+                            <i class="fas fa-plus"></i> Suggest a Product
+                        </button>
+                    </div>
+                </div>
+
+                <div class="max-products-banner" id="max-products-banner" style="display: none;">
+                    <div>
+                        <strong>Active product limit:</strong> <span id="max-products-count">20</span>
+                        <span class="text-muted" id="active-products-summary"></span>
+                    </div>
+                    <div class="badge bg-primary-subtle text-primary" id="active-products-count-badge">0 Active</div>
+                </div>
+
+                <div class="ranked-products-tabs">
+                    <button class="btn btn-outline-secondary active" data-filter="all" id="products-tab-all">All</button>
+                    <button class="btn btn-outline-secondary" data-filter="active" id="products-tab-active">Active</button>
+                    <button class="btn btn-outline-secondary" data-filter="requested" id="products-tab-requested">Requested</button>
+                    <button class="btn btn-outline-secondary" data-filter="mine" id="products-tab-mine">Mine</button>
+                    <button class="btn btn-outline-secondary" data-filter="pinned" id="products-tab-pinned">Pinned</button>
+                </div>
+
+                <div class="alert alert-info mt-3" id="products-info-banner" style="display: none;"></div>
+
+                <div class="ranked-products-list mt-3" id="ranked-products-list"></div>
+                <div class="ranked-products-empty mt-3" id="ranked-products-empty" style="display: none;">
+                    <p class="mb-2">No requests yet—be the first to suggest a product.</p>
+                    <button class="btn btn-primary" id="empty-state-suggest-btn"><i class="fas fa-plus"></i> Suggest a Product</button>
+                </div>
+            </div>
+
+            <!-- Suggest Product Modal -->
+            <div class="modal fade" id="suggest-product-modal" tabindex="-1" aria-labelledby="suggest-product-modal-label" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="suggest-product-modal-label">Suggest a Product</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="suggest-product-error" class="alert alert-danger" style="display: none;"></div>
+                            <form id="suggest-product-form">
+                                <div class="mb-3">
+                                    <label for="suggest-product-name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="suggest-product-name" placeholder="e.g., Organic Honey" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="suggest-product-note" class="form-label">Why should the group consider this?</label>
+                                    <textarea class="form-control" id="suggest-product-note" rows="3" placeholder="Describe the benefits or reason for adding this product."></textarea>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="suggest-product-image" class="form-label">Image URL</label>
+                                        <input type="url" class="form-control" id="suggest-product-image" placeholder="https://example.com/image.jpg">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="suggest-product-url" class="form-label">Product Link</label>
+                                        <input type="url" class="form-control" id="suggest-product-url" placeholder="https://supplier.com/listing">
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="submit-suggest-product-btn">Submit Suggestion</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Shopping List Section -->
             <div class="group-section shopping-list">
                 <div class="section-header">
                     <h3>Shopping List</h3>
-                    <button class="btn btn-sm btn-primary" id="add-item-toggle"><i class="fas fa-plus"></i> Add Item</button>
+                    <button class="btn btn-sm btn-primary" id="add-item-toggle"><i class="fas fa-plus"></i> Create Listing</button>
+                </div>
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-2 mt-3">
+                    <div class="schedule-summary">
+                        <div><strong>Order by:</strong> <span id="order-by-date-display">Not set</span></div>
+                        <div><strong>Delivery date:</strong> <span id="delivery-date-display">Not set</span></div>
+                    </div>
+                    <div id="schedule-admin-actions" class="d-none">
+                        <button class="btn btn-outline-secondary btn-sm" id="edit-schedule-btn"><i class="fas fa-calendar-plus"></i> Edit schedule</button>
+                    </div>
+                </div>
+                <div id="schedule-form" class="card card-body mt-3" style="display: none;">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="order-by-input-day" class="form-label">Order by day</label>
+                            <select class="form-select" id="order-by-input-day">
+                                <option value="">Select day</option>
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="order-by-input-time" class="form-label">Order by time</label>
+                            <input type="time" class="form-control" id="order-by-input-time">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="delivery-day-input" class="form-label">Delivery day</label>
+                            <select class="form-select" id="delivery-day-input">
+                                <option value="">Select day</option>
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="delivery-time-input" class="form-label">Delivery time</label>
+                            <input type="time" class="form-control" id="delivery-time-input">
+                        </div>
+                    </div>
+                    <div id="schedule-form-error" class="text-danger small mt-2" style="display: none;"></div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-schedule-btn">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="save-schedule-btn">Save schedule</button>
+                    </div>
                 </div>
                 
-                <!-- Add Item Form (initially hidden) -->
-                <div class="add-item-form" id="add-item-form" style="display: none;">
-                    <h5>Add New Item</h5>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="product-name">Product Name</label>
-                            <input type="text" class="form-control" id="product-name" placeholder="Enter product name">
-                        </div>
-                        <div class="form-group">
-                            <label for="vendor">Vendor</label>
-                            <input type="text" class="form-control" id="vendor" placeholder="Enter vendor name">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="case-price">Case Price ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="case-price" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label for="quantity">Quantity</label>
-                            <input type="number" min="1" class="form-control" id="quantity" placeholder="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="total-units">Total Units</label>
-                            <input type="number" min="1" class="form-control" id="total-units" placeholder="1">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="notes">Notes</label>
-                            <textarea class="form-control" id="item-notes" placeholder="Any additional information about this item"></textarea>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-primary" id="save-item-btn">Add to Shopping List</button>
-                        <button type="button" class="btn btn-outline-secondary ml-2" id="cancel-item-btn">Cancel</button>
-                    </div>
-                </div>
+                <!-- Order-By Warning Banner -->
+                <div id="order-by-warning" class="alert mt-3" style="display: none;"></div>
                 
                 <!-- Shopping List Table -->
                 <div class="table-responsive mt-3">
