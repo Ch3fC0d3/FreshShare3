@@ -54,6 +54,15 @@ router.get('/search', marketplaceController.searchListings);
 
 // Look up product information by UPC code
 router.get('/upc/:upc', (req, res, next) => {
+  // Validate UPC format (must be all digits)
+  const { upc } = req.params;
+  if (!/^\d+$/.test(upc)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid UPC format. UPC must contain only digits.'
+    });
+  }
+
   console.log('UPC LOOKUP ROUTE ACCESSED with UPC:', req.params.upc);
   console.log('Request path:', req.path);
   console.log('Full URL:', req.originalUrl);

@@ -2,7 +2,7 @@
 process.env.NODE_ENV = 'test';
 
 const request = require('supertest');
-const app = require('../server');
+const { app } = require('../server');
 const usdaApi = require('../utils/usdaApi');
 
 describe('GET /api/marketplace/upc/:upc', () => {

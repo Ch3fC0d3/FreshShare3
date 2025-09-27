@@ -22,6 +22,7 @@ const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const config = require('./config/auth.config');
 const fs = require('fs');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Load environment variables from .env file
 const dotenv = require('dotenv');
@@ -922,7 +923,9 @@ async function connectToDatabase(mongoUri) {
     
     // Initialize database roles and start the server
     await initializeDatabase();
-    startServer();
+    if (process.env.NODE_ENV !== 'test') {
+      startServer();
+    }
 
   } catch (err) {
     console.error(`❌ MongoDB connection error: ${err.message}`);
@@ -948,12 +951,11 @@ async function main() {
   let mongoUri = envUri;
 
   if (!mongoUri) {
-    // Build local Mongo URI from db.config.js
-    const host = dbConfig.HOST || '127.0.0.1';
-    const port = dbConfig.PORT || 27017;
-    const dbName = dbConfig.DB || 'freshshare_db';
-    mongoUri = `mongodb://${host}:${port}/${dbName}`;
-    console.log(`Using local MongoDB at ${mongoUri}`);
+    // If no production URI, start in-memory MongoDB for local dev/testing
+    console.log('Starting in-memory MongoDB for development...');
+    mongod = await MongoMemoryServer.create();
+    mongoUri = mongod.getUri();
+    console.log(`In-memory MongoDB running at: ${mongoUri}`);
   } else {
     console.log('Using MongoDB URI from environment.');
   }
@@ -991,5 +993,10 @@ if (require.main === module) {
     main();
   }
 } else {
-  module.exports = app;
+  module.exports = {
+    app,
+    connectDb: connectToDatabase,
+    initializeDatabase,
+    shutdown,
+  };
 }
