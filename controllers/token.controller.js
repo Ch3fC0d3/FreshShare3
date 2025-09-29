@@ -42,11 +42,12 @@ exports.syncToken = async (req, res) => {
         }
         
         // Set token as cookie
+        const isSecureRequest = req.secure || (req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: isSecureRequest,
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-            sameSite: 'lax',
+            sameSite: isSecureRequest ? 'none' : 'lax',
             path: '/'
         });
         

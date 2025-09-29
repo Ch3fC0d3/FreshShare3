@@ -6,6 +6,65 @@
 // Store the original fetch function
 const originalFetch = window.fetch;
 
+function getCookie(name) {
+  try {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(';').shift();
+    }
+  } catch (err) {
+    console.error('local-auth: failed to read cookie', err);
+  }
+  return null;
+}
+
+function normalizeAuthHeader(headers) {
+  if (!headers) {
+    return;
+  }
+
+  const cookieToken = getCookie('token');
+
+  if (typeof headers.get === 'function' && typeof headers.set === 'function') {
+    const existing = headers.get('Authorization') || headers.get('authorization');
+    if (!existing) {
+      return;
+    }
+    if (cookieToken) {
+      headers.set('Authorization', `Bearer ${cookieToken}`);
+    } else {
+      headers.delete('Authorization');
+    }
+    return;
+  }
+
+  if (Array.isArray(headers)) {
+    const index = headers.findIndex(([key]) => String(key).toLowerCase() === 'authorization');
+    if (index === -1) {
+      return;
+    }
+    if (cookieToken) {
+      headers[index][1] = `Bearer ${cookieToken}`;
+    } else {
+      headers.splice(index, 1);
+    }
+    return;
+  }
+
+  const headerKeys = Object.keys(headers);
+  const authKey = headerKeys.find(key => key.toLowerCase() === 'authorization');
+  if (!authKey) {
+    return;
+  }
+
+  if (cookieToken) {
+    headers[authKey] = `Bearer ${cookieToken}`;
+  } else {
+    delete headers[authKey];
+  }
+}
+
 // Override the fetch function to redirect API requests to the local server
 window.fetch = function(url, options) {
   // Check if this is an API request
@@ -64,14 +123,13 @@ window.fetch = function(url, options) {
       });
     }
     
-    // Log auth headers if present
     if (options && options.headers) {
-      const authHeader = options.headers['Authorization'] || options.headers['authorization'];
-      if (authHeader) {
-        console.log('Request includes auth header:', authHeader.substring(0, 20) + '...');
-      } else {
-        console.log('Request has no auth header');
-      }
+      normalizeAuthHeader(options.headers);
+      const headerPreview = (() => {
+        const token = getCookie('token');
+        return token ? token.substring(0, 20) + '...' : '(cookie missing)';
+      })();
+      console.log('local-auth: normalized Authorization header to match cookie:', headerPreview);
     }
   }
   
