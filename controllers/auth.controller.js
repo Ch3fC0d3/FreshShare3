@@ -183,19 +183,20 @@ exports.login = async (req, res) => {
         message: "Invalid password!"
       });
     }
-
-    // Generate JWT token with expiration based on rememberMe
     const token = jwt.sign({ id: user._id }, JWT_SECRET, {
       expiresIn: tokenExpiration // either 30 or 7 days depending on rememberMe
     });
+    try {
+      console.log('[auth.controller] Issued login token preview:', token.substring(0, 15) + '...');
+    } catch (_) {}
 
-    // Set token as cookie with expiration based on rememberMe
+    const isSecureRequest = req.secure || (req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: cookieExpiration, // either 30 or 7 days in milliseconds
-      sameSite: 'lax', // Changed from 'strict' to 'lax' to work better across pages
-      path: '/' // Ensure cookie is available on all paths
+      secure: isSecureRequest,
+      maxAge: cookieExpiration,
+      sameSite: isSecureRequest ? 'none' : 'lax',
+      path: '/'
     });
 
     // Create user object without password

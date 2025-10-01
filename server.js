@@ -12,15 +12,16 @@ process.on('unhandledRejection', (err) => {
   console.error(err.stack);
   process.exit(1);
 });
-
 const express = require('express');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-const config = require('./config/auth.config');
+const dbConfig = require('./config/db.config');
+const authConfig = require('./config/auth.config');
 const fs = require('fs');
 
 // Load environment variables from .env file
@@ -56,9 +57,6 @@ const PORT = 3002;
 
 // Ensure templates always have an assetVersion available
 app.locals.assetVersion = process.env.ASSET_VERSION || String(Date.now());
-
-// Database configuration
-const dbConfig = require('./config/db.config.js');
 
 // Initialize all routes and middleware first, then start the server
 console.log('Initializing routes and middleware first...');
@@ -215,13 +213,41 @@ app.use(async (req, res, next) => {
         // Verify token using the same secret as in auth.config.js
         console.log('[globalAuth] verifying token with primary secret. Token length:', token.length);
         console.log('[globalAuth] token preview:', mask(token));
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "bezkoder-secret-key");
+        const primarySecret = (authConfig && authConfig.secret) || process.env.JWT_SECRET || 'bezkoder-secret-key';
+        const legacySecret = process.env.LEGACY_JWT_SECRET || 'freshShare-auth-secret';
+        let decoded = null;
+        try {
+          decoded = jwt.verify(token, primarySecret);
+        } catch (primaryErr) {
+          console.warn('[globalAuth] primary JWT verification failed, attempting legacy secret:', primaryErr && primaryErr.message);
+          decoded = jwt.verify(token, legacySecret);
+          console.log('[globalAuth] legacy JWT secret accepted token');
+        }
         const User = require('./models/user.model');
-        const user = await User.findById(decoded.id).select('-password');
+        const user = await User.findById(decoded.id)
+          .select('-password')
+          .populate('roles', 'name');
         
         if (user) {
+          // Normalize document for templates and ensure roles contain names
+          const plainUser = user.toObject({ getters: true, virtuals: true });
+          plainUser.roles = (plainUser.roles || []).map((role) => {
+            if (typeof role === 'string') {
+              return role;
+            }
+            if (role && typeof role === 'object') {
+              if (typeof role.name === 'string' && role.name.length > 0) {
+                return role.name;
+              }
+              if (role._id) {
+                return String(role._id);
+              }
+            }
+            return '';
+          }).filter(Boolean);
+
           // Add user data to locals for all views
-          res.locals.user = user;
+          res.locals.user = plainUser;
           console.log('User authenticated:', user.username, 'ID:', user._id); // Enhanced debug log
           
           // Check if token is close to expiration (less than 24 hours remaining)
@@ -247,15 +273,27 @@ app.use(async (req, res, next) => {
           }
         } else {
           console.log('Token valid but user not found in database');
-          res.clearCookie('token'); // Clear token if user doesn't exist
         }
       } catch (err) {
         console.error('[globalAuth] token verification failed:', err && err.name, err && err.message);
         console.error('[globalAuth] token value (masked):', mask(token));
-        res.clearCookie('token'); // Clear invalid token
       }
     } else {
       console.log('No authentication token found');
+    }
+
+    try {
+      if (res.locals.user) {
+        console.log('[globalAuth] locals.user set to:', {
+          id: String(res.locals.user._id || ''),
+          username: res.locals.user.username || '(no username)',
+          roles: Array.isArray(res.locals.user.roles) ? res.locals.user.roles : '(no roles)'
+        });
+      } else {
+        console.log('[globalAuth] locals.user remains null after auth middleware');
+      }
+    } catch (logErr) {
+      console.error('[globalAuth] locals.user logging failed:', logErr && logErr.message);
     }
     next();
   } catch (err) {
